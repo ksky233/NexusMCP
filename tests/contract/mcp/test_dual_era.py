@@ -1,4 +1,4 @@
-"""Contract assertions for MCP Modern/Legacy behavior on one SDK v2 server."""
+"""验证同一个 SDK v2 Server 的 MCP Modern/Legacy 契约。"""
 
 import pytest
 

@@ -1,4 +1,4 @@
-"""Contract assertions for FastAPI mounting and HTTP request context."""
+"""验证 FastAPI 挂载和 HTTP RequestContext 契约。"""
 
 import httpx
 import httpx2
@@ -65,6 +65,5 @@ async def test_fastapi_mount_exposes_mcp_and_request_context() -> None:
     assert tools_list_context.request_id != "None"
     assert tools_list_context.mcp_session_id is None
     assert (
-        tools_list_context.traceparent
-        == "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01"
+        tools_list_context.traceparent == "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01"
     )

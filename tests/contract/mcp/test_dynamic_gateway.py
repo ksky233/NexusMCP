@@ -1,13 +1,13 @@
-"""Contract assertions for request-scoped Tool discovery and dispatch."""
+"""验证请求级 Tool 发现与分发契约。"""
 
 import pytest
-from mcp import Client
+from mcp import Client, types
 from mcp.types import TextContent
 
 from examples.mcp_compatibility.dynamic_gateway import PRINCIPAL_META_KEY, server
 
 
-def _meta(principal: str) -> dict[str, str]:
+def _meta(principal: str) -> types.RequestParamsMeta:
     """为内存 Transport 构造测试身份；正式身份不能直接信任客户端 _meta。"""
 
     return {PRINCIPAL_META_KEY: principal}

@@ -1,1 +1,1 @@
-"""Repository-local runnable examples."""
+"""仓库内可运行示例。"""

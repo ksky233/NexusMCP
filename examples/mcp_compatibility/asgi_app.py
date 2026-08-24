@@ -1,4 +1,4 @@
-"""E3: mount the low-level MCP server inside a FastAPI host application."""
+"""E3：将低层 MCP Server 挂载到 FastAPI 宿主应用。"""
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager

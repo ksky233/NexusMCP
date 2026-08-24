@@ -98,13 +98,16 @@ src/nexusmcp/
 ├── modules/catalog/
 │   ├── domain.py
 │   ├── ports.py
-│   └── use_cases.py
+│   ├── use_cases.py
+│   └── adapters/in_memory.py
 └── shared/
     ├── errors.py
     └── request_context.py
 ```
 
 `infrastructure`、其他业务模块、Admin API、CLI、Migration 和 Eval 在真实职责出现时创建。
+
+`catalog/adapters/in_memory.py` 已因 Application Factory 和确定性测试的真实需要进入首批目录；它实现与未来 PostgreSQL Adapter 相同的 Port，不是一次性 Demo。
 
 `examples/upstream_apis/` 中的三个 Fake API 是独立测试上游，不属于 NexusMCP Domain。`src/nexusmcp/` 不得 import Demo 模块，也不得为某个场景增加专用 Parser、Gateway 或 Executor。三个服务必须通过同一 OpenAPI Import、Tool Binding 和 Runtime 链路接入。
 

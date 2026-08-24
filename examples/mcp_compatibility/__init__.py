@@ -1,1 +1,1 @@
-"""Runnable MCP compatibility experiments for S1."""
+"""S1 可运行 MCP 兼容性实验。"""

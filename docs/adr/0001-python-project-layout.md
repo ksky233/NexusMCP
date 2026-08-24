@@ -292,7 +292,9 @@ src/
     │       ├── __init__.py
     │       ├── domain.py
     │       ├── ports.py
-    │       └── use_cases.py
+    │       ├── use_cases.py
+    │       └── adapters/
+    │           └── in_memory.py
     └── shared/
         ├── __init__.py
         ├── errors.py
@@ -308,6 +310,8 @@ src/
 - CLI（等待第一个 Import 命令）；
 - Eval/RAG 目录；
 - Redis/Celery/Kubernetes 配置。
+
+`catalog/adapters/in_memory.py` 是 Application Factory 和确定性测试实际需要的 Port 实现，会作为本地开发/测试 Adapter 长期保留，不属于为目录对称创建的空骨架。
 
 ### 12. 依赖方向
 
@@ -439,3 +443,13 @@ uv run basedpyright
 - 插件系统要求 Namespace Package；
 - 多团队所有权要求将某个 Bounded Context 独立仓库化；
 - `src` Layout 阻碍目标部署平台且存在可复现证据。
+
+## 实施记录
+
+2026-08-24 已按本 ADR 创建首批骨架：
+
+- 使用官方 `uv_build` 和默认 `src/nexusmcp` 模块发现；
+- Package 可从仓库目录外导入；
+- Application Factory、Health 和正式 MCP `tools/list` Adapter 可运行；
+- Catalog Domain/Port/Use Case/In-Memory Adapter 已建立；
+- pytest、Ruff、basedpyright、sdist/wheel 构建通过。

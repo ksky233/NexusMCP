@@ -1,4 +1,4 @@
-"""E2: prove that SDK v2 can expose database-shaped tools dynamically."""
+"""E2：验证 SDK v2 可以动态暴露数据库形态的 Tool。"""
 
 from dataclasses import dataclass
 from typing import Any
@@ -124,12 +124,12 @@ async def list_visible_tools(
         types.Tool(
             name=tool.name,
             description=tool.description,
-            inputSchema=tool.input_schema,
+            input_schema=tool.input_schema,
         )
         for tool in _visible_tools(_principal(ctx))
     ]
     # 结果随 Principal 变化，所以不能声明为 public cache；ttlMs=0 避免实验被缓存干扰。
-    return types.ListToolsResult(tools=tools, cacheScope="private", ttlMs=0)
+    return types.ListToolsResult(tools=tools, cache_scope="private", ttl_ms=0)
 
 
 async def call_tool(
@@ -145,7 +145,7 @@ async def call_tool(
     if params.name not in visible_by_name:
         return types.CallToolResult(
             content=[types.TextContent(text="tool is not visible to this principal")],
-            isError=True,
+            is_error=True,
         )
 
     arguments = params.arguments or {}
@@ -158,7 +158,7 @@ async def call_tool(
     else:
         return types.CallToolResult(
             content=[types.TextContent(text="tool binding was not found")],
-            isError=True,
+            is_error=True,
         )
 
     return types.CallToolResult(content=[types.TextContent(text=result)])

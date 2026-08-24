@@ -1,4 +1,4 @@
-"""E1: prove that one SDK v2 server serves Modern and Legacy clients."""
+"""E1：验证同一个 SDK v2 Server 可以服务 Modern 与 Legacy Client。"""
 
 from dataclasses import dataclass
 from typing import Literal
