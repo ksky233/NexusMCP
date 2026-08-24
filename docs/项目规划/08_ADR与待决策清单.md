@@ -1,0 +1,194 @@
+# 08｜ADR 与待决策清单
+
+> 状态：持续维护
+> 作用：区分已经拍板的架构决策、推荐默认值和需要实验后再定的事项。
+
+## 1. 已确认决策
+
+### D-001｜NexusMCP 是独立项目
+
+- 不把 NexusGate/NexusLLM 代码塞入本仓库；
+- 只定义必要的身份与 Trace Contract；
+- Agent Runtime 仅作为 Demo Client。
+
+### D-002｜Modern MCP 优先
+
+- 主协议：`2026-07-28`；
+- Legacy handshake/session 只做兼容；
+- Modern Domain 不建立隐式 Transport Session。
+
+### D-003｜使用官方 Python MCP SDK v2
+
+- SDK 负责协议类型、编解码和版本协商；
+- 手写代码聚焦 Gateway、Registry、Policy 和治理；
+- `examples/mcp_compatibility` 用于理解和契约验证，不替代 SDK。
+
+### D-004｜模块化单体
+
+- 第一版一个部署单元；
+- 代码内区分 Control Plane/Data Plane；
+- 只有实测负载/安全/故障域触发拆分。
+
+### D-005｜旧 Java 项目只读参考
+
+- 不在旧项目上继续开发；
+- 迁移 Contract/Fixture/领域知识；
+- 不逐行 JavaToPython；
+- 不复制 Session Transport 和明文 Key 模型。
+
+### D-006｜Tool Search 关键词优先
+
+- name/description/tags/namespace/owner + PostgreSQL FTS；
+- Semantic Tool Discovery 需要 Search Eval 证据。
+
+### D-007｜保留极小 RAG MCP
+
+- `knowledge.search` 是受治理的示例 Tool；
+- 摄取用 CLI；
+- PostgreSQL + pgvector；
+- 不建设完整知识库平台。
+
+### D-008｜质量能力进入主线
+
+- Eval、OpenTelemetry、安全、幂等、错误分类不是收尾装饰；
+- Must Feature 没有测试和失败行为说明，不算完成。
+
+### D-009｜src Layout 与领域优先模块组织
+
+- 正式业务代码位于 `src/nexusmcp`；
+- 使用 `bootstrap/interfaces/modules/infrastructure/shared` 一级职责；
+- 业务按 Registry、Catalog、Connectors 等限界上下文组织；
+- 不建立重复的 Control Plane/Data Plane 领域模型；
+- 不预建没有真实 Use Case 的空模块。
+
+决策记录：[ADR-0001](../adr/0001-python-project-layout.md)。
+
+## 2. 推荐但需在初始化时确认
+
+### R-001｜Persistence 工程工具
+
+已确认 Python 3.12、uv、FastAPI、Pydantic v2、pytest、Ruff 和 basedpyright。待第一个持久化模块出现时确认 SQLAlchemy 2 async、Alembic 和数据库 Driver。
+
+版本通过 `pyproject.toml` 与 `uv.lock` 管理，不预装尚未使用的组件。
+
+### R-002｜PostgreSQL 主存储
+
+理由：
+
+- Registry/Policy/Audit 事务需求；
+- JSONB；
+- FTS；
+- pgvector；
+- 减少 Redis/Vector DB 等额外依赖。
+
+### R-003｜Redis 按需引入
+
+只有以下能力需要时引入：
+
+- distributed rate limit；
+- shared cache；
+- subscription bus；
+- distributed lock；
+- background job coordination。
+
+Legacy Session 本身不构成新项目必须引入 Redis 的理由。
+
+## 3. 实验决策
+
+### 3.1 已完成
+
+| ID | 问题 | 结论 | 决策证据 |
+|---|---|---|---|
+| Q-001 | Python MCP SDK 精确版本/commit | S1 锁定 `mcp==2.0.0` | Modern/Legacy Contract Test |
+| Q-002 | SDK 原生路由还是自定义 ASGI Adapter | 使用公开低层 `Server` Callback + 官方 ASGI App | Dynamic Tool/FastAPI Context Test、ADR-0002 |
+
+### 3.2 待实验
+
+| ID | 问题 | 触发阶段 | 决策证据 |
+|---|---|---|---|
+| Q-003 | Tool Version 独立表还是单表多版本 | S2 | Publish/rollback/query 用例 |
+| Q-004 | Policy condition 最小表达式 | S3 | 真实 Policy Case，不提前上 Rego |
+| Q-005 | Approval 完全使用 MRTR 还是保留 REST resolve | S3 | 客户端兼容与 SDK 能力 |
+| Q-006 | Audit 同步/异步写入 | S5 | 故障语义和 Benchmark |
+| Q-007 | Redis 是否进入默认 Compose | S5 | Cache/rate-limit/coordination 实测 |
+| Q-008 | Embedding 模型 | S4 | 中文/英文 Retrieval Eval、成本 |
+| Q-009 | pgvector index 类型 | S4/S5 | 数据规模与 Benchmark |
+| Q-010 | 是否增加 Semantic Tool Search | 后续 | FTS Search Eval 未达标 |
+| Q-011 | 是否拆 Control/Data Plane | 后续 | 负载/权限/故障域证据 |
+| Q-012 | 是否部署 Kubernetes | 后续 | JD/部署需求，不为展示而做 |
+
+## 4. 当前不阻塞的问题
+
+以下问题暂不影响 S1/S2：
+
+- 管理 UI 技术栈；
+- 完整 OIDC Provider；
+- Vault/KMS；
+- Federation；
+- A2A；
+- MCP Apps；
+- Skills/Agent Registry；
+- 多区域部署；
+- 商业计费。
+
+如果实现过程中开始讨论这些问题，应先确认是否已经完成当前阶段验收。
+
+## 5. ADR 状态
+
+| ADR | 状态 | 主题 |
+|---|---|---|
+| [0001](../adr/0001-python-project-layout.md) | Accepted | src Layout、模块组织与首批目录 |
+| [0002](../adr/0002-mcp-protocol-and-sdk-adapter.md) | Accepted | MCP 协议时代与 SDK Adapter 层级 |
+| 0003 | Covered by ADR-0001 | 模块化单体与拆分触发条件 |
+| 0004 | Planned | PostgreSQL 主存储 |
+| 0005 | Planned | Identity 与 Trust Boundary |
+| 0006 | Planned | Credential Reference |
+| 0007 | Planned | Tool Retry 与 Side Effect |
+| 0008 | Planned | Tool Search FTS |
+| 0009 | Planned | RAG Demo 边界 |
+| 0010 | Planned | Audit 写入策略 |
+
+不是现在一次性写完。每个 ADR 在相关实现前后完成。
+
+## 6. ADR 模板
+
+```markdown
+# ADR-XXXX｜标题
+
+## 状态
+
+Proposed / Accepted / Superseded
+
+## 背景
+
+要解决什么问题，约束是什么。
+
+## 决策
+
+选择什么。
+
+## 备选方案
+
+考虑过哪些方案。
+
+## 影响
+
+获得什么、失去什么、新增什么风险。
+
+## 验证
+
+用哪些 Test/Metric/Eval 验证。
+
+## 复审触发条件
+
+什么时候需要重新考虑。
+```
+
+## 7. 决策纪律
+
+1. 先有问题和触发条件，再引入组件；
+2. “某热门项目用了”不是充分理由；
+3. 架构决策必须能映射到测试或指标；
+4. 不用 ADR 记录普通代码细节；
+5. 已确认决策如被推翻，新增 ADR 并说明 supersede，不静默改文档；
+6. 待决策项不应阻塞无依赖的当前工作。
