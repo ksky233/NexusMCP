@@ -4,7 +4,7 @@
 
 NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，负责将企业 HTTP/OpenAPI 服务和已有 MCP Server 纳入统一 Tool Catalog，并在 MCP 调用链上执行身份、策略、凭据、审批、审计与可观测性。
 
-当前阶段：`S2-2B-2｜Catalog Domain 与 Port 契约完成`。
+当前阶段：`S2-2B-3｜PostgreSQL Repository 与 Unit of Work Adapter 完成`。
 
 ## 当前边界
 
@@ -17,7 +17,8 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，�
 - GitHub Actions 会在 Push/PR 上使用云端 Ubuntu Runner 执行完整质量门禁；
 - PostgreSQL、Tool/ToolVersion/ToolBinding 和 Publish 事务已经完成设计冻结；
 - PostgreSQL 18.6、SQLAlchemy Async、Alembic Baseline 和 7 张首批 ORM 表已经建立；
-- PostgreSQL Repository/UoW Adapter、OpenAPI Parser 和 `tools/call` 正式执行链尚未实现。
+- Catalog/Binding 已具有 SQLAlchemy Async Repository、显式 ORM Mapping 和每 Command 独立 UoW；
+- Publish Use Case、Database Bootstrap、OpenAPI Parser 和 `tools/call` 正式执行链尚未实现。
 
 ## 代码语言约定
 
@@ -68,6 +69,7 @@ docker compose stop postgres
 - [S2-1.5 CI 基线](./docs/实验记录/03_S2-1.5_CI基线.md)
 - [S2-2B-1 PostgreSQL 与 Migration 基线](./docs/实验记录/04_S2-2B-1_PostgreSQL与Migration基线.md)
 - [S2-2B-2 Catalog Domain 与 Port 契约](./docs/实验记录/05_S2-2B-2_Catalog领域与Port契约.md)
+- [S2-2B-3 PostgreSQL Repository 与 Unit of Work](./docs/实验记录/06_S2-2B-3_PostgreSQLRepository与UnitOfWork.md)
 - [业务词汇、核心用例与限界上下文](./docs/架构/01_业务词汇核心用例与限界上下文.md)
 - [持久化模型与发布事务](./docs/架构/02_持久化模型与发布事务.md)
 - [ADR-0001：Python 项目布局](./docs/adr/0001-python-project-layout.md)

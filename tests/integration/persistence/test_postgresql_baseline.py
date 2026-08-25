@@ -1,20 +1,18 @@
 """真实 PostgreSQL Baseline Migration 与核心约束测试。"""
 
 import asyncio
-import os
 import uuid
 
 import pytest
 from alembic import command
-from alembic.config import Config
 from sqlalchemy import inspect, select
-from sqlalchemy.engine import make_url
 from sqlalchemy.exc import IntegrityError
 
 from nexusmcp.infrastructure.persistence.engine import create_engine, create_session_factory
 from nexusmcp.modules.catalog.adapters.sqlalchemy_models import ToolModel, ToolVersionModel
 from nexusmcp.modules.identity.adapters.sqlalchemy_models import TenantModel
 from nexusmcp.modules.registry.adapters.sqlalchemy_models import UpstreamServiceModel
+from tests.integration.persistence.database import alembic_config, require_test_database_url
 
 pytestmark = pytest.mark.integration
 
@@ -27,28 +25,6 @@ EXPECTED_TABLES = {
     "tool_version",
     "tool_binding",
 }
-
-
-def require_test_database_url() -> str:
-    """只允许测试操作显式命名的隔离数据库。"""
-
-    database_url = os.getenv("NEXUSMCP_TEST_DATABASE_URL")
-    if not database_url:
-        pytest.skip("NEXUSMCP_TEST_DATABASE_URL is not configured")
-
-    parsed = make_url(database_url)
-    database_name = parsed.database or ""
-    if "test" not in database_name.lower():
-        raise RuntimeError("integration database name must include 'test'")
-    if parsed.drivername != "postgresql+asyncpg":
-        raise RuntimeError("integration database must use postgresql+asyncpg")
-    return database_url
-
-
-def alembic_config(database_url: str) -> Config:
-    config = Config("alembic.ini")
-    config.set_main_option("sqlalchemy.url", database_url)
-    return config
 
 
 async def table_names(database_url: str) -> set[str]:

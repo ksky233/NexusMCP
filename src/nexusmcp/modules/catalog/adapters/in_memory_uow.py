@@ -66,3 +66,18 @@ class InMemoryCatalogUnitOfWork:
         _ = self.bindings
         self._transaction_catalog = self._committed_catalog.clone()
         self._transaction_bindings = self._committed_bindings.clone()
+
+
+class InMemoryCatalogUnitOfWorkFactory:
+    """让每次测试 Command 获得独立 UoW，同时共享已提交内存状态。"""
+
+    def __init__(
+        self,
+        catalog: InMemoryToolCatalogRepository | None = None,
+        bindings: InMemoryToolBindingRepository | None = None,
+    ) -> None:
+        self._catalog = catalog if catalog is not None else InMemoryToolCatalogRepository()
+        self._bindings = bindings if bindings is not None else InMemoryToolBindingRepository()
+
+    def __call__(self) -> InMemoryCatalogUnitOfWork:
+        return InMemoryCatalogUnitOfWork(self._catalog, self._bindings)

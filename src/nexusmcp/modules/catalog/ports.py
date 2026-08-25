@@ -76,3 +76,9 @@ class CatalogUnitOfWork(Protocol):
     async def commit(self) -> None: ...
 
     async def rollback(self) -> None: ...
+
+
+class CatalogUnitOfWorkFactory(Protocol):
+    """为每次 Command 创建独立事务边界，避免并发请求共享 Session。"""
+
+    def __call__(self) -> CatalogUnitOfWork: ...

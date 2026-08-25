@@ -160,3 +160,6 @@ tests/contract/repositories/test_in_memory_repository_contracts.py
 3. 实现每事务独立 AsyncSession 的 Unit of Work；
 4. 让 PostgreSQL Adapter 运行同一 Repository/UoW Contract；
 5. 增加 Tenant 与并发锁相关的 Integration Test。
+
+以上内容已在 [S2-2B-3 PostgreSQL Repository 与 Unit of Work](./06_S2-2B-3_PostgreSQLRepository与UnitOfWork.md)
+完成。
