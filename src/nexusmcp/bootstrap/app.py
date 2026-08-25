@@ -12,20 +12,20 @@ from nexusmcp.bootstrap.config import Settings, get_settings
 from nexusmcp.interfaces.health.router import router as health_router
 from nexusmcp.interfaces.mcp.context import resolve_request_context
 from nexusmcp.interfaces.mcp.server import create_mcp_server
-from nexusmcp.modules.catalog.adapters.in_memory import InMemoryToolRepository
-from nexusmcp.modules.catalog.ports import ToolRepository
+from nexusmcp.modules.catalog.adapters.in_memory import InMemoryToolCatalogRepository
+from nexusmcp.modules.catalog.ports import ToolCatalogRepository
 from nexusmcp.modules.catalog.use_cases import ListVisibleTools
 from nexusmcp.shared.request_context import RequestContext
 
 
 def create_app(
     settings: Settings | None = None,
-    tool_repository: ToolRepository | None = None,
+    tool_repository: ToolCatalogRepository | None = None,
 ) -> FastAPI:
     """创建完整组装的应用，不让业务代码依赖全局对象。"""
 
     resolved_settings = settings or get_settings()
-    resolved_repository = tool_repository or InMemoryToolRepository()
+    resolved_repository = tool_repository or InMemoryToolCatalogRepository()
     list_visible_tools = ListVisibleTools(resolved_repository)
 
     def context_resolver(ctx: ServerRequestContext[Any, Any]) -> RequestContext:

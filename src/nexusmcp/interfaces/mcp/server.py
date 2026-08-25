@@ -43,7 +43,8 @@ def create_mcp_server(
                 input_schema=dict(tool.input_schema),
                 output_schema=dict(tool.output_schema) if tool.output_schema else None,
                 _meta={
-                    "com.nexusmcp/toolId": tool.id,
+                    "com.nexusmcp/toolId": tool.tool_id,
+                    "com.nexusmcp/toolVersionId": tool.tool_version_id,
                     "com.nexusmcp/toolVersion": tool.version,
                 },
             )

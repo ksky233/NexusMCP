@@ -1,5 +1,6 @@
 """Tool Catalog 出站 Adapter 实现。"""
 
-from nexusmcp.modules.catalog.adapters.in_memory import InMemoryToolRepository
+from nexusmcp.modules.catalog.adapters.in_memory import InMemoryToolCatalogRepository
+from nexusmcp.modules.catalog.adapters.in_memory_uow import InMemoryCatalogUnitOfWork
 
-__all__ = ["InMemoryToolRepository"]
+__all__ = ["InMemoryCatalogUnitOfWork", "InMemoryToolCatalogRepository"]

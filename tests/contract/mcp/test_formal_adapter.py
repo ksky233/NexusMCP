@@ -8,16 +8,17 @@ from mcp.client.streamable_http import streamable_http_client
 from nexusmcp.bootstrap.app import create_app
 from nexusmcp.bootstrap.config import Settings
 from nexusmcp.interfaces.mcp.server import create_mcp_server
-from nexusmcp.modules.catalog.adapters.in_memory import InMemoryToolRepository
-from nexusmcp.modules.catalog.domain import ToolDefinition, ToolStatus, ToolVisibility
+from nexusmcp.modules.catalog.adapters.in_memory import InMemoryToolCatalogRepository
+from nexusmcp.modules.catalog.domain import PublishedTool, ToolSideEffect, ToolVisibility
 from nexusmcp.modules.catalog.use_cases import ListVisibleTools
 
 
-def _repository() -> InMemoryToolRepository:
-    return InMemoryToolRepository(
-        [
-            ToolDefinition(
-                id="directory-get-employee-v1",
+def _repository() -> InMemoryToolCatalogRepository:
+    return InMemoryToolCatalogRepository(
+        published_tools=[
+            PublishedTool(
+                tool_id="directory-get-employee",
+                tool_version_id="directory-get-employee-v1",
                 tenant_id="local",
                 canonical_name="directory.get_employee",
                 display_name="Get employee",
@@ -28,8 +29,11 @@ def _repository() -> InMemoryToolRepository:
                     "required": ["employee_id"],
                     "additionalProperties": False,
                 },
-                status=ToolStatus.PUBLISHED,
+                output_schema=None,
+                version=1,
                 visibility=ToolVisibility.PUBLIC,
+                side_effect=ToolSideEffect.READ_ONLY,
+                schema_digest="directory-get-employee-v1",
             )
         ]
     )

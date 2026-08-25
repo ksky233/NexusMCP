@@ -1,9 +1,9 @@
-"""Catalog 可见性与生命周期不变量单元测试。"""
+"""Catalog 可见性 Use Case 单元测试。"""
 
 import pytest
 
-from nexusmcp.modules.catalog.adapters.in_memory import InMemoryToolRepository
-from nexusmcp.modules.catalog.domain import ToolDefinition, ToolStatus, ToolVisibility
+from nexusmcp.modules.catalog.adapters.in_memory import InMemoryToolCatalogRepository
+from nexusmcp.modules.catalog.domain import PublishedTool, ToolSideEffect, ToolVisibility
 from nexusmcp.modules.catalog.use_cases import ListVisibleTools, ListVisibleToolsQuery
 from nexusmcp.shared.request_context import ProtocolEra, RequestContext
 
@@ -20,39 +20,30 @@ def _context(principal_id: str) -> RequestContext:
     )
 
 
-def _tool(
-    tool_id: str,
-    name: str,
-    *,
-    status: ToolStatus = ToolStatus.PUBLISHED,
-    visibility: ToolVisibility = ToolVisibility.PUBLIC,
-    allowed: frozenset[str] = frozenset(),
-) -> ToolDefinition:
-    return ToolDefinition(
-        id=tool_id,
+def _published_tool(name: str, visibility: ToolVisibility) -> PublishedTool:
+    return PublishedTool(
+        tool_id=f"tool-{name}",
+        tool_version_id=f"version-{name}",
         tenant_id="tenant-a",
         canonical_name=name,
         display_name=name,
         description=f"Tool {name}",
         input_schema={"type": "object", "properties": {}},
-        status=status,
+        output_schema=None,
+        version=1,
         visibility=visibility,
-        allowed_principal_ids=allowed,
+        side_effect=ToolSideEffect.READ_ONLY,
+        schema_digest=f"schema-{name}",
     )
 
 
 @pytest.mark.asyncio
-async def test_list_visible_tools_filters_lifecycle_and_principal() -> None:
-    repository = InMemoryToolRepository(
-        [
-            _tool("tool-public", "directory.public"),
-            _tool(
-                "tool-restricted",
-                "ops.restricted",
-                visibility=ToolVisibility.RESTRICTED,
-                allowed=frozenset({"operator"}),
-            ),
-            _tool("tool-draft", "inventory.draft", status=ToolStatus.DRAFT),
+async def test_list_visible_tools_applies_coarse_visibility_and_sorts_names() -> None:
+    repository = InMemoryToolCatalogRepository(
+        published_tools=[
+            _published_tool("ops.restricted", ToolVisibility.RESTRICTED),
+            _published_tool("inventory.list_items", ToolVisibility.AUTHENTICATED),
+            _published_tool("directory.get_employee", ToolVisibility.PUBLIC),
         ]
     )
     use_case = ListVisibleTools(repository)
@@ -60,17 +51,8 @@ async def test_list_visible_tools_filters_lifecycle_and_principal() -> None:
     anonymous = await use_case.execute(ListVisibleToolsQuery(_context("anonymous")))
     operator = await use_case.execute(ListVisibleToolsQuery(_context("operator")))
 
-    assert [tool.canonical_name for tool in anonymous] == ["directory.public"]
+    assert [tool.canonical_name for tool in anonymous] == ["directory.get_employee"]
     assert [tool.canonical_name for tool in operator] == [
-        "directory.public",
-        "ops.restricted",
+        "directory.get_employee",
+        "inventory.list_items",
     ]
-
-
-def test_restricted_tool_requires_allowed_principals() -> None:
-    with pytest.raises(ValueError, match="restricted tool"):
-        _tool(
-            "invalid",
-            "invalid.restricted",
-            visibility=ToolVisibility.RESTRICTED,
-        )

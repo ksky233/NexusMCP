@@ -115,7 +115,9 @@ Add ToolVersion
 
 未来 Repository/UoW 需要显式维护 Aggregate 写入顺序，不能依赖隐式 Lazy Relationship。
 
-## 8. 当前未完成
+## 8. S2-2B-1 验收时尚未完成
+
+以下是本阶段结束时的历史边界；其中前两项契约设计已在 S2-2B-2 完成：
 
 - Domain ToolDefinition 尚未拆成 Tool/ToolVersion/PublishedTool；
 - PostgreSQL Repository 尚未实现；
@@ -123,7 +125,7 @@ Add ToolVersion
 - 跨 Tenant Binding 仍需 Application 规则与 Integration Test；
 - OpenAPI Import Parser 尚未实现；
 - 应用 Lifespan 尚未接入 Database Engine/Readiness；
-- CI 云端首次运行等待 Push。
+- CI 已在后续 Push 中通过首次云端运行。
 
 ## 9. 下一步
 

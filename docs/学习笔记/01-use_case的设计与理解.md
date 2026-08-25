@@ -1,5 +1,10 @@
 ## `use_cases.py` 的理解
 
+> 版本提示：本文代码示例对应 S2-1 的 `ToolDefinition` / `ToolRepository` 最小骨架。
+> S2-2B-2 已将其演进为 `Tool`、`ToolVersion`、`PublishedTool` 和
+> `ToolCatalogRepository`；Use Case 的职责与依赖方向没有改变。新契约参见
+> [S2-2B-2 Catalog Domain 与 Port 契约](../实验记录/05_S2-2B-2_Catalog领域与Port契约.md)。
+
 「Use Case」来自软件工程方法论，这是一个有明确来源和严格边界的架构概念。
 
 ---
