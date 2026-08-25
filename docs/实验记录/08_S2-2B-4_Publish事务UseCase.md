@@ -200,3 +200,7 @@ tests/integration/persistence/test_postgresql_publish_tool.py
 4. MCP `tools/list` 从 PublishedTool Projection 读取真实数据库；
 5. 保留显式 InMemory 注入供 Unit/Contract Test 使用；
 6. 验证启动失败、数据库不可用和 Shutdown Dispose 行为。
+
+以上内容已在
+[S2-2B-5 Database Bootstrap 与正式 Catalog Query](./09_S2-2B-5_DatabaseBootstrap与正式CatalogQuery.md)
+完成。

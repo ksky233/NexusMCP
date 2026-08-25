@@ -8,8 +8,20 @@ from nexusmcp.modules.connectors.ports import ToolBindingRepository
 from nexusmcp.modules.registry.ports import UpstreamRepository
 
 
-class ToolCatalogRepository(Protocol):
-    """以 Catalog 领域对象表达读写意图，不暴露 ORM 或 SQLAlchemy Session。"""
+class PublishedToolReader(Protocol):
+    """面向 Data Plane 发现链路的最小只读 Port。"""
+
+    async def list_published_by_tenant(self, tenant_id: str) -> tuple[PublishedTool, ...]: ...
+
+    async def get_published_by_name(
+        self,
+        tenant_id: str,
+        canonical_name: str,
+    ) -> PublishedTool | None: ...
+
+
+class ToolCatalogRepository(PublishedToolReader, Protocol):
+    """以 Catalog 领域对象表达写模型意图，不暴露 ORM 或 SQLAlchemy Session。"""
 
     async def add_tool(self, tenant_id: str, tool: Tool) -> None: ...
 
@@ -46,14 +58,6 @@ class ToolCatalogRepository(Protocol):
         tenant_id: str,
         tool_id: str,
     ) -> ToolVersion | None: ...
-
-    async def list_published_by_tenant(self, tenant_id: str) -> tuple[PublishedTool, ...]: ...
-
-    async def get_published_by_name(
-        self,
-        tenant_id: str,
-        canonical_name: str,
-    ) -> PublishedTool | None: ...
 
 
 class CatalogUnitOfWork(Protocol):

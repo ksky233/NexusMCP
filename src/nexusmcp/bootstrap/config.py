@@ -1,9 +1,9 @@
 """经过校验的应用配置。"""
 
 from functools import lru_cache
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,9 +23,11 @@ class Settings(BaseSettings):
     debug: bool = False
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     log_format: Literal["console", "json"] = "console"
+    catalog_backend: Literal["memory", "postgresql"] = "memory"
     local_tenant_id: str = "local"
     database_url: SecretStr | None = None
     database_echo: bool = False
+    database_readiness_timeout_seconds: float = 1.0
     transport_allowed_hosts: list[str] = Field(
         default_factory=lambda: [
             "127.0.0.1",
@@ -37,6 +39,16 @@ class Settings(BaseSettings):
         ]
     )
     transport_allowed_origins: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_runtime_mode(self) -> Self:
+        if self.catalog_backend == "postgresql" and self.database_url is None:
+            raise ValueError("database_url is required when catalog_backend is postgresql")
+        if self.environment == "production" and self.catalog_backend != "postgresql":
+            raise ValueError("production environment requires postgresql catalog_backend")
+        if self.database_readiness_timeout_seconds <= 0:
+            raise ValueError("database_readiness_timeout_seconds must be positive")
+        return self
 
 
 @lru_cache(maxsize=1)

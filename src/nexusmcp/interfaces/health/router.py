@@ -1,27 +1,35 @@
-"""进程健康检查 Endpoint。"""
+"""进程 Liveness 与依赖 Readiness Endpoint。"""
 
+from collections.abc import Awaitable, Callable
 from typing import Literal
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response, status
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/health", tags=["health"])
+type ReadinessProbe = Callable[[], Awaitable[bool]]
 
 
 class HealthResponse(BaseModel):
-    status: Literal["ok"] = "ok"
+    status: Literal["ok", "not_ready"]
 
 
-@router.get("", response_model=HealthResponse)
-@router.get("/live", response_model=HealthResponse)
-async def liveness() -> HealthResponse:
-    """报告进程和事件循环能够处理请求。"""
+def create_health_router(readiness_probe: ReadinessProbe) -> APIRouter:
+    router = APIRouter(prefix="/health", tags=["health"])
 
-    return HealthResponse()
+    @router.get("", response_model=HealthResponse)
+    @router.get("/live", response_model=HealthResponse)
+    async def liveness() -> HealthResponse:
+        """只证明进程和事件循环能处理请求，不探测外部依赖。"""
 
+        return HealthResponse(status="ok")
 
-@router.get("/ready", response_model=HealthResponse)
-async def readiness() -> HealthResponse:
-    """初始就绪检查；真实 Adapter 出现后再增加依赖探针。"""
+    @router.get("/ready", response_model=HealthResponse)
+    async def readiness(response: Response) -> HealthResponse:
+        """依赖尚未启动或 PostgreSQL 不可用时返回 503。"""
 
-    return HealthResponse()
+        if not await readiness_probe():
+            response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+            return HealthResponse(status="not_ready")
+        return HealthResponse(status="ok")
+
+    return router
