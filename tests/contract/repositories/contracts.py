@@ -202,6 +202,13 @@ class ToolBindingRepositoryContract:
             == binding
         )
         assert await empty_bindings.get_for_update(TENANT_A_ID, binding.id) == binding
+        assert (
+            await empty_bindings.get_by_tool_version_for_update(
+                TENANT_A_ID,
+                binding.tool_version_id,
+            )
+            == binding
+        )
         assert await empty_bindings.get_by_id(TENANT_B_ID, binding.id) is None
 
         changed = replace(binding, binding_digest="3" * 64)

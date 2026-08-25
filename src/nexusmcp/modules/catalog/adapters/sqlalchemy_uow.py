@@ -12,6 +12,9 @@ from nexusmcp.modules.catalog.adapters.sqlalchemy_repository import (
 from nexusmcp.modules.connectors.adapters.sqlalchemy_repository import (
     SqlAlchemyToolBindingRepository,
 )
+from nexusmcp.modules.registry.adapters.sqlalchemy_repository import (
+    SqlAlchemyUpstreamRepository,
+)
 
 
 class SqlAlchemyCatalogUnitOfWork:
@@ -22,6 +25,7 @@ class SqlAlchemyCatalogUnitOfWork:
         self._session: AsyncSession | None = None
         self._catalog: SqlAlchemyToolCatalogRepository | None = None
         self._bindings: SqlAlchemyToolBindingRepository | None = None
+        self._upstreams: SqlAlchemyUpstreamRepository | None = None
 
     @property
     def catalog(self) -> SqlAlchemyToolCatalogRepository:
@@ -35,12 +39,19 @@ class SqlAlchemyCatalogUnitOfWork:
             raise RuntimeError("unit of work must be entered before accessing repositories")
         return self._bindings
 
+    @property
+    def upstreams(self) -> SqlAlchemyUpstreamRepository:
+        if self._upstreams is None:
+            raise RuntimeError("unit of work must be entered before accessing repositories")
+        return self._upstreams
+
     async def __aenter__(self) -> SqlAlchemyCatalogUnitOfWork:
         if self._session is not None:
             raise RuntimeError("unit of work does not support nested entry")
         self._session = self._session_factory()
         self._catalog = SqlAlchemyToolCatalogRepository(self._session)
         self._bindings = SqlAlchemyToolBindingRepository(self._session)
+        self._upstreams = SqlAlchemyUpstreamRepository(self._session)
         return self
 
     async def __aexit__(
@@ -58,6 +69,7 @@ class SqlAlchemyCatalogUnitOfWork:
             self._session = None
             self._catalog = None
             self._bindings = None
+            self._upstreams = None
 
     async def commit(self) -> None:
         await self._require_session().commit()

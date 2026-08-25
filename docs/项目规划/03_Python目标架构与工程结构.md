@@ -302,6 +302,31 @@ RateLimitExceeded
 
 由 Protocol Adapter 映射成 MCP/JSON-RPC/HTTP 对外错误。日志保留内部 error code，不向客户端泄露 Secret、堆栈和内部 URL。
 
+实现边界：
+
+```text
+Domain/Application
+→ 只抛 NexusMcpError 子类，不 import FastAPI/MCP/SQLAlchemy Error
+
+MCP Interface
+→ 映射为 MCP Tool Result 或 JSON-RPC Error
+
+HTTP Interface
+→ 映射为 HTTP Status + {code, message, request_id}
+
+Background Job
+→ 映射为 failed status + error_code + safe message
+```
+
+`safe_message` 可以进入协议响应；内部诊断消息只进入受控日志。HTTP Status、MCP Result 和 Job Status
+都属于 Interface Adapter 决策，不写入 Domain Exception。
+
+Expected Error 只在最外层边界记录一次，避免 Repository、Use Case、Interface 重复打印同一异常。
+Unexpected Exception 对外统一返回安全消息，内部日志只记录异常类型和不含参数值的 Stack Frame。
+
+S2-2B-3.5 已实现 Publish 前置错误集：Tool/Version/Binding Not Found、Invalid Tool State、Tenant
+Boundary Violation、Publish Conflict、Upstream Not Active 和 Schema/Binding Digest Mismatch。
+
 ## 12. 启动形态
 
 第一版进程内同时挂载：

@@ -70,6 +70,23 @@ class SqlAlchemyToolBindingRepository:
         )
         return tool_binding_from_model(model) if model is not None else None
 
+    async def get_by_tool_version_for_update(
+        self,
+        tenant_id: str,
+        tool_version_id: str,
+    ) -> ToolBinding | None:
+        tenant_uuid = as_uuid(tenant_id, field_name="tenant id")
+        version_uuid = as_uuid(tool_version_id, field_name="tool version id")
+        model = await self._session.scalar(
+            select(ToolBindingModel)
+            .where(
+                ToolBindingModel.tenant_id == tenant_uuid,
+                ToolBindingModel.tool_version_id == version_uuid,
+            )
+            .with_for_update()
+        )
+        return tool_binding_from_model(model) if model is not None else None
+
     async def _get_model(
         self,
         tenant_id: str,

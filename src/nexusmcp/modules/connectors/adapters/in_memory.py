@@ -60,6 +60,14 @@ class InMemoryToolBindingRepository:
         # PostgreSQL Adapter 会把同一意图映射为 SELECT ... FOR UPDATE。
         return await self.get_by_id(tenant_id, binding_id)
 
+    async def get_by_tool_version_for_update(
+        self,
+        tenant_id: str,
+        tool_version_id: str,
+    ) -> ToolBinding | None:
+        # 内存执行不需要数据库锁，但保留 Publish 所需的排他读取语义。
+        return await self.get_by_tool_version(tenant_id, tool_version_id)
+
     def clone(self) -> InMemoryToolBindingRepository:
         """为 InMemory Unit of Work 创建事务内隔离副本。"""
 

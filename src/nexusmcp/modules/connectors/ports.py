@@ -24,6 +24,12 @@ class ToolBindingRepository(Protocol):
         tool_version_id: str,
     ) -> ToolBinding | None: ...
 
+    async def get_by_tool_version_for_update(
+        self,
+        tenant_id: str,
+        tool_version_id: str,
+    ) -> ToolBinding | None: ...
+
     async def get_for_update(
         self,
         tenant_id: str,

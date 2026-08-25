@@ -178,7 +178,8 @@ tests/integration/persistence/test_sqlalchemy_repository_contracts.py
 
 ## 8. 下一步
 
-进入 `S2-2B-4｜Publish 事务 Use Case`：
+先完成 [S2-2B-3.5 Error 与 Logging 基线](./07_S2-2B-3.5_Error与Logging基线.md)，再进入
+`S2-2B-4｜Publish 事务 Use Case`：
 
 1. 定义 Publish Command/Result 与业务错误；
 2. 使用 UoW 锁定 Tool、待发布 Version 和 Binding；

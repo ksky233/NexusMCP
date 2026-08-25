@@ -56,6 +56,20 @@ class Tool:
         if not self.canonical_name.startswith(f"{self.namespace}."):
             raise ValueError("tool canonical name must start with its namespace")
 
+    def activate(self) -> Tool:
+        """发布成功时激活稳定 Tool Identity；重复激活保持幂等。"""
+
+        return self if self.status is ToolStatus.ACTIVE else replace(self, status=ToolStatus.ACTIVE)
+
+    def disable(self) -> Tool:
+        """停用整个 Tool Identity，不修改历史 Version。"""
+
+        return (
+            self
+            if self.status is ToolStatus.DISABLED
+            else replace(self, status=ToolStatus.DISABLED)
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class ToolVersion:

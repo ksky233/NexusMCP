@@ -5,6 +5,7 @@ from typing import Protocol, Self
 
 from nexusmcp.modules.catalog.domain import PublishedTool, Tool, ToolVersion
 from nexusmcp.modules.connectors.ports import ToolBindingRepository
+from nexusmcp.modules.registry.ports import UpstreamRepository
 
 
 class ToolCatalogRepository(Protocol):
@@ -63,6 +64,9 @@ class CatalogUnitOfWork(Protocol):
 
     @property
     def bindings(self) -> ToolBindingRepository: ...
+
+    @property
+    def upstreams(self) -> UpstreamRepository: ...
 
     async def __aenter__(self) -> Self: ...
 

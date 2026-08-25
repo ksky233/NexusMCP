@@ -18,8 +18,11 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "NexusMCP"
+    service_name: str = "nexusmcp"
     environment: Literal["development", "test", "production"] = "development"
     debug: bool = False
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    log_format: Literal["console", "json"] = "console"
     local_tenant_id: str = "local"
     database_url: SecretStr | None = None
     database_echo: bool = False

@@ -6,6 +6,7 @@ from types import TracebackType
 
 from nexusmcp.modules.catalog.adapters.in_memory import InMemoryToolCatalogRepository
 from nexusmcp.modules.connectors.adapters.in_memory import InMemoryToolBindingRepository
+from nexusmcp.modules.registry.adapters.in_memory import InMemoryUpstreamRepository
 
 
 class InMemoryCatalogUnitOfWork:
@@ -15,6 +16,7 @@ class InMemoryCatalogUnitOfWork:
         self,
         catalog: InMemoryToolCatalogRepository | None = None,
         bindings: InMemoryToolBindingRepository | None = None,
+        upstreams: InMemoryUpstreamRepository | None = None,
     ) -> None:
         self._committed_catalog = (
             catalog if catalog is not None else InMemoryToolCatalogRepository()
@@ -22,8 +24,12 @@ class InMemoryCatalogUnitOfWork:
         self._committed_bindings = (
             bindings if bindings is not None else InMemoryToolBindingRepository()
         )
+        self._committed_upstreams = (
+            upstreams if upstreams is not None else InMemoryUpstreamRepository()
+        )
         self._transaction_catalog: InMemoryToolCatalogRepository | None = None
         self._transaction_bindings: InMemoryToolBindingRepository | None = None
+        self._transaction_upstreams: InMemoryUpstreamRepository | None = None
 
     @property
     def catalog(self) -> InMemoryToolCatalogRepository:
@@ -37,11 +43,18 @@ class InMemoryCatalogUnitOfWork:
             raise RuntimeError("unit of work must be entered before accessing repositories")
         return self._transaction_bindings
 
+    @property
+    def upstreams(self) -> InMemoryUpstreamRepository:
+        if self._transaction_upstreams is None:
+            raise RuntimeError("unit of work must be entered before accessing repositories")
+        return self._transaction_upstreams
+
     async def __aenter__(self) -> InMemoryCatalogUnitOfWork:
         if self._transaction_catalog is not None:
             raise RuntimeError("unit of work does not support nested entry")
         self._transaction_catalog = self._committed_catalog.clone()
         self._transaction_bindings = self._committed_bindings.clone()
+        self._transaction_upstreams = self._committed_upstreams.clone()
         return self
 
     async def __aexit__(
@@ -53,19 +66,24 @@ class InMemoryCatalogUnitOfWork:
         # 未显式 Commit 的事务副本直接丢弃，因此正常退出和异常退出都默认回滚。
         self._transaction_catalog = None
         self._transaction_bindings = None
+        self._transaction_upstreams = None
 
     async def commit(self) -> None:
         catalog = self.catalog
         bindings = self.bindings
+        upstreams = self.upstreams
         self._committed_catalog.replace_with(catalog)
         self._committed_bindings.replace_with(bindings)
+        self._committed_upstreams.replace_with(upstreams)
 
     async def rollback(self) -> None:
         # 回滚后仍允许 Use Case 在同一边界中读取已提交状态，但不会保留之前的修改。
         _ = self.catalog
         _ = self.bindings
+        _ = self.upstreams
         self._transaction_catalog = self._committed_catalog.clone()
         self._transaction_bindings = self._committed_bindings.clone()
+        self._transaction_upstreams = self._committed_upstreams.clone()
 
 
 class InMemoryCatalogUnitOfWorkFactory:
@@ -75,9 +93,11 @@ class InMemoryCatalogUnitOfWorkFactory:
         self,
         catalog: InMemoryToolCatalogRepository | None = None,
         bindings: InMemoryToolBindingRepository | None = None,
+        upstreams: InMemoryUpstreamRepository | None = None,
     ) -> None:
         self._catalog = catalog if catalog is not None else InMemoryToolCatalogRepository()
         self._bindings = bindings if bindings is not None else InMemoryToolBindingRepository()
+        self._upstreams = upstreams if upstreams is not None else InMemoryUpstreamRepository()
 
     def __call__(self) -> InMemoryCatalogUnitOfWork:
-        return InMemoryCatalogUnitOfWork(self._catalog, self._bindings)
+        return InMemoryCatalogUnitOfWork(self._catalog, self._bindings, self._upstreams)
