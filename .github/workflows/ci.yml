@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXUSMCP_DATABASE_URL: postgresql+asyncpg://nexusmcp:nexusmcp_test@127.0.0.1:5432/nexusmcp_test
+      NEXUSMCP_TEST_DATABASE_URL: postgresql+asyncpg://nexusmcp:nexusmcp_test@127.0.0.1:5432/nexusmcp_test
+
+    services:
+      postgres:
+        image: postgres:18.6-alpine
+        env:
+          POSTGRES_DB: nexusmcp_test
+          POSTGRES_USER: nexusmcp
+          POSTGRES_PASSWORD: nexusmcp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nexusmcp -d nexusmcp_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.12.5"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install Python
+        run: uv python install
+
+      - name: Verify lock file
+        run: uv lock --check
+
+      - name: Install project
+        run: uv sync --frozen
+
+      - name: Ruff lint
+        run: uv run ruff check .
+
+      - name: Ruff format
+        run: uv run ruff format --check .
+
+      - name: Type check
+        run: uv run basedpyright
+
+      - name: Verify migrations
+        run: |
+          uv run alembic upgrade head
+          uv run alembic check
+
+      - name: Test
+        run: uv run python -m pytest -q
+
+      - name: Build package
+        run: uv build --clear

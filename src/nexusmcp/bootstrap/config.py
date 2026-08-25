@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     environment: Literal["development", "test", "production"] = "development"
     debug: bool = False
     local_tenant_id: str = "local"
+    database_url: SecretStr | None = None
+    database_echo: bool = False
     transport_allowed_hosts: list[str] = Field(
         default_factory=lambda: [
             "127.0.0.1",

@@ -63,6 +63,16 @@
 
 决策记录：[ADR-0001](../adr/0001-python-project-layout.md)。
 
+### D-010｜PostgreSQL 主存储与 Tool 版本分离
+
+- PostgreSQL 是第一版唯一主业务数据库；
+- Tool 保存稳定身份，ToolVersion 保存不可变对外契约；
+- ToolBinding 精确绑定 ToolVersion；
+- Publish ToolVersion + Binding 使用同一数据库事务；
+- Redis、独立 Vector/Search DB 不进入默认基线。
+
+决策记录：[ADR-0004](../adr/0004-postgresql-primary-store.md)。
+
 ## 2. 推荐但需在初始化时确认
 
 ### R-001｜Persistence 工程工具
@@ -70,16 +80,6 @@
 已确认 Python 3.12、uv、FastAPI、Pydantic v2、pytest、Ruff 和 basedpyright。待第一个持久化模块出现时确认 SQLAlchemy 2 async、Alembic 和数据库 Driver。
 
 版本通过 `pyproject.toml` 与 `uv.lock` 管理，不预装尚未使用的组件。
-
-### R-002｜PostgreSQL 主存储
-
-理由：
-
-- Registry/Policy/Audit 事务需求；
-- JSONB；
-- FTS；
-- pgvector；
-- 减少 Redis/Vector DB 等额外依赖。
 
 ### R-003｜Redis 按需引入
 
@@ -101,12 +101,12 @@ Legacy Session 本身不构成新项目必须引入 Redis 的理由。
 |---|---|---|---|
 | Q-001 | Python MCP SDK 精确版本/commit | S1 锁定 `mcp==2.0.0` | Modern/Legacy Contract Test |
 | Q-002 | SDK 原生路由还是自定义 ASGI Adapter | 使用公开低层 `Server` Callback + 官方 ASGI App | Dynamic Tool/FastAPI Context Test、ADR-0002 |
+| Q-003 | Tool Version 独立表还是单表多版本 | Tool 与 ToolVersion 分表；Binding 精确绑定 Version | Publish/Rollback/Query 用例分析、ADR-0004 |
 
 ### 3.2 待实验
 
 | ID | 问题 | 触发阶段 | 决策证据 |
 |---|---|---|---|
-| Q-003 | Tool Version 独立表还是单表多版本 | S2 | Publish/rollback/query 用例 |
 | Q-004 | Policy condition 最小表达式 | S3 | 真实 Policy Case，不提前上 Rego |
 | Q-005 | Approval 完全使用 MRTR 还是保留 REST resolve | S3 | 客户端兼容与 SDK 能力 |
 | Q-006 | Audit 同步/异步写入 | S5 | 故障语义和 Benchmark |
@@ -140,7 +140,7 @@ Legacy Session 本身不构成新项目必须引入 Redis 的理由。
 | [0001](../adr/0001-python-project-layout.md) | Accepted | src Layout、模块组织与首批目录 |
 | [0002](../adr/0002-mcp-protocol-and-sdk-adapter.md) | Accepted | MCP 协议时代与 SDK Adapter 层级 |
 | 0003 | Covered by ADR-0001 | 模块化单体与拆分触发条件 |
-| 0004 | Planned | PostgreSQL 主存储 |
+| [0004](../adr/0004-postgresql-primary-store.md) | Accepted | PostgreSQL 主存储与 Tool 版本模型 |
 | 0005 | Planned | Identity 与 Trust Boundary |
 | 0006 | Planned | Credential Reference |
 | 0007 | Planned | Tool Retry 与 Side Effect |

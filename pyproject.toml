@@ -5,9 +5,12 @@ description = "Enterprise MCP Gateway and Registry"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "alembic>=1.19,<2",
+    "asyncpg>=0.30,<1",
     "fastapi>=0.116,<1",
     "mcp==2.0.0",
     "pydantic-settings>=2.10,<3",
+    "sqlalchemy[asyncio]>=2.0.52,<2.1",
     "uvicorn>=0.35,<1",
 ]
 
@@ -27,6 +30,9 @@ build-backend = "uv_build"
 [tool.pytest.ini_options]
 addopts = "-ra"
 asyncio_mode = "auto"
+markers = [
+    "integration: requires an isolated external dependency such as PostgreSQL",
+]
 testpaths = ["tests"]
 
 [tool.ruff]
