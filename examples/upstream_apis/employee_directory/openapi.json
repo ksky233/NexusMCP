@@ -1,0 +1,195 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Employee Directory API",
+    "version": "1.0.0",
+    "description": "Lightweight in-memory API used by the NexusMCP OpenAPI import slice."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:9001"
+    }
+  ],
+  "paths": {
+    "/employees/{employee_id}": {
+      "get": {
+        "operationId": "getEmployee",
+        "summary": "Get employee",
+        "description": "Get one employee by its stable employee id.",
+        "tags": ["directory"],
+        "parameters": [
+          {
+            "name": "employee_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Employee",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Employee"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Employee not found"
+          }
+        }
+      }
+    },
+    "/employees": {
+      "get": {
+        "operationId": "listEmployees",
+        "summary": "List employees",
+        "description": "List employees with optional department and status filters.",
+        "tags": ["directory"],
+        "parameters": [
+          {
+            "name": "department",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/EmploymentStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Employee list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Employee"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/employees/search": {
+      "post": {
+        "operationId": "searchEmployees",
+        "summary": "Search employees",
+        "description": "Search employees using a nested request body.",
+        "tags": ["directory", "search"],
+        "x-nexusmcp-side-effect": "read_only",
+        "parameters": [
+          {
+            "name": "X-Directory-Region",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["cn", "global"],
+              "default": "cn"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchEmployeesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Matched employees",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Employee"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "EmploymentStatus": {
+        "type": "string",
+        "enum": ["active", "leave", "terminated"]
+      },
+      "Employee": {
+        "type": "object",
+        "required": ["employee_id", "name", "department", "status", "email"],
+        "properties": {
+          "employee_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "department": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EmploymentStatus"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        }
+      },
+      "EmployeeSearchFilter": {
+        "type": "object",
+        "properties": {
+          "department": {
+            "type": ["string", "null"]
+          },
+          "statuses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmploymentStatus"
+            }
+          }
+        }
+      },
+      "SearchEmployeesRequest": {
+        "type": "object",
+        "required": ["filter"],
+        "properties": {
+          "filter": {
+            "$ref": "#/components/schemas/EmployeeSearchFilter"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20
+          }
+        }
+      }
+    }
+  }
+}

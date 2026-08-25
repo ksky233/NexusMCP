@@ -4,8 +4,13 @@ import pytest
 
 from nexusmcp.shared.errors import (
     BindingDigestMismatchError,
+    ImportedOperationNotFoundError,
+    InvalidReviewStateError,
     InvalidToolStateError,
     NexusMcpError,
+    OpenApiDocumentInvalidError,
+    OpenApiFeatureUnsupportedError,
+    OpenApiSourceNotFoundError,
     PublishConflictError,
     SchemaDigestMismatchError,
     TenantBoundaryViolationError,
@@ -28,6 +33,11 @@ from nexusmcp.shared.errors import (
         UpstreamNotActiveError,
         SchemaDigestMismatchError,
         BindingDigestMismatchError,
+        OpenApiSourceNotFoundError,
+        OpenApiDocumentInvalidError,
+        OpenApiFeatureUnsupportedError,
+        ImportedOperationNotFoundError,
+        InvalidReviewStateError,
     ],
 )
 def test_error_contract_uses_stable_code_and_safe_english_message(

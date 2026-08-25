@@ -64,6 +64,13 @@ class InMemoryToolCatalogRepository:
             None,
         )
 
+    async def get_tool_by_name_for_update(
+        self,
+        tenant_id: str,
+        canonical_name: str,
+    ) -> Tool | None:
+        return await self.get_tool_by_name(tenant_id, canonical_name)
+
     async def get_tool_for_update(self, tenant_id: str, tool_id: str) -> Tool | None:
         # 内存执行是单线程确定性测试；方法保留业务所需的排他读取语义。
         return await self.get_tool_by_id(tenant_id, tool_id)
@@ -121,6 +128,14 @@ class InMemoryToolCatalogRepository:
             ),
             None,
         )
+
+    async def next_version_number(self, tenant_id: str, tool_id: str) -> int:
+        versions = [
+            version.version
+            for version in self._versions.values()
+            if version.tenant_id == tenant_id and version.tool_id == tool_id
+        ]
+        return max(versions, default=0) + 1
 
     async def list_published_by_tenant(self, tenant_id: str) -> tuple[PublishedTool, ...]:
         tools = (tool for tool in self._published_tools.values() if tool.tenant_id == tenant_id)

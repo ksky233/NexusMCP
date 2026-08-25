@@ -35,6 +35,12 @@ class ToolCatalogRepository(PublishedToolReader, Protocol):
         canonical_name: str,
     ) -> Tool | None: ...
 
+    async def get_tool_by_name_for_update(
+        self,
+        tenant_id: str,
+        canonical_name: str,
+    ) -> Tool | None: ...
+
     async def get_tool_for_update(self, tenant_id: str, tool_id: str) -> Tool | None: ...
 
     async def add_version(self, tenant_id: str, version: ToolVersion) -> None: ...
@@ -58,6 +64,8 @@ class ToolCatalogRepository(PublishedToolReader, Protocol):
         tenant_id: str,
         tool_id: str,
     ) -> ToolVersion | None: ...
+
+    async def next_version_number(self, tenant_id: str, tool_id: str) -> int: ...
 
 
 class CatalogUnitOfWork(Protocol):

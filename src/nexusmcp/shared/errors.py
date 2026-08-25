@@ -61,3 +61,28 @@ class SchemaDigestMismatchError(NexusMcpError):
 class BindingDigestMismatchError(NexusMcpError):
     code = "binding_digest_mismatch"
     safe_message = "The tool binding no longer matches the reviewed version."
+
+
+class OpenApiSourceNotFoundError(NexusMcpError):
+    code = "openapi_source_not_found"
+    safe_message = "The OpenAPI source was not found."
+
+
+class OpenApiDocumentInvalidError(NexusMcpError):
+    code = "openapi_document_invalid"
+    safe_message = "The OpenAPI document is invalid."
+
+
+class OpenApiFeatureUnsupportedError(NexusMcpError):
+    code = "openapi_feature_unsupported"
+    safe_message = "The OpenAPI document uses an unsupported feature."
+
+
+class ImportedOperationNotFoundError(NexusMcpError):
+    code = "imported_operation_not_found"
+    safe_message = "The imported operation was not found."
+
+
+class InvalidReviewStateError(NexusMcpError):
+    code = "invalid_review_state"
+    safe_message = "The imported operation cannot be reviewed from its current state."

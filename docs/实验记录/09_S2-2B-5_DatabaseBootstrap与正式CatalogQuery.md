@@ -182,3 +182,7 @@ tests/integration/persistence/test_postgresql_catalog_bootstrap.py
 6. Review 后生成 Draft ToolVersion + ToolBinding；
 7. 调用现有 Publish Use Case；
 8. 通过正式 PostgreSQL Catalog 在 MCP `tools/list` 中发现 Tool。
+
+以上内容已在
+[S2-3 Employee Directory OpenAPI 纵向切片](./10_S2-3_EmployeeDirectoryOpenAPI纵向切片.md)
+完成。

@@ -1,6 +1,6 @@
 """ToolCatalogRepository 的 SQLAlchemy Async Adapter。"""
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from nexusmcp.infrastructure.persistence.identifiers import as_uuid
@@ -59,6 +59,22 @@ class SqlAlchemyToolCatalogRepository:
                 ToolModel.tenant_id == tenant_uuid,
                 ToolModel.canonical_name == canonical_name,
             )
+        )
+        return tool_from_model(model) if model is not None else None
+
+    async def get_tool_by_name_for_update(
+        self,
+        tenant_id: str,
+        canonical_name: str,
+    ) -> Tool | None:
+        tenant_uuid = as_uuid(tenant_id, field_name="tenant id")
+        model = await self._session.scalar(
+            select(ToolModel)
+            .where(
+                ToolModel.tenant_id == tenant_uuid,
+                ToolModel.canonical_name == canonical_name,
+            )
+            .with_for_update()
         )
         return tool_from_model(model) if model is not None else None
 
@@ -128,6 +144,15 @@ class SqlAlchemyToolCatalogRepository:
             )
         )
         return tool_version_from_model(model) if model is not None else None
+
+    async def next_version_number(self, tenant_id: str, tool_id: str) -> int:
+        next_version = await self._session.scalar(
+            select(func.coalesce(func.max(ToolVersionModel.version), 0) + 1).where(
+                ToolVersionModel.tenant_id == as_uuid(tenant_id, field_name="tenant id"),
+                ToolVersionModel.tool_id == as_uuid(tool_id, field_name="tool id"),
+            )
+        )
+        return int(next_version or 1)
 
     async def list_published_by_tenant(self, tenant_id: str) -> tuple[PublishedTool, ...]:
         statement = self._published_statement(tenant_id).order_by(ToolModel.canonical_name)

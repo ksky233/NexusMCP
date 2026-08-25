@@ -125,6 +125,13 @@ class CatalogRepositoryContract:
 
         assert await empty_catalog.get_tool_by_id(TENANT_A_ID, tool.id) == tool
         assert await empty_catalog.get_tool_by_name(TENANT_A_ID, tool.canonical_name) == tool
+        assert (
+            await empty_catalog.get_tool_by_name_for_update(
+                TENANT_A_ID,
+                tool.canonical_name,
+            )
+            == tool
+        )
         assert await empty_catalog.get_tool_for_update(TENANT_A_ID, tool.id) == tool
         assert await empty_catalog.get_tool_by_id(TENANT_B_ID, tool.id) is None
 
@@ -152,6 +159,7 @@ class CatalogRepositoryContract:
         assert await empty_catalog.get_version_by_id(TENANT_A_ID, draft.id) == draft
         assert await empty_catalog.get_version_for_update(TENANT_A_ID, draft.id) == draft
         assert await empty_catalog.get_published_version(TENANT_A_ID, draft.tool_id) == published
+        assert await empty_catalog.next_version_number(TENANT_A_ID, draft.tool_id) == 3
         assert await empty_catalog.get_version_by_id(TENANT_B_ID, draft.id) is None
 
         reviewed = draft.submit_for_review(NOW)
