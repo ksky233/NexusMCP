@@ -49,3 +49,17 @@ Tenant + Upstream
 - 外部 Secret Store 只需新增 Adapter；
 - Executor 测试必须证明 Secret 不进入 Log/Audit/Error；
 - Query Injection 的 URL/日志风险高于 Header，需要独立安全测试。
+
+## Implementation Confirmation
+
+S3-3 已用 InMemory Resolver 和 Environment Provider 验证本 ADR：
+
+- `Principal > Role > Tenant`，同一 Subject 下 `Tool > Upstream Wildcard`；
+- 同特异性多条 Binding 直接返回 `credential_binding_conflict`；
+- Upstream `auth_scheme != none` 时必须成功解析 Credential，否则 Fail Closed；
+- Policy ALLOW 后才解析 Secret；DENY 不调用 Resolver/Provider；
+- Execution 只保存 `credential_binding_id`，临时 `SecretValue` 只传给 Executor；
+- Header 与 Query 均由受信 Binding 在参数映射后覆盖注入。
+
+Environment Provider 是本地开发 Adapter，不代表生产 Secret Store 决策；CredentialBinding
+PostgreSQL 持久化也不在本阶段范围内。

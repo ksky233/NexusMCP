@@ -288,5 +288,6 @@ Approval、真实 Credential 与写 Tool 不进入第一条执行切片。
 
 - S3-1 已完成 Modern MCP Read-Only HTTP `tools/call`；
 - S3-2 已完成 Static Bearer Principal 与 Rule-Based ALLOW/DENY；
-- 下一步 S3-3 在 ALLOW 之后接入 CredentialBinding/Secret Injection；
-- Approval、持久化 Execution/Audit 和写 Tool 仍按本文边界待实现。
+- S3-3 已在 ALLOW 之后接入 CredentialBinding、Environment Secret Provider 与 Header/Query
+  Injection；同特异性冲突 Fail Closed，DENY 不读取 Secret；
+- 下一步 S3-4 接入 Approval Gate 与单次消费；持久化 Execution/Audit 和写 Tool 仍按本文边界待实现。

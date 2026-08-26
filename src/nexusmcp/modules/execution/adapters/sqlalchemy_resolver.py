@@ -74,4 +74,5 @@ class SqlAlchemyExecutableToolResolver:
             binding_type=ToolBindingType(binding.binding_type),
             binding_config=deepcopy(binding.binding_config_json),
             upstream_endpoint=upstream.endpoint,
+            upstream_auth_scheme=upstream.auth_scheme,
         )

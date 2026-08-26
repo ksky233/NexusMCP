@@ -174,3 +174,5 @@ tests/integration/persistence/test_mcp_principal_policy.py
 5. Secret 不进入 Context/Log/Execution/Audit/Error；
 6. DENY 调用不解析 Secret；
 7. 暂不接真实 Vault/KMS。
+
+实现结果见 [S3-3 CredentialBinding 与 Secret Injection](./17_S3-3_CredentialBinding与SecretInjection.md)。

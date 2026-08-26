@@ -8,7 +8,15 @@ import pytest
 
 from nexusmcp.modules.catalog.domain import ToolSideEffect, ToolVisibility
 from nexusmcp.modules.connectors.domain import ToolBindingType
-from nexusmcp.modules.credentials.domain import ResolvedCredential
+from nexusmcp.modules.credentials.domain import (
+    CredentialBinding,
+    CredentialInjectionLocation,
+    CredentialSubjectType,
+    CredentialValueFormat,
+    ResolvedCredential,
+    SecretReference,
+    SecretValue,
+)
 from nexusmcp.modules.execution.adapters.in_memory import InMemoryToolExecutionRepository
 from nexusmcp.modules.execution.adapters.jsonschema_validator import JsonSchemaArgumentsValidator
 from nexusmcp.modules.execution.call_tool import CallTool
@@ -25,6 +33,7 @@ from nexusmcp.modules.identity.adapters.context_principal import ContextPrincipa
 from nexusmcp.modules.policy.adapters.static_read_only import StaticReadOnlyPolicyEvaluator
 from nexusmcp.shared.errors import (
     AuthorizationError,
+    CredentialBindingNotFoundError,
     InvalidArgumentsError,
     UnknownExecutionOutcomeError,
 )
@@ -72,6 +81,50 @@ class SuccessfulExecutor:
         )
 
 
+class CapturingExecutor:
+    def __init__(self) -> None:
+        self.credential: ResolvedCredential | None = None
+
+    async def execute(
+        self,
+        request: ExecutorRequest,
+        credential: ResolvedCredential | None,
+    ) -> ExecutorResult:
+        self.credential = credential
+        return ExecutorResult(
+            data={"employee_id": request.arguments["employee_id"]},
+            content_type="application/json",
+            upstream_status=200,
+        )
+
+
+class CountingCredentialResolver:
+    def __init__(self, resolved: CredentialBinding | None) -> None:
+        self._resolved = resolved
+        self.calls = 0
+
+    async def resolve(
+        self,
+        tenant_id: str,
+        principal: object,
+        tool_id: str,
+        upstream_service_id: str,
+    ) -> CredentialBinding | None:
+        _ = (tenant_id, principal, tool_id, upstream_service_id)
+        self.calls += 1
+        return self._resolved
+
+
+class CountingCredentialProvider:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def resolve(self, reference: SecretReference) -> SecretValue:
+        _ = reference
+        self.calls += 1
+        return SecretValue("upstream-secret")
+
+
 class UnknownExecutor:
     async def execute(
         self,
@@ -108,6 +161,8 @@ def context() -> ActorContext:
 
 def executable_tool(
     side_effect: ToolSideEffect = ToolSideEffect.READ_ONLY,
+    *,
+    auth_scheme: str | None = "none",
 ) -> ResolvedExecutableTool:
     return ResolvedExecutableTool(
         tenant_id="tenant-a",
@@ -141,13 +196,20 @@ def executable_tool(
             "request_body": None,
         },
         upstream_endpoint="http://employee.test",
+        upstream_auth_scheme=auth_scheme,
     )
 
 
 def build_use_case(
     *,
     tool: ResolvedExecutableTool | None = None,
-    executor: SuccessfulExecutor | UnknownExecutor | CancelledExecutor | None = None,
+    executor: SuccessfulExecutor
+    | CapturingExecutor
+    | UnknownExecutor
+    | CancelledExecutor
+    | None = None,
+    credential_binding_resolver: CountingCredentialResolver | None = None,
+    credential_provider: CountingCredentialProvider | None = None,
 ) -> tuple[CallTool, InMemoryToolExecutionRepository]:
     repository = InMemoryToolExecutionRepository()
     resolved_tool = tool or executable_tool()
@@ -161,6 +223,8 @@ def build_use_case(
             executor=executor or SuccessfulExecutor(),
             clock=FixedClock(),
             identifier_generator=FixedIdentifierGenerator(),
+            credential_binding_resolver=credential_binding_resolver,
+            credential_provider=credential_provider,
         ),
         repository,
     )
@@ -212,6 +276,102 @@ async def test_static_policy_denies_write_tool_before_execution() -> None:
             )
         )
 
+    assert await repository.list_by_tenant("tenant-a") == ()
+
+
+@pytest.mark.asyncio
+async def test_allowed_call_resolves_credential_and_records_only_binding_id() -> None:
+    credential_binding = CredentialBinding(
+        id="credential-binding-1",
+        tenant_id="tenant-a",
+        subject_type=CredentialSubjectType.TENANT,
+        subject_id=None,
+        tool_id="tool-1",
+        upstream_service_id="upstream-1",
+        secret_reference=SecretReference(
+            provider="environment",
+            reference="EMPLOYEE_API_TOKEN",
+        ),
+        injection_location=CredentialInjectionLocation.HEADER,
+        injection_name="Authorization",
+        value_format=CredentialValueFormat.BEARER,
+    )
+    resolver = CountingCredentialResolver(credential_binding)
+    provider = CountingCredentialProvider()
+    executor = CapturingExecutor()
+    use_case, repository = build_use_case(
+        tool=executable_tool(auth_scheme="bearer"),
+        executor=executor,
+        credential_binding_resolver=resolver,
+        credential_provider=provider,
+    )
+
+    result = await use_case.execute(
+        CallToolCommand(
+            context=context(),
+            tool_name="directory.get_employee",
+            arguments={"employee_id": "emp-001"},
+        )
+    )
+
+    execution = await repository.get_by_id("tenant-a", result.execution_id)
+    assert resolver.calls == 1
+    assert provider.calls == 1
+    assert executor.credential is not None
+    assert executor.credential.value.reveal() == "upstream-secret"
+    assert execution is not None
+    assert execution.credential_binding_id == "credential-binding-1"
+    assert "upstream-secret" not in repr(execution)
+
+
+@pytest.mark.asyncio
+async def test_denied_call_does_not_resolve_or_read_credential() -> None:
+    resolver = CountingCredentialResolver(None)
+    provider = CountingCredentialProvider()
+    use_case, repository = build_use_case(
+        tool=executable_tool(
+            ToolSideEffect.NON_IDEMPOTENT_WRITE,
+            auth_scheme="bearer",
+        ),
+        credential_binding_resolver=resolver,
+        credential_provider=provider,
+    )
+
+    with pytest.raises(AuthorizationError):
+        await use_case.execute(
+            CallToolCommand(
+                context=context(),
+                tool_name="directory.get_employee",
+                arguments={"employee_id": "emp-001"},
+            )
+        )
+
+    assert resolver.calls == 0
+    assert provider.calls == 0
+    assert await repository.list_by_tenant("tenant-a") == ()
+
+
+@pytest.mark.asyncio
+async def test_missing_credential_binding_fails_before_execution_record() -> None:
+    resolver = CountingCredentialResolver(None)
+    provider = CountingCredentialProvider()
+    use_case, repository = build_use_case(
+        tool=executable_tool(auth_scheme="bearer"),
+        credential_binding_resolver=resolver,
+        credential_provider=provider,
+    )
+
+    with pytest.raises(CredentialBindingNotFoundError):
+        await use_case.execute(
+            CallToolCommand(
+                context=context(),
+                tool_name="directory.get_employee",
+                arguments={"employee_id": "emp-001"},
+            )
+        )
+
+    assert resolver.calls == 1
+    assert provider.calls == 0
     assert await repository.list_by_tenant("tenant-a") == ()
 
 

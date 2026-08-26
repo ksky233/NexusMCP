@@ -3,6 +3,8 @@
 import asyncio
 
 from nexusmcp.modules.catalog.domain import ToolVisibility
+from nexusmcp.modules.credentials.domain import ResolvedCredential
+from nexusmcp.modules.credentials.ports import CredentialBindingResolver, CredentialProvider
 from nexusmcp.modules.execution.domain import (
     CallToolCommand,
     CallToolResult,
@@ -10,6 +12,7 @@ from nexusmcp.modules.execution.domain import (
     ExecutionStatus,
     ExecutorFailure,
     ExecutorRequest,
+    ResolvedExecutableTool,
     ToolExecution,
 )
 from nexusmcp.modules.execution.ports import (
@@ -18,7 +21,7 @@ from nexusmcp.modules.execution.ports import (
     ToolExecutionRepository,
     ToolExecutor,
 )
-from nexusmcp.modules.identity.domain import PrincipalType
+from nexusmcp.modules.identity.domain import InternalPrincipal, PrincipalType
 from nexusmcp.modules.identity.ports import PrincipalResolver
 from nexusmcp.modules.policy.domain import (
     PolicyEffect,
@@ -30,6 +33,8 @@ from nexusmcp.shared.clock import Clock
 from nexusmcp.shared.errors import (
     ApprovalRequiredError,
     AuthorizationError,
+    CredentialBindingNotFoundError,
+    CredentialResolutionError,
     InvalidArgumentsError,
     ToolNotFoundError,
     ToolNotVisibleError,
@@ -53,6 +58,8 @@ class CallTool:
         executor: ToolExecutor,
         clock: Clock,
         identifier_generator: IdentifierGenerator,
+        credential_binding_resolver: CredentialBindingResolver | None = None,
+        credential_provider: CredentialProvider | None = None,
         timeout_seconds: float = 5.0,
     ) -> None:
         if timeout_seconds <= 0:
@@ -65,6 +72,8 @@ class CallTool:
         self._executor = executor
         self._clock = clock
         self._identifier_generator = identifier_generator
+        self._credential_binding_resolver = credential_binding_resolver
+        self._credential_provider = credential_provider
         self._timeout_seconds = timeout_seconds
 
     async def execute(self, command: CallToolCommand) -> CallToolResult:
@@ -95,6 +104,11 @@ class CallTool:
             )
 
         tenant_id = context.tenant_id
+        credential = await self._resolve_credential(
+            tenant_id=tenant_id,
+            principal=principal,
+            tool=tool,
+        )
         execution = ToolExecution(
             id=self._identifier_generator.new_id(),
             tenant_id=tenant_id,
@@ -106,6 +120,9 @@ class CallTool:
             side_effect=tool.side_effect,
             status=ExecutionStatus.PLANNED,
             planned_at=self._clock.now(),
+            credential_binding_id=(
+                credential.credential_binding_id if credential is not None else None
+            ),
             idempotency_key=command.idempotency_key,
         )
         await self._execution_repository.add(tenant_id, execution)
@@ -120,7 +137,7 @@ class CallTool:
                     arguments=command.arguments,
                     timeout_seconds=self._timeout_seconds,
                 ),
-                credential=None,
+                credential=credential,
             )
         except asyncio.CancelledError:
             await self._execution_repository.save(
@@ -161,6 +178,36 @@ class CallTool:
             data=executor_result.data,
             content_type=executor_result.content_type,
             upstream_status=executor_result.upstream_status,
+        )
+
+    async def _resolve_credential(
+        self,
+        *,
+        tenant_id: str,
+        principal: InternalPrincipal,
+        tool: ResolvedExecutableTool,
+    ) -> ResolvedCredential | None:
+        auth_scheme = (tool.upstream_auth_scheme or "none").strip().lower()
+        if auth_scheme == "none":
+            return None
+        if self._credential_binding_resolver is None or self._credential_provider is None:
+            raise CredentialResolutionError("credential services were not configured")
+
+        binding = await self._credential_binding_resolver.resolve(
+            tenant_id,
+            principal,
+            tool.tool_id,
+            tool.upstream_service_id,
+        )
+        if binding is None:
+            raise CredentialBindingNotFoundError("no credential binding matched tool call")
+        value = await self._credential_provider.resolve(binding.secret_reference)
+        return ResolvedCredential(
+            credential_binding_id=binding.id,
+            injection_location=binding.injection_location,
+            injection_name=binding.injection_name,
+            value_format=binding.value_format,
+            value=value,
         )
 
 

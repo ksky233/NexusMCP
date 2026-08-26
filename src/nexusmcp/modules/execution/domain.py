@@ -77,6 +77,7 @@ class ResolvedExecutableTool:
     binding_type: ToolBindingType
     binding_config: Mapping[str, Any]
     upstream_endpoint: str
+    upstream_auth_scheme: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,6 +92,7 @@ class ToolExecution:
     side_effect: ToolSideEffect
     status: ExecutionStatus
     planned_at: datetime
+    credential_binding_id: str | None = None
     idempotency_key: str | None = None
     started_at: datetime | None = None
     finished_at: datetime | None = None

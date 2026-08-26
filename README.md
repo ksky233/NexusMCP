@@ -4,7 +4,7 @@
 
 NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，负责将企业 HTTP/OpenAPI 服务和已有 MCP Server 纳入统一 Tool Catalog，并在 MCP 调用链上执行身份、策略、凭据、审批、审计与可观测性。
 
-当前阶段：`S3-2｜Principal 与 ALLOW/DENY Policy 完成`。
+当前阶段：`S3-3｜CredentialBinding 与 Secret Injection 完成`。
 
 ## 当前边界
 
@@ -28,7 +28,10 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，�
 - S2 已完成；S3 已冻结 Principal、Policy、Credential、Approval、Execution/Audit 与 Retry 边界；
 - Modern MCP `tools/call` 已跑通 Read-Only HTTP GET、Schema Validation、Static Policy 和 Execution；
 - Static Bearer Principal 与 Rule-Based ALLOW/DENY Policy 已接入调用阶段；
-- 真实 JWT/OIDC、Credential、Approval、持久化 Execution/Audit 和写 Tool 尚未实现。
+- CredentialBinding 已支持 Principal/Role/Tenant 特异性解析、Environment Secret Provider 与
+  Header/Query Injection，DENY 不解析 Secret；
+- 真实 JWT/OIDC、生产 Secret Store、CredentialBinding 持久化、Approval、持久化 Execution/Audit
+  和写 Tool 尚未实现。
 
 ## 代码语言约定
 
@@ -136,8 +139,10 @@ docker compose stop postgres
 - [S3-0 Call/Policy/Credential/Execution 模型与 ADR](./docs/实验记录/14_S3-0_Call治理模型与ADR.md)
 - [S3-1 Read-Only HTTP tools/call](./docs/实验记录/15_S3-1_ReadOnlyHTTPToolsCall.md)
 - [S3-2 Principal 与 ALLOW/DENY Policy](./docs/实验记录/16_S3-2_Principal与AllowDenyPolicy.md)
+- [S3-3 CredentialBinding 与 Secret Injection](./docs/实验记录/17_S3-3_CredentialBinding与SecretInjection.md)
 - [业务词汇、核心用例与限界上下文](./docs/架构/01_业务词汇核心用例与限界上下文.md)
 - [持久化模型与发布事务](./docs/架构/02_持久化模型与发布事务.md)
+- [tools/call 治理执行模型](./docs/架构/03_tools_call治理执行模型.md)
 - [ADR-0001：Python 项目布局](./docs/adr/0001-python-project-layout.md)
 - [ADR-0002：MCP 协议与 SDK Adapter](./docs/adr/0002-mcp-protocol-and-sdk-adapter.md)
 - [ADR-0004：PostgreSQL 主存储](./docs/adr/0004-postgresql-primary-store.md)

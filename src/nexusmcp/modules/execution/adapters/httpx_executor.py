@@ -181,6 +181,10 @@ def _inject_credential(
     if credential.value_format is CredentialValueFormat.BEARER:
         value = f"Bearer {value}"
     if credential.injection_location is CredentialInjectionLocation.HEADER:
+        # HTTP Header 名称大小写不敏感，先删除同名输入，避免形成两个 Authorization。
+        for header_name in tuple(headers):
+            if header_name.lower() == credential.injection_name.lower():
+                del headers[header_name]
         headers[credential.injection_name] = value
     elif credential.injection_location is CredentialInjectionLocation.QUERY:
         query[credential.injection_name] = value

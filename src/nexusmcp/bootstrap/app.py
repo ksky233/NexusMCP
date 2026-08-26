@@ -31,6 +31,7 @@ from nexusmcp.modules.catalog.publish import PublishTool
 from nexusmcp.modules.catalog.review import SubmitToolVersionForReview
 from nexusmcp.modules.catalog.search import SearchPublishedTools
 from nexusmcp.modules.catalog.use_cases import ListVisibleTools
+from nexusmcp.modules.credentials.ports import CredentialBindingResolver, CredentialProvider
 from nexusmcp.modules.execution.adapters.httpx_executor import HttpxToolExecutor
 from nexusmcp.modules.execution.adapters.in_memory import InMemoryToolExecutionRepository
 from nexusmcp.modules.execution.adapters.jsonschema_validator import JsonSchemaArgumentsValidator
@@ -65,6 +66,8 @@ def create_app(
     tool_http_client: httpx.AsyncClient | None = None,
     principal_authenticator: PrincipalAuthenticator | None = None,
     policy_evaluator: PolicyEvaluator | None = None,
+    credential_binding_resolver: CredentialBindingResolver | None = None,
+    credential_provider: CredentialProvider | None = None,
 ) -> FastAPI:
     """创建完整组装的应用，不让业务代码依赖全局对象。"""
 
@@ -108,6 +111,8 @@ def create_app(
             executor=HttpxToolExecutor(resolved_http_client),
             clock=SystemClock(),
             identifier_generator=UuidIdentifierGenerator(),
+            credential_binding_resolver=credential_binding_resolver,
+            credential_provider=credential_provider,
             timeout_seconds=resolved_settings.tool_call_timeout_seconds,
         )
 

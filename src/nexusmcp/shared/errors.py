@@ -123,6 +123,21 @@ class ApprovalRequiredError(NexusMcpError):
     safe_message = "This tool call requires approval."
 
 
+class CredentialBindingNotFoundError(NexusMcpError):
+    code = "credential_binding_not_found"
+    safe_message = "No credential binding is available for this tool call."
+
+
+class CredentialBindingConflictError(NexusMcpError):
+    code = "credential_binding_conflict"
+    safe_message = "Multiple credential bindings match this tool call."
+
+
+class CredentialResolutionError(NexusMcpError):
+    code = "credential_resolution_failed"
+    safe_message = "The upstream credential could not be resolved."
+
+
 class UpstreamTimeoutError(NexusMcpError):
     code = "upstream_timeout"
     safe_message = "The upstream service did not respond before the timeout."

@@ -31,7 +31,11 @@ from tests.contract.repositories.contracts import (
 pytestmark = pytest.mark.integration
 
 
-async def seed_executable_tool(session: AsyncSession) -> None:
+async def seed_executable_tool(
+    session: AsyncSession,
+    *,
+    auth_scheme: str | None = "none",
+) -> None:
     tenant_id = uuid.UUID(TENANT_A_ID)
     tool_id = uuid.UUID(TOOL_ID)
     version_id = uuid.UUID(VERSION_ID)
@@ -50,7 +54,7 @@ async def seed_executable_tool(session: AsyncSession) -> None:
             service_type="http",
             transport_type="http",
             endpoint="http://employee.test",
-            auth_scheme="none",
+            auth_scheme=auth_scheme,
             config_json={},
             status="active",
         )
