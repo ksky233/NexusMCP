@@ -3,6 +3,8 @@
 import pytest
 
 from nexusmcp.shared.errors import (
+    ApprovalRequiredError,
+    AuthorizationError,
     BindingDigestMismatchError,
     ImportedOperationNotFoundError,
     InvalidArgumentsError,
@@ -19,9 +21,13 @@ from nexusmcp.shared.errors import (
     ToolBindingNotFoundError,
     ToolNotFoundError,
     ToolVersionNotFoundError,
+    UnknownExecutionOutcomeError,
     UpstreamConflictError,
     UpstreamNotActiveError,
     UpstreamNotFoundError,
+    UpstreamResponseError,
+    UpstreamTimeoutError,
+    UpstreamUnavailableError,
 )
 
 
@@ -46,6 +52,12 @@ from nexusmcp.shared.errors import (
         InvalidArgumentsError,
         UpstreamNotFoundError,
         UpstreamConflictError,
+        AuthorizationError,
+        ApprovalRequiredError,
+        UpstreamTimeoutError,
+        UpstreamUnavailableError,
+        UpstreamResponseError,
+        UnknownExecutionOutcomeError,
     ],
 )
 def test_error_contract_uses_stable_code_and_safe_english_message(

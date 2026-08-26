@@ -47,3 +47,17 @@ def test_local_control_plane_is_forbidden_in_production() -> None:
             local_tenant_id="00000000-0000-0000-0000-000000000001",
             control_plane_enabled=True,
         )
+
+
+def test_tool_execution_requires_postgresql_and_positive_timeout() -> None:
+    with pytest.raises(ValidationError, match="requires postgresql"):
+        Settings(
+            environment="test",
+            catalog_backend="memory",
+            tool_execution_enabled=True,
+        )
+    with pytest.raises(ValidationError, match="tool_call_timeout_seconds"):
+        Settings(
+            environment="test",
+            tool_call_timeout_seconds=0,
+        )

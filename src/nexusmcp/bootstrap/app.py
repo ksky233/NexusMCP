@@ -4,6 +4,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
+import httpx
 from fastapi import FastAPI
 from mcp.server.context import ServerRequestContext
 from mcp.server.transport_security import TransportSecuritySettings
@@ -20,7 +21,7 @@ from nexusmcp.infrastructure.identifiers import UuidIdentifierGenerator
 from nexusmcp.infrastructure.persistence.runtime import DatabaseRuntime, DatabaseRuntimePort
 from nexusmcp.interfaces.admin import AdminServices, create_admin_app
 from nexusmcp.interfaces.health.router import create_health_router
-from nexusmcp.interfaces.mcp.context import resolve_request_context
+from nexusmcp.interfaces.mcp.context import request_headers, resolve_request_context
 from nexusmcp.interfaces.mcp.server import create_mcp_server
 from nexusmcp.modules.catalog.adapters.in_memory import InMemoryToolCatalogRepository
 from nexusmcp.modules.catalog.adapters.sqlalchemy_reader import SqlAlchemyPublishedToolReader
@@ -30,6 +31,15 @@ from nexusmcp.modules.catalog.publish import PublishTool
 from nexusmcp.modules.catalog.review import SubmitToolVersionForReview
 from nexusmcp.modules.catalog.search import SearchPublishedTools
 from nexusmcp.modules.catalog.use_cases import ListVisibleTools
+from nexusmcp.modules.execution.adapters.httpx_executor import HttpxToolExecutor
+from nexusmcp.modules.execution.adapters.in_memory import InMemoryToolExecutionRepository
+from nexusmcp.modules.execution.adapters.jsonschema_validator import JsonSchemaArgumentsValidator
+from nexusmcp.modules.execution.adapters.sqlalchemy_resolver import (
+    SqlAlchemyExecutableToolResolver,
+)
+from nexusmcp.modules.execution.call_tool import CallTool
+from nexusmcp.modules.identity.adapters.context_principal import ContextPrincipalResolver
+from nexusmcp.modules.identity.ports import PrincipalAuthenticator
 from nexusmcp.modules.openapi_import.adapters.local_document_reader import (
     LocalOpenApiDocumentReader,
 )
@@ -37,6 +47,8 @@ from nexusmcp.modules.openapi_import.import_openapi import ImportOpenApi
 from nexusmcp.modules.openapi_import.parser import OpenApiParser
 from nexusmcp.modules.openapi_import.queries import GetOpenApiImport
 from nexusmcp.modules.openapi_import.review import ReviewImportedOperation
+from nexusmcp.modules.policy.adapters.static_read_only import StaticReadOnlyPolicyEvaluator
+from nexusmcp.modules.policy.ports import PolicyEvaluator
 from nexusmcp.modules.registry.use_cases import (
     DisableUpstream,
     ListUpstreams,
@@ -50,6 +62,9 @@ def create_app(
     settings: Settings | None = None,
     tool_reader: PublishedToolReader | None = None,
     database_runtime: DatabaseRuntimePort | None = None,
+    tool_http_client: httpx.AsyncClient | None = None,
+    principal_authenticator: PrincipalAuthenticator | None = None,
+    policy_evaluator: PolicyEvaluator | None = None,
 ) -> FastAPI:
     """创建完整组装的应用，不让业务代码依赖全局对象。"""
 
@@ -70,13 +85,49 @@ def create_app(
     if resolved_reader is None:
         resolved_reader = InMemoryToolCatalogRepository()
     list_visible_tools = ListVisibleTools(resolved_reader)
+    call_tool_use_case: CallTool | None = None
+    execution_repository: InMemoryToolExecutionRepository | None = None
+    resolved_http_client = tool_http_client
+    owns_http_client = False
+    if resolved_settings.tool_execution_enabled:
+        if resolved_runtime is None:  # pragma: no cover - Settings/Composition 已阻止该状态
+            raise RuntimeError("Tool execution requires Database Runtime")
+        if resolved_http_client is None:
+            resolved_http_client = httpx.AsyncClient(
+                follow_redirects=False,
+                trust_env=False,
+            )
+            owns_http_client = True
+        execution_repository = InMemoryToolExecutionRepository()
+        call_tool_use_case = CallTool(
+            principal_resolver=ContextPrincipalResolver(),
+            tool_resolver=SqlAlchemyExecutableToolResolver(resolved_runtime),
+            arguments_validator=JsonSchemaArgumentsValidator(),
+            policy_evaluator=policy_evaluator or StaticReadOnlyPolicyEvaluator(),
+            execution_repository=execution_repository,
+            executor=HttpxToolExecutor(resolved_http_client),
+            clock=SystemClock(),
+            identifier_generator=UuidIdentifierGenerator(),
+            timeout_seconds=resolved_settings.tool_call_timeout_seconds,
+        )
 
     def context_resolver(ctx: ServerRequestContext[Any, Any]) -> RequestContext:
-        return resolve_request_context(ctx, tenant_id=resolved_settings.local_tenant_id)
+        principal = None
+        if principal_authenticator is not None:
+            principal = principal_authenticator.authenticate(
+                request_headers(ctx).get("authorization"),
+                resolved_settings.local_tenant_id,
+            )
+        return resolve_request_context(
+            ctx,
+            tenant_id=resolved_settings.local_tenant_id,
+            principal=principal,
+        )
 
     mcp_server = create_mcp_server(
         list_visible_tools=list_visible_tools,
         context_resolver=context_resolver,
+        call_tool=call_tool_use_case,
     )
     transport_security = TransportSecuritySettings(
         allowed_hosts=resolved_settings.transport_allowed_hosts,
@@ -87,13 +138,17 @@ def create_app(
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         # Mounted MCP 子应用不会运行自身 Lifespan，必须由宿主应用管理。
-        if resolved_runtime is not None:
-            await resolved_runtime.start()
+        runtime_started = False
         try:
+            if resolved_runtime is not None:
+                await resolved_runtime.start()
+                runtime_started = True
             async with mcp_server.session_manager.run():
                 yield
         finally:
-            if resolved_runtime is not None:
+            if owns_http_client and resolved_http_client is not None:
+                await resolved_http_client.aclose()
+            if resolved_runtime is not None and runtime_started:
                 await resolved_runtime.stop()
 
     async def readiness_probe() -> bool:
@@ -153,6 +208,7 @@ def create_app(
     app.state.mcp_server = mcp_server
     app.state.database_runtime = resolved_runtime
     app.state.admin_app = admin_app
+    app.state.execution_repository = execution_repository
 
     # 先注册宿主路由，再注册 Catch-all MCP Mount，避免 /health 被截获。
     app.include_router(create_health_router(readiness_probe))

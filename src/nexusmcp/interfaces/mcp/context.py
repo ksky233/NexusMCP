@@ -7,6 +7,7 @@ from typing import Any, cast
 
 from mcp.server.context import ServerRequestContext
 
+from nexusmcp.modules.identity.domain import InternalPrincipal, PrincipalType
 from nexusmcp.shared.request_context import (
     ANONYMOUS_PRINCIPAL_ID,
     ProtocolEra,
@@ -17,10 +18,12 @@ MODERN_PROTOCOL_VERSION = "2026-07-28"
 _TRACEPARENT_PATTERN = re.compile(r"^[\da-fA-F]{2}-([\da-fA-F]{32})-[\da-fA-F]{16}-[\da-fA-F]{2}$")
 
 
-def _headers(ctx: ServerRequestContext[Any, Any]) -> Mapping[str, str]:
+def request_headers(ctx: ServerRequestContext[Any, Any]) -> Mapping[str, str]:
     request = ctx.request
     headers = getattr(request, "headers", None)
-    return cast(Mapping[str, str], headers) if isinstance(headers, Mapping) else {}
+    if not isinstance(headers, Mapping):
+        return {}
+    return {str(key).lower(): str(value) for key, value in cast(Mapping[Any, Any], headers).items()}
 
 
 def _trace_id(headers: Mapping[str, str]) -> str:
@@ -33,10 +36,17 @@ def resolve_request_context(
     ctx: ServerRequestContext[Any, Any],
     *,
     tenant_id: str,
+    principal: InternalPrincipal | None = None,
 ) -> RequestContext:
     """在可信 Authenticator 引入前构造匿名 RequestContext。"""
 
-    headers = _headers(ctx)
+    headers = request_headers(ctx)
+    resolved_principal = principal or InternalPrincipal(
+        id=ANONYMOUS_PRINCIPAL_ID,
+        tenant_id=tenant_id,
+        principal_type=PrincipalType.ANONYMOUS,
+        authn_method="anonymous",
+    )
     protocol_era = (
         ProtocolEra.MODERN
         if ctx.protocol_version == MODERN_PROTOCOL_VERSION
@@ -48,6 +58,9 @@ def resolve_request_context(
         protocol_version=ctx.protocol_version,
         protocol_era=protocol_era,
         tenant_id=tenant_id,
-        principal_id=ANONYMOUS_PRINCIPAL_ID,
-        authn_method="anonymous",
+        principal_id=resolved_principal.id,
+        authn_method=resolved_principal.authn_method,
+        principal_type=resolved_principal.principal_type.value,
+        roles=resolved_principal.roles,
+        principal_attributes=resolved_principal.attributes,
     )

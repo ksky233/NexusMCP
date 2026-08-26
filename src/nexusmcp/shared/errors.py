@@ -106,3 +106,38 @@ class InvalidReviewStateError(NexusMcpError):
 class InvalidArgumentsError(NexusMcpError):
     code = "invalid_arguments"
     safe_message = "The request arguments are invalid."
+
+
+class AuthorizationError(NexusMcpError):
+    code = "authorization_denied"
+    safe_message = "The principal is not allowed to call this tool."
+
+
+class AuthenticationError(NexusMcpError):
+    code = "authentication_failed"
+    safe_message = "The request could not be authenticated."
+
+
+class ApprovalRequiredError(NexusMcpError):
+    code = "approval_required"
+    safe_message = "This tool call requires approval."
+
+
+class UpstreamTimeoutError(NexusMcpError):
+    code = "upstream_timeout"
+    safe_message = "The upstream service did not respond before the timeout."
+
+
+class UpstreamUnavailableError(NexusMcpError):
+    code = "upstream_unavailable"
+    safe_message = "The upstream service is unavailable."
+
+
+class UpstreamResponseError(NexusMcpError):
+    code = "upstream_response_error"
+    safe_message = "The upstream service returned an invalid response."
+
+
+class UnknownExecutionOutcomeError(NexusMcpError):
+    code = "unknown_execution_outcome"
+    safe_message = "The upstream execution outcome could not be determined."

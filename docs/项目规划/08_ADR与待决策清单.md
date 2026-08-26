@@ -73,6 +73,33 @@
 
 决策记录：[ADR-0004](../adr/0004-postgresql-primary-store.md)。
 
+### D-011｜Internal Principal 与 Trust Boundary
+
+- 只有认证 Adapter 创建可信 Principal；
+- 不信任客户端 Tenant/User Header；
+- 不保存原始 Token/完整 Claims；
+- 无匹配 Policy 默认 DENY。
+
+决策记录：[ADR-0005](../adr/0005-identity-trust-boundary.md)。
+
+### D-012｜SecretReference 与 Egress Credential 分离
+
+- Inbound/Internal/Egress Credential 不混用；
+- 数据库只保存 SecretReference；
+- Policy/Approval 后才解析 Secret；
+- SecretValue 只在 Executor 单次调用内存中存在。
+
+决策记录：[ADR-0006](../adr/0006-credential-reference-and-injection.md)。
+
+### D-013｜Side Effect 决定 Retry 与 Unknown Outcome
+
+- Execution 区分 Failed 与 Unknown；
+- Non-Idempotent After-Send Timeout 不自动 Retry；
+- Read Only/具备 Key 的 Idempotent Write 才进入有限 Retry；
+- 数据库事务不跨越 Upstream 调用。
+
+决策记录：[ADR-0007](../adr/0007-side-effect-retry-and-unknown-outcome.md)。
+
 ## 2. 推荐但需在初始化时确认
 
 ### R-001｜Persistence 工程工具
@@ -141,10 +168,10 @@ Legacy Session 本身不构成新项目必须引入 Redis 的理由。
 | [0002](../adr/0002-mcp-protocol-and-sdk-adapter.md) | Accepted | MCP 协议时代与 SDK Adapter 层级 |
 | 0003 | Covered by ADR-0001 | 模块化单体与拆分触发条件 |
 | [0004](../adr/0004-postgresql-primary-store.md) | Accepted | PostgreSQL 主存储与 Tool 版本模型 |
-| 0005 | Planned | Identity 与 Trust Boundary |
-| 0006 | Planned | Credential Reference |
-| 0007 | Planned | Tool Retry 与 Side Effect |
-| 0008 | Planned | Tool Search FTS |
+| [0005](../adr/0005-identity-trust-boundary.md) | Accepted | Identity 与 Trust Boundary |
+| [0006](../adr/0006-credential-reference-and-injection.md) | Accepted | Credential Reference |
+| [0007](../adr/0007-side-effect-retry-and-unknown-outcome.md) | Accepted | Tool Retry、Side Effect 与 Unknown Outcome |
+| 0008 | Covered by ADR-0004/S2-5 | Tool Search FTS |
 | 0009 | Planned | RAG Demo 边界 |
 | 0010 | Planned | Audit 写入策略 |
 

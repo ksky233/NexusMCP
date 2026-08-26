@@ -4,7 +4,7 @@
 
 NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，负责将企业 HTTP/OpenAPI 服务和已有 MCP Server 纳入统一 Tool Catalog，并在 MCP 调用链上执行身份、策略、凭据、审批、审计与可观测性。
 
-当前阶段：`S2-6｜S2 收口与 Control Plane 接缝完成`。
+当前阶段：`S3-2｜Principal 与 ALLOW/DENY Policy 完成`。
 
 ## 当前边界
 
@@ -25,7 +25,10 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，�
 - 三个 Demo 共 7 个接口已复用同一 Pipeline，并由 MCP 同时返回三个 Namespace；
 - Catalog 已具有 PostgreSQL Weighted FTS、GIN Index、相关度排名和治理过滤；
 - Local Admin REST 已覆盖 Registry、Import、Review、Publish、Search，并与 `/mcp` 隔离；
-- S2 已完成；认证、Policy、Credential、Approval、Audit 和 `tools/call` 进入 S3。
+- S2 已完成；S3 已冻结 Principal、Policy、Credential、Approval、Execution/Audit 与 Retry 边界；
+- Modern MCP `tools/call` 已跑通 Read-Only HTTP GET、Schema Validation、Static Policy 和 Execution；
+- Static Bearer Principal 与 Rule-Based ALLOW/DENY Policy 已接入调用阶段；
+- 真实 JWT/OIDC、Credential、Approval、持久化 Execution/Audit 和写 Tool 尚未实现。
 
 ## 代码语言约定
 
@@ -46,6 +49,12 @@ uv run ruff format --check .
 uv run basedpyright
 uv build
 uv run uvicorn nexusmcp.main:app --reload
+```
+
+Read-Only `directory.get_employee` 调用需要另一个终端启动 Fake Upstream：
+
+```powershell
+uv run uvicorn examples.upstream_apis.employee_directory.app:app --port 9001
 ```
 
 ## 本地 PostgreSQL
@@ -124,8 +133,14 @@ docker compose stop postgres
 - [S2-4 Operations / Inventory 通用性验证](./docs/实验记录/11_S2-4_OperationsInventory通用性验证.md)
 - [S2-5 Catalog PostgreSQL FTS](./docs/实验记录/12_S2-5_CatalogPostgreSQLFTS.md)
 - [S2-6 S2 收口与 Control Plane 接缝](./docs/实验记录/13_S2-6_S2收口与ControlPlane接缝.md)
+- [S3-0 Call/Policy/Credential/Execution 模型与 ADR](./docs/实验记录/14_S3-0_Call治理模型与ADR.md)
+- [S3-1 Read-Only HTTP tools/call](./docs/实验记录/15_S3-1_ReadOnlyHTTPToolsCall.md)
+- [S3-2 Principal 与 ALLOW/DENY Policy](./docs/实验记录/16_S3-2_Principal与AllowDenyPolicy.md)
 - [业务词汇、核心用例与限界上下文](./docs/架构/01_业务词汇核心用例与限界上下文.md)
 - [持久化模型与发布事务](./docs/架构/02_持久化模型与发布事务.md)
 - [ADR-0001：Python 项目布局](./docs/adr/0001-python-project-layout.md)
 - [ADR-0002：MCP 协议与 SDK Adapter](./docs/adr/0002-mcp-protocol-and-sdk-adapter.md)
 - [ADR-0004：PostgreSQL 主存储](./docs/adr/0004-postgresql-primary-store.md)
+- [ADR-0005：Identity 与 Trust Boundary](./docs/adr/0005-identity-trust-boundary.md)
+- [ADR-0006：Credential Reference 与 Injection](./docs/adr/0006-credential-reference-and-injection.md)
+- [ADR-0007：Side Effect、Retry 与 Unknown Outcome](./docs/adr/0007-side-effect-retry-and-unknown-outcome.md)

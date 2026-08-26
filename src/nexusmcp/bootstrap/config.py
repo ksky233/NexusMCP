@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     database_echo: bool = False
     database_readiness_timeout_seconds: float = 1.0
     control_plane_enabled: bool = False
+    tool_execution_enabled: bool = False
+    tool_call_timeout_seconds: float = 5.0
     local_admin_principal_id: str = "local-admin"
     openapi_fixture_root: Path = Path("examples/upstream_apis")
     transport_allowed_hosts: list[str] = Field(
@@ -57,6 +59,8 @@ class Settings(BaseSettings):
             )
         if self.control_plane_enabled and self.catalog_backend != "postgresql":
             raise ValueError("control_plane_enabled requires postgresql catalog_backend")
+        if self.tool_execution_enabled and self.catalog_backend != "postgresql":
+            raise ValueError("tool_execution_enabled requires postgresql catalog_backend")
         if self.control_plane_enabled:
             try:
                 uuid.UUID(self.local_tenant_id)
@@ -64,6 +68,8 @@ class Settings(BaseSettings):
                 raise ValueError("control_plane_enabled requires UUID local_tenant_id") from None
         if self.database_readiness_timeout_seconds <= 0:
             raise ValueError("database_readiness_timeout_seconds must be positive")
+        if self.tool_call_timeout_seconds <= 0:
+            raise ValueError("tool_call_timeout_seconds must be positive")
         return self
 
 
