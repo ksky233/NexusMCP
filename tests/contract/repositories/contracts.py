@@ -93,6 +93,8 @@ def make_published_tool(tenant_id: str = TENANT_A_ID) -> PublishedTool:
         visibility=ToolVisibility.PUBLIC,
         side_effect=ToolSideEffect.READ_ONLY,
         schema_digest="1" * 64,
+        owner="people-platform",
+        tags=("directory", "employee"),
     )
 
 

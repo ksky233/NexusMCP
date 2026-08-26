@@ -27,6 +27,17 @@ def test_tool_canonical_name_must_belong_to_namespace() -> None:
         )
 
 
+def test_catalog_managed_tool_cannot_use_reserved_nexus_namespace() -> None:
+    with pytest.raises(ValueError, match="reserved"):
+        Tool(
+            id="tool-1",
+            tenant_id="tenant-a",
+            namespace="nexus",
+            canonical_name="nexus.search_tools",
+            owner="tenant-owner",
+        )
+
+
 def test_published_version_requires_publish_timestamp() -> None:
     with pytest.raises(ValueError, match="published_at"):
         ToolVersion(

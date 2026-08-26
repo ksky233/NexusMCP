@@ -74,6 +74,15 @@ def test_request_state_key_and_approval_ttl_have_secure_bounds() -> None:
         Settings(environment="test", request_state_key=SecretStr("short-key"))
 
 
+def test_embedding_settings_validate_model_dimensions_and_url() -> None:
+    with pytest.raises(ValidationError, match="embedding_model"):
+        Settings(environment="test", embedding_model=" ")
+    with pytest.raises(ValidationError, match="embedding_dimensions"):
+        Settings(environment="test", embedding_dimensions=32)
+    with pytest.raises(ValidationError, match="embedding_api_url"):
+        Settings(environment="test", embedding_api_url="file:///tmp/embedding")
+
+
 def test_production_tool_execution_requires_shared_request_state_key() -> None:
     with pytest.raises(ValidationError, match="request_state_key"):
         Settings(

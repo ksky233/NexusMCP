@@ -7,6 +7,7 @@ from nexusmcp.modules.catalog.domain import (
     PublishedTool,
     PublishedToolSearchHit,
     Tool,
+    ToolSideEffect,
     ToolVersion,
     ToolVisibility,
 )
@@ -33,6 +34,8 @@ class PublishedToolSearch(Protocol):
         query_text: str,
         *,
         visibilities: tuple[ToolVisibility, ...],
+        namespace: str | None,
+        side_effect: ToolSideEffect | None,
         limit: int,
     ) -> tuple[PublishedToolSearchHit, ...]: ...
 

@@ -2,6 +2,9 @@
 
 from nexusmcp.modules.approval.adapters.sqlalchemy_models import ApprovalRequestModel
 from nexusmcp.modules.audit.adapters.sqlalchemy_models import AuditEventModel
+from nexusmcp.modules.catalog.adapters.sqlalchemy_embedding_models import (
+    ToolSearchEmbeddingModel,
+)
 from nexusmcp.modules.catalog.adapters.sqlalchemy_models import ToolModel, ToolVersionModel
 from nexusmcp.modules.connectors.adapters.sqlalchemy_models import ToolBindingModel
 from nexusmcp.modules.execution.adapters.sqlalchemy_models import (
@@ -22,6 +25,7 @@ ALL_MODELS = (
     ImportedOperationModel,
     ToolModel,
     ToolVersionModel,
+    ToolSearchEmbeddingModel,
     ToolBindingModel,
     ApprovalRequestModel,
     ToolExecutionModel,

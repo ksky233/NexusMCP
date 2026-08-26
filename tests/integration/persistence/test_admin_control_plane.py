@@ -158,7 +158,10 @@ async def test_admin_rest_drives_import_review_publish_search_and_mcp(
             )
             async with Client(mcp_transport) as mcp_client:
                 tools = await mcp_client.list_tools(cache_mode="refresh")
-            assert [tool.name for tool in tools.tools] == ["directory.get_employee"]
+            assert [tool.name for tool in tools.tools] == [
+                "nexus.search_tools",
+                "directory.get_employee",
+            ]
 
             disabled = await client.post(f"/admin/upstreams/{upstream_id}/disable")
             assert disabled.status_code == 200

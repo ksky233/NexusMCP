@@ -6,9 +6,12 @@ from collections.abc import Iterable
 
 from nexusmcp.modules.catalog.domain import (
     PublishedTool,
+    PublishedToolSearchHit,
     Tool,
+    ToolSideEffect,
     ToolVersion,
     ToolVersionStatus,
+    ToolVisibility,
 )
 
 
@@ -147,6 +150,45 @@ class InMemoryToolCatalogRepository:
         canonical_name: str,
     ) -> PublishedTool | None:
         return self._published_tools.get((tenant_id, canonical_name))
+
+    async def search_published(
+        self,
+        tenant_id: str,
+        query_text: str,
+        *,
+        visibilities: tuple[ToolVisibility, ...],
+        namespace: str | None,
+        side_effect: ToolSideEffect | None,
+        limit: int,
+    ) -> tuple[PublishedToolSearchHit, ...]:
+        tokens = tuple(token for token in query_text.lower().split() if token)
+        hits: list[PublishedToolSearchHit] = []
+        for tool in self._published_tools.values():
+            if tool.tenant_id != tenant_id or tool.visibility not in visibilities:
+                continue
+            if namespace is not None and tool.namespace != namespace:
+                continue
+            if side_effect is not None and tool.side_effect is not side_effect:
+                continue
+            name_text = f"{tool.canonical_name} {tool.display_name}".lower()
+            tag_text = " ".join(tool.tags).lower()
+            description_text = tool.description.lower()
+            owner_text = (tool.owner or "").lower()
+            searchable = " ".join((name_text, tag_text, description_text, owner_text))
+            if not tokens or not all(token in searchable for token in tokens):
+                continue
+            rank = sum(
+                4.0 * (token in name_text)
+                + 3.0 * (token in tag_text)
+                + 1.0 * (token in description_text)
+                + 1.0 * (token in owner_text)
+                for token in tokens
+            )
+            if query_text.lower() == tool.canonical_name.lower():
+                rank += 100.0
+            hits.append(PublishedToolSearchHit(tool=tool, rank=rank))
+        hits.sort(key=lambda hit: (-hit.rank, hit.tool.canonical_name))
+        return tuple(hits[:limit])
 
     def clone(self) -> InMemoryToolCatalogRepository:
         """为 InMemory Unit of Work 创建事务内隔离副本。"""

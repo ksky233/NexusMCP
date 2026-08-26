@@ -9,6 +9,7 @@ from enum import StrEnum
 from typing import Any
 
 from nexusmcp.shared.request_context import ANONYMOUS_PRINCIPAL_ID
+from nexusmcp.shared.tool_namespaces import is_reserved_tool_namespace
 
 
 class ToolStatus(StrEnum):
@@ -55,6 +56,8 @@ class Tool:
         _require_non_blank("tool owner", self.owner)
         if not self.canonical_name.startswith(f"{self.namespace}."):
             raise ValueError("tool canonical name must start with its namespace")
+        if is_reserved_tool_namespace(self.namespace):
+            raise ValueError("tool namespace is reserved by NexusMCP")
 
     def activate(self) -> Tool:
         """发布成功时激活稳定 Tool Identity；重复激活保持幂等。"""
@@ -156,6 +159,8 @@ class PublishedTool:
     visibility: ToolVisibility
     side_effect: ToolSideEffect
     schema_digest: str
+    owner: str | None = None
+    tags: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         _require_non_blank("tool id", self.tool_id)
@@ -176,6 +181,10 @@ class PublishedTool:
         if self.visibility is ToolVisibility.AUTHENTICATED:
             return principal_id != ANONYMOUS_PRINCIPAL_ID
         return False
+
+    @property
+    def namespace(self) -> str:
+        return self.canonical_name.partition(".")[0]
 
 
 @dataclass(frozen=True, slots=True)

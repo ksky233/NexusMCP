@@ -2,7 +2,11 @@
 
 from dataclasses import dataclass
 
-from nexusmcp.modules.catalog.domain import PublishedToolSearchHit, ToolVisibility
+from nexusmcp.modules.catalog.domain import (
+    PublishedToolSearchHit,
+    ToolSideEffect,
+    ToolVisibility,
+)
 from nexusmcp.modules.catalog.ports import PublishedToolSearch
 from nexusmcp.shared.errors import InvalidArgumentsError
 from nexusmcp.shared.request_context import ANONYMOUS_PRINCIPAL_ID, ActorContext
@@ -13,6 +17,8 @@ class SearchPublishedToolsQuery:
     context: ActorContext
     text: str
     limit: int = 10
+    namespace: str | None = None
+    side_effect: ToolSideEffect | None = None
 
 
 class SearchPublishedTools:
@@ -30,6 +36,9 @@ class SearchPublishedTools:
             raise InvalidArgumentsError("tool search text must not exceed 200 characters")
         if not 1 <= query.limit <= 50:
             raise InvalidArgumentsError("tool search limit must be between 1 and 50")
+        namespace = query.namespace.strip() if query.namespace is not None else None
+        if namespace == "":
+            raise InvalidArgumentsError("tool search namespace must not be blank")
         visibilities = (ToolVisibility.PUBLIC,)
         if query.context.principal_id != ANONYMOUS_PRINCIPAL_ID:
             visibilities = (
@@ -40,5 +49,7 @@ class SearchPublishedTools:
             query.context.tenant_id,
             query_text,
             visibilities=visibilities,
+            namespace=namespace,
+            side_effect=query.side_effect,
             limit=query.limit,
         )

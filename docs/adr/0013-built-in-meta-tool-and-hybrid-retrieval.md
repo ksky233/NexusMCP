@@ -51,8 +51,8 @@ nexus.search_tools
 - side_effect: optional
 ```
 
-返回 Top-K 轻量 Tool Metadata；完整 Schema 通过后续 Describe/Activation 接缝按需获取。Meta Tool
-自身仍受 Authentication、Tenant Boundary、Search Policy、Rate/Trace/Audit 约束，但不走 Upstream
+返回最多 10 个 Top-K Tool Metadata 与完整 Input/Output Schema，由 Host 动态激活。Meta Tool 自身仍受
+Authentication、Tenant Boundary、Search Policy、Rate/Trace/Audit 约束，但不走 Upstream
 Credential/Execution Connector。
 
 ## Rejected Alternatives
@@ -69,7 +69,7 @@ Credential/Execution Connector。
 
 - Agent/Host 必须理解 Lexical 与 Hybrid 的选择说明；
 - Lexical → Hybrid 的自主重试可能多一次 Round Trip，但避免所有明确 Query 支付 Embedding 成本；
-- S4-0 必须冻结 Search Result 后如何由 MCP Host 动态加载完整 Schema；
+- S4-0 已冻结 Top-K Full Schema + Host Dynamic Activation，不增加 Generic Call Meta Tool；
 - PostgreSQL 运行环境需要增加 pgvector，并通过 Eval 决定 Embedding Model/Dimensions/Index；
 - Vector-only、Auto、Rerank 保留为内部或 Deferred Strategy，不进入第一版公共协议；
 - Meta Tool 的版本、Namespace 和权限规则必须与 Catalog Managed Tool 明确隔离。
@@ -83,3 +83,18 @@ Credential/Execution Connector。
 - Lexical 无结果后由 Agent/测试流程再次调用 Hybrid；
 - Hidden/Cross-Tenant Tool 在所有 Strategy 中均不泄漏；
 - Publish 不依赖 Embedding Provider 可用性，Reindex 可重复且由 Source Digest 去重。
+
+## Implementation Confirmation
+
+S4-0/S4-1 已确认：
+
+- `nexus.search_tools` 始终由 Application 组装，不写入 Catalog；
+- Upstream/Catalog 拒绝保留的 `nexus` Namespace；
+- `tool_discovery_mode=eager|search_first` 控制初始发现范围；
+- Search-First 初始只列出 Meta Tool；
+- Lexical 使用现有 PostgreSQL Weighted FTS，并接受 Namespace/Side Effect Filter；
+- Candidate 在 Visibility 后继续执行粗粒度 Policy Filter；
+- Top-K 最大 10，直接返回完整 Schema；
+- SDK 可以调用未在初始 `tools/list` 中列出、但由 Search Result 激活的业务 Tool；
+- Hybrid 在 Vector Index 缺失时返回稳定 Unavailable，不静默降级；
+- 当前 8 个 Demo Tool 已建立 Lexical Eval Baseline 和已知 Semantic Gap Cases。

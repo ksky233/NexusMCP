@@ -19,6 +19,7 @@ from nexusmcp.shared.errors import (
 )
 from nexusmcp.shared.identifiers import IdentifierGenerator
 from nexusmcp.shared.request_context import ActorContext
+from nexusmcp.shared.tool_namespaces import is_reserved_tool_namespace
 
 _NAMESPACE_PATTERN = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 _SENSITIVE_CONFIG_KEYS = {
@@ -187,6 +188,8 @@ class ListUpstreams:
 def _validate_namespace(namespace: str) -> None:
     if not _NAMESPACE_PATTERN.fullmatch(namespace):
         raise InvalidArgumentsError("upstream namespace is invalid")
+    if is_reserved_tool_namespace(namespace):
+        raise InvalidArgumentsError("upstream namespace is reserved by NexusMCP")
 
 
 def _validate_registration(

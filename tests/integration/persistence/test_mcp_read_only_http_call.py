@@ -192,3 +192,55 @@ async def test_modern_mcp_read_only_http_tool_call(
         AuditOutcome.ALLOWED,
         AuditOutcome.SUCCEEDED,
     ]
+
+
+@pytest.mark.asyncio
+async def test_search_first_discovers_schema_then_calls_unlisted_business_tool(
+    pg_session_factory: async_sessionmaker[AsyncSession],
+    migrated_database_url: str,
+) -> None:
+    async with pg_session_factory() as seed_session:
+        await seed_executable_tool(seed_session)
+    upstream_transport = httpx.ASGITransport(app=employee_directory_app)
+    async with httpx.AsyncClient(transport=upstream_transport) as upstream_client:
+        app = create_app(
+            Settings(
+                environment="test",
+                catalog_backend="postgresql",
+                database_url=SecretStr(migrated_database_url),
+                local_tenant_id=TENANT_A_ID,
+                tool_execution_enabled=True,
+                tool_discovery_mode="search_first",
+            ),
+            tool_http_client=upstream_client,
+        )
+        async with app.router.lifespan_context(app):
+            transport = httpx2.ASGITransport(app=app)
+            async with httpx2.AsyncClient(
+                transport=transport,
+                base_url="http://testserver",
+            ) as http_client:
+                mcp_transport = streamable_http_client(
+                    "http://testserver/mcp",
+                    http_client=http_client,
+                )
+                async with Client(mcp_transport) as client:
+                    listed = await client.list_tools(cache_mode="refresh")
+                    searched = await client.call_tool(
+                        "nexus.search_tools",
+                        {
+                            "query": "employee",
+                            "retrieval_mode": "lexical",
+                        },
+                    )
+                    candidate = searched.structured_content["tools"][0]
+                    called = await client.call_tool(
+                        candidate["name"],
+                        {"employee_id": "emp-001"},
+                    )
+
+    assert [tool.name for tool in listed.tools] == ["nexus.search_tools"]
+    assert candidate["name"] == "directory.get_employee"
+    assert candidate["inputSchema"]["required"] == ["employee_id"]
+    assert called.is_error is False
+    assert called.structured_content["name"] == "Ada Chen"

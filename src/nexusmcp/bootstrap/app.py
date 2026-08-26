@@ -34,7 +34,8 @@ from nexusmcp.modules.approval.use_cases import (
 from nexusmcp.modules.catalog.adapters.in_memory import InMemoryToolCatalogRepository
 from nexusmcp.modules.catalog.adapters.sqlalchemy_reader import SqlAlchemyPublishedToolReader
 from nexusmcp.modules.catalog.adapters.sqlalchemy_search import SqlAlchemyPublishedToolSearch
-from nexusmcp.modules.catalog.ports import PublishedToolReader
+from nexusmcp.modules.catalog.meta_search import SearchTools
+from nexusmcp.modules.catalog.ports import PublishedToolReader, PublishedToolSearch
 from nexusmcp.modules.catalog.publish import PublishTool
 from nexusmcp.modules.catalog.review import SubmitToolVersionForReview
 from nexusmcp.modules.catalog.search import SearchPublishedTools
@@ -83,6 +84,7 @@ def create_app(
     credential_binding_resolver: CredentialBindingResolver | None = None,
     credential_provider: CredentialProvider | None = None,
     request_state_security: RequestStateSecurity | None = None,
+    published_tool_search: PublishedToolSearch | None = None,
 ) -> FastAPI:
     """创建完整组装的应用，不让业务代码依赖全局对象。"""
 
@@ -103,6 +105,22 @@ def create_app(
     if resolved_reader is None:
         resolved_reader = InMemoryToolCatalogRepository()
     list_visible_tools = ListVisibleTools(resolved_reader)
+    resolved_policy_evaluator = policy_evaluator or StaticReadOnlyPolicyEvaluator()
+    principal_resolver = ContextPrincipalResolver()
+    search_backend = published_tool_search
+    if search_backend is None and resolved_runtime is not None:
+        search_backend = SqlAlchemyPublishedToolSearch(resolved_runtime)
+    if search_backend is None and isinstance(resolved_reader, InMemoryToolCatalogRepository):
+        search_backend = resolved_reader
+    search_tools = (
+        SearchTools(
+            lexical_search=SearchPublishedTools(search_backend),
+            principal_resolver=principal_resolver,
+            policy_evaluator=resolved_policy_evaluator,
+        )
+        if search_backend is not None
+        else None
+    )
     clock = SystemClock()
     identifier_generator = UuidIdentifierGenerator()
     request_approval: RequestApproval | None = None
@@ -140,10 +158,10 @@ def create_app(
         execution_reader = SqlAlchemyToolExecutionReader(resolved_runtime)
         audit_reader = SqlAlchemyAuditEventReader(resolved_runtime)
         call_tool_use_case = CallTool(
-            principal_resolver=ContextPrincipalResolver(),
+            principal_resolver=principal_resolver,
             tool_resolver=SqlAlchemyExecutableToolResolver(resolved_runtime),
             arguments_validator=JsonSchemaArgumentsValidator(),
-            policy_evaluator=policy_evaluator or StaticReadOnlyPolicyEvaluator(),
+            policy_evaluator=resolved_policy_evaluator,
             execution_lifecycle=execution_lifecycle,
             executor=ExecuteWithRetry(
                 HttpxToolExecutor(resolved_http_client),
@@ -175,6 +193,8 @@ def create_app(
         list_visible_tools=list_visible_tools,
         context_resolver=context_resolver,
         call_tool=call_tool_use_case,
+        search_tools=search_tools,
+        search_first=resolved_settings.tool_discovery_mode == "search_first",
         decide_approval=decide_approval,
         request_state_security=request_state_security or _request_state_security(resolved_settings),
     )

@@ -179,6 +179,7 @@ Legacy Session 本身不构成新项目必须引入 Redis 的理由。
 | [0011](../adr/0011-asynchronous-approval-mrtr-and-resume.md) | Accepted | 异步 Approval、MRTR 与恢复 |
 | [0012](../adr/0012-retry-idempotency-and-attempts.md) | Accepted | Retry、Idempotency 与 ExecutionAttempt |
 | [0013](../adr/0013-built-in-meta-tool-and-hybrid-retrieval.md) | Accepted | 内建 Meta Tool 与 Hybrid Tool Retrieval |
+| [0014](../adr/0014-pgvector-infrastructure-and-vector-storage.md) | Accepted | PostgreSQL 18 pgvector 与 Vector Storage |
 
 不是现在一次性写完。每个 ADR 在相关实现前后完成。
 

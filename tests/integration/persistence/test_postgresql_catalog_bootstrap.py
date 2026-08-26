@@ -149,7 +149,10 @@ async def test_postgresql_lifespan_readiness_and_mcp_catalog_query(
 
         after_stop = await http_client.get("/health/ready")
 
-    assert [tool.name for tool in result.tools] == ["directory.get_employee"]
-    assert result.tools[0].input_schema["required"] == ["employee_id"]
+    assert [tool.name for tool in result.tools] == [
+        "nexus.search_tools",
+        "directory.get_employee",
+    ]
+    assert result.tools[1].input_schema["required"] == ["employee_id"]
     assert runtime.is_started is False
     assert after_stop.status_code == 503

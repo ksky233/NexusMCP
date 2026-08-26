@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     log_format: Literal["console", "json"] = "console"
     catalog_backend: Literal["memory", "postgresql"] = "memory"
+    tool_discovery_mode: Literal["eager", "search_first"] = "eager"
+    embedding_model: str = "Qwen/Qwen3-Embedding-8B"
+    embedding_dimensions: int = 2048
+    embedding_api_url: str = "https://api.siliconflow.cn/v1/embeddings"
+    embedding_api_key: SecretStr | None = None
     local_tenant_id: str = "local"
     database_url: SecretStr | None = None
     database_echo: bool = False
@@ -72,6 +77,12 @@ class Settings(BaseSettings):
                 raise ValueError("control_plane_enabled requires UUID local_tenant_id") from None
         if self.database_readiness_timeout_seconds <= 0:
             raise ValueError("database_readiness_timeout_seconds must be positive")
+        if not self.embedding_model.strip():
+            raise ValueError("embedding_model must not be blank")
+        if not 64 <= self.embedding_dimensions <= 8192:
+            raise ValueError("embedding_dimensions must be between 64 and 8192")
+        if not self.embedding_api_url.startswith(("https://", "http://")):
+            raise ValueError("embedding_api_url must use http or https")
         if self.tool_call_timeout_seconds <= 0:
             raise ValueError("tool_call_timeout_seconds must be positive")
         if not 1 <= self.tool_retry_max_attempts <= 10:

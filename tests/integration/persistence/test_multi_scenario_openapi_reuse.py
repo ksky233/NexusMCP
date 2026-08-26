@@ -263,6 +263,7 @@ async def test_three_scenarios_share_pipeline_and_catalog(
                 tools = await client.list_tools(cache_mode="refresh")
 
     assert [tool.name for tool in tools.tools] == [
+        "nexus.search_tools",
         "directory.get_employee",
         "directory.list_employees",
         "directory.search_employees",

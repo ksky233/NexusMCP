@@ -109,6 +109,7 @@ async def test_duplicate_upstream_is_rejected() -> None:
         {"endpoint": "http://user:password@internal.example.test"},
         {"config": {"nested": {"api_key": "do-not-store"}}},
         {"namespace": "Invalid Namespace"},
+        {"namespace": "nexus"},
     ],
 )
 async def test_registry_rejects_invalid_or_sensitive_configuration(

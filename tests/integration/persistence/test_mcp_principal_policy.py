@@ -158,11 +158,17 @@ async def test_same_tool_is_allowed_denied_or_unauthenticated_by_principal(
             audits = await audit_reader.list_by_tenant(TENANT_A_ID)
 
     assert user_a_list is not None
-    assert [tool.name for tool in user_a_list.tools] == ["directory.get_employee"]
+    assert [tool.name for tool in user_a_list.tools] == [
+        "nexus.search_tools",
+        "directory.get_employee",
+    ]
     assert user_a.is_error is False
     assert user_b_list is not None
     # tools/list 可见不代表 tools/call 被授权，调用阶段必须重新执行 Policy。
-    assert [tool.name for tool in user_b_list.tools] == ["directory.get_employee"]
+    assert [tool.name for tool in user_b_list.tools] == [
+        "nexus.search_tools",
+        "directory.get_employee",
+    ]
     assert user_b.is_error is True
     assert user_b.meta is not None
     assert user_b.meta["com.nexusmcp/errorCode"] == "authorization_denied"

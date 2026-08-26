@@ -12,7 +12,14 @@ from mcp.server.request_state import RequestStateBoundary, RequestStateSecurity
 
 from nexusmcp.interfaces.mcp.context import resolve_request_context
 from nexusmcp.interfaces.mcp.errors import to_call_tool_error
+from nexusmcp.interfaces.mcp.meta_tools import (
+    NEXUS_SEARCH_TOOLS_NAME,
+    parse_search_tools_query,
+    search_tools_definition,
+    search_tools_result,
+)
 from nexusmcp.modules.approval.use_cases import DecideApproval, DecideApprovalCommand
+from nexusmcp.modules.catalog.meta_search import SearchTools
 from nexusmcp.modules.catalog.use_cases import ListVisibleTools, ListVisibleToolsQuery
 from nexusmcp.modules.execution.call_tool import CallTool
 from nexusmcp.modules.execution.domain import CallToolCommand, is_valid_idempotency_key
@@ -49,6 +56,8 @@ def create_mcp_server(
     list_visible_tools: ListVisibleTools,
     context_resolver: ContextResolver = _anonymous_local_context,
     call_tool: CallTool | None = None,
+    search_tools: SearchTools | None = None,
+    search_first: bool = False,
     decide_approval: DecideApproval | None = None,
     request_state_security: RequestStateSecurity | None = None,
 ) -> Server[Any]:
@@ -67,7 +76,11 @@ def create_mcp_server(
             protocol_era=request_context.protocol_era.value,
         ):
             try:
-                tools = await list_visible_tools.execute(ListVisibleToolsQuery(request_context))
+                tools = (
+                    ()
+                    if search_first
+                    else await list_visible_tools.execute(ListVisibleToolsQuery(request_context))
+                )
                 protocol_tools = [
                     types.Tool(
                         name=tool.canonical_name,
@@ -83,6 +96,8 @@ def create_mcp_server(
                     )
                     for tool in tools
                 ]
+                if search_tools is not None:
+                    protocol_tools.insert(0, search_tools_definition())
             except NexusMcpError as error:
                 logger.warning(
                     "mcp_request_rejected",
@@ -140,6 +155,51 @@ def create_mcp_server(
             tenant_id=request_context.tenant_id,
             protocol_era=request_context.protocol_era.value,
         ):
+            if params.name == NEXUS_SEARCH_TOOLS_NAME:
+                if search_tools is None:
+                    return to_call_tool_error(NexusMcpError("Tool search is not configured"))
+                try:
+                    query = parse_search_tools_query(
+                        request_context,
+                        params.arguments or {},
+                    )
+                    hits = await search_tools.execute(query)
+                except NexusMcpError as error:
+                    logger.warning(
+                        "mcp_meta_tool_call_rejected",
+                        extra={
+                            "event": "mcp_meta_tool_call_rejected",
+                            "error_code": error.code,
+                            "duration_ms": round(
+                                (perf_counter() - started_at) * 1000,
+                                3,
+                            ),
+                        },
+                    )
+                    return to_call_tool_error(error)
+                except Exception:
+                    logger.exception(
+                        "mcp_meta_tool_call_failed",
+                        extra={
+                            "event": "mcp_meta_tool_call_failed",
+                            "error_code": "unexpected_error",
+                            "duration_ms": round(
+                                (perf_counter() - started_at) * 1000,
+                                3,
+                            ),
+                        },
+                    )
+                    return to_call_tool_error(NexusMcpError())
+                logger.info(
+                    "mcp_tool_search_completed",
+                    extra={
+                        "event": "mcp_tool_search_completed",
+                        "retrieval_mode": query.retrieval_mode.value,
+                        "candidate_count": len(hits),
+                        "duration_ms": round((perf_counter() - started_at) * 1000, 3),
+                    },
+                )
+                return search_tools_result(hits, query.retrieval_mode)
             if call_tool is None:
                 return to_call_tool_error(NexusMcpError("tools/call is not configured"))
             try:
@@ -217,7 +277,7 @@ def create_mcp_server(
         version="0.1.0",
         description="Enterprise MCP Gateway and Registry",
         on_list_tools=on_list_tools,
-        on_call_tool=on_call_tool if call_tool is not None else None,
+        on_call_tool=on_call_tool if call_tool is not None or search_tools is not None else None,
     )
     security = request_state_security or RequestStateSecurity.ephemeral(
         ttl=600,

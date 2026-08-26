@@ -8,6 +8,7 @@ from nexusmcp.modules.catalog.adapters.sqlalchemy_mapping import published_tool_
 from nexusmcp.modules.catalog.adapters.sqlalchemy_models import ToolModel, ToolVersionModel
 from nexusmcp.modules.catalog.domain import (
     PublishedToolSearchHit,
+    ToolSideEffect,
     ToolStatus,
     ToolVersionStatus,
     ToolVisibility,
@@ -26,6 +27,8 @@ class SqlAlchemyPublishedToolSearch:
         query_text: str,
         *,
         visibilities: tuple[ToolVisibility, ...],
+        namespace: str | None,
+        side_effect: ToolSideEffect | None,
         limit: int,
     ) -> tuple[PublishedToolSearchHit, ...]:
         session_factory = self._database_runtime.require_session_factory()
@@ -50,6 +53,10 @@ class SqlAlchemyPublishedToolSearch:
             .order_by(desc(rank), ToolModel.canonical_name)
             .limit(limit)
         )
+        if namespace is not None:
+            statement = statement.where(ToolModel.namespace == namespace)
+        if side_effect is not None:
+            statement = statement.where(ToolVersionModel.side_effect == side_effect.value)
         async with session_factory() as session:
             rows = (await session.execute(statement)).tuples().all()
         return tuple(

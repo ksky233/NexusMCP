@@ -4,7 +4,7 @@
 
 NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，负责将企业 HTTP/OpenAPI 服务和已有 MCP Server 纳入统一 Tool Catalog，并在 MCP 调用链上执行身份、策略、凭据、审批、审计与可观测性。
 
-当前阶段：`S3｜Gateway 与治理执行链完成`。
+当前阶段：`S4-2a｜pgvector 与 Embedding API 基础设施完成`。
 
 ## 当前边界
 
@@ -16,7 +16,7 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，�
 - Catalog 已拆分 Tool、ToolVersion、PublishedTool，并建立 Repository/UoW Contract；
 - GitHub Actions 会在 Push/PR 上使用云端 Ubuntu Runner 执行完整质量门禁；
 - PostgreSQL、Tool/ToolVersion/ToolBinding 和 Publish 事务已经完成设计冻结；
-- PostgreSQL 18.6、SQLAlchemy Async、Alembic Baseline 和 11 张 ORM 表已经建立；
+- PostgreSQL 18.6 + pgvector 0.8.6、SQLAlchemy Async、Alembic Baseline 和 12 张 ORM 表已经建立；
 - Catalog/Binding 已具有 SQLAlchemy Async Repository、显式 ORM Mapping 和每 Command 独立 UoW；
 - 已建立协议无关安全错误、MCP/HTTP 映射接缝、结构化日志和 async Log Context；
 - Publish 已实现 Tool/Version/Binding/Upstream 锁定、Digest 校验、原子状态切换与 Domain Event；
@@ -37,6 +37,12 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，�
 - 一个 Execution 支持多个持久化 Attempt；Read-Only/Idempotent Write 具有有界 Retry，幂等 Key
   具有数据库唯一 Claim、参数冲突和并发去重；
 - Inventory `set_reorder_level` 已作为唯一受控 PUT 幂等写纵向切片，其他 POST/非幂等写仍被拒绝；
+- 内建 `nexus.search_tools` 已接通 PostgreSQL FTS；Eager 模式与业务 Tool 一起返回，Search-First
+  模式初始只返回 Meta Tool；Top-K 候选携带可动态激活的完整 Schema；
+- Agent-facing Search Contract 只暴露必填 `lexical | hybrid`；Hybrid 在 pgvector Index 完成前返回
+  稳定的 `tool_search_mode_unavailable`；
+- SiliconFlow `Qwen/Qwen3-Embedding-8B` 2048 维 Smoke Test 已通过；`VECTOR(2048)` Projection、
+  pgvector Extension、Exact Cosine Round-Trip 已完成，第一版不建立 HNSW；
 - 真实 JWT/OIDC、生产 Secret Store、CredentialBinding 持久化、跨调用 Result Replay、通用写 Tool
   与 Reconciliation 尚未实现。
 
@@ -153,6 +159,8 @@ docker compose stop postgres
 - [S3-4 Approval Gate 与单次消费](./docs/实验记录/18_S3-4_ApprovalGate与单次消费.md)
 - [S3-5 持久化 ToolExecution 与 Audit 接缝](./docs/实验记录/19_S3-5_持久化Execution与Audit接缝.md)
 - [S3-6 Retry/Idempotency 执行与 S3 收口](./docs/实验记录/20_S3-6_Retry与Idempotency执行.md)
+- [S4-0/1 Meta Tool 与 Lexical Search](./docs/实验记录/21_S4-0_MetaTool与LexicalSearch.md)
+- [S4-2a pgvector 与 Embedding API 基础设施](./docs/实验记录/22_S4-2_pgvector与Embedding基础设施.md)
 - [业务词汇、核心用例与限界上下文](./docs/架构/01_业务词汇核心用例与限界上下文.md)
 - [持久化模型与发布事务](./docs/架构/02_持久化模型与发布事务.md)
 - [tools/call 治理执行模型](./docs/架构/03_tools_call治理执行模型.md)
@@ -167,3 +175,4 @@ docker compose stop postgres
 - [ADR-0011：异步 Approval、MRTR 与恢复](./docs/adr/0011-asynchronous-approval-mrtr-and-resume.md)
 - [ADR-0012：Retry、Idempotency 与 ExecutionAttempt](./docs/adr/0012-retry-idempotency-and-attempts.md)
 - [ADR-0013：内建 Meta Tool 与 Hybrid Tool Retrieval](./docs/adr/0013-built-in-meta-tool-and-hybrid-retrieval.md)
+- [ADR-0014：PostgreSQL 18 pgvector 与 Vector Storage](./docs/adr/0014-pgvector-infrastructure-and-vector-storage.md)

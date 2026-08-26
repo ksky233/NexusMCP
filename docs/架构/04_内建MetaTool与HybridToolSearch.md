@@ -15,7 +15,7 @@ User Natural Language
 → nexus.search_tools
 → Top-K Visible Tool Metadata
 → Agent Final Selection
-→ Describe/Activate Tool Schema
+→ Activate Candidate Tool Schema
 → tools/call
 → Policy/Approval/Credential/Execution/Audit
 ```
@@ -212,7 +212,7 @@ Resolve Internal Principal
 
 ## 9. Search Result 与动态 Activation
 
-Meta Tool 返回轻量候选：
+S4-0 Contract Test 已冻结第一版行为：Meta Tool 返回最多 10 个候选，并携带完整 Input/Output Schema：
 
 ```text
 canonical_name
@@ -223,20 +223,34 @@ side_effect
 version
 match metadata
 tool_version_id
+input_schema / output_schema
 ```
 
-不在 Search Result 中默认返回所有完整 JSON Schema。S4-0 必须通过 Modern MCP SDK/目标 Host Contract
-Test 冻结以下接缝之一：
+候选范围已经从全 Catalog 缩小到 Top-K，因此第一版不再增加 `nexus.describe_tool` 或
+`include_schema` 开关。Modern MCP SDK Contract 已验证：业务 Tool 即使未出现在初始 `tools/list`，Host
+获得候选 Name/Schema 后仍可直接按名称调用：
 
 ```text
 Search Result
-→ Describe/Get Schema
-→ Host Dynamic Activation/Refresh
+→ Host Dynamic Activation
 → tools/call
+```
+
+Application Setting：
+
+```text
+tool_discovery_mode = eager
+→ tools/list 返回 nexus.search_tools + 全部可见业务 Tool
+
+tool_discovery_mode = search_first
+→ tools/list 只返回 nexus.search_tools（Pinned Tool 后续再加）
 ```
 
 禁止用一个无 Schema 的通用 `nexus.call_any_tool(name, arguments)` 绕过 Tool Contract、Policy 与模型
 参数校验。
+
+当前 Hybrid 枚举已进入稳定 Schema，但在 Vector Index 完成前返回
+`tool_search_mode_unavailable`，不把 FTS Fallback 伪装成 Hybrid。
 
 ## 10. Eval
 
@@ -276,4 +290,19 @@ Unauthorized Leakage。Agent-facing Contract Test 额外证明只暴露 `lexical
 ## 12. 关联决策
 
 - [ADR-0013｜内建 Meta Tool 与 Hybrid Tool Retrieval](../adr/0013-built-in-meta-tool-and-hybrid-retrieval.md)
+- [ADR-0014｜PostgreSQL 18 pgvector 与 Vector Storage](../adr/0014-pgvector-infrastructure-and-vector-storage.md)
 - [S4 阶段路书](../项目规划/06_阶段路书与验收标准.md)
+
+## 13. S4-2a Infrastructure Confirmation
+
+- Local/CI 镜像：`pgvector/pgvector:0.8.6-pg18-trixie`；
+- 实际 Server：PostgreSQL 18.6 (Debian Trixie)，pgvector 0.8.6；
+- Online Provider：SiliconFlow；
+- Model：`Qwen/Qwen3-Embedding-8B`；
+- Dimensions：2048；
+- Storage：`VECTOR(2048)`；
+- Distance：Cosine；
+- Index：第一版 Exact Scan，无 HNSW/IVFFlat；
+- Projection Table：`tool_search_embedding`；
+- Python Adapter：pgvector SQLAlchemy Type Processor；不叠加 asyncpg Binary Codec；
+- 真实 2048 维 Round-Trip 与 Exact Nearest Neighbor Integration Test 已通过。

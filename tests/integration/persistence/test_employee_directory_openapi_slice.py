@@ -209,7 +209,10 @@ async def test_employee_directory_openapi_to_mcp_catalog_slice(
             async with Client(mcp_transport) as client:
                 tools = await client.list_tools(cache_mode="refresh")
 
-    assert [tool.name for tool in tools.tools] == ["directory.get_employee"]
-    assert tools.tools[0].input_schema["required"] == ["employee_id"]
-    assert tools.tools[0].meta is not None
-    assert tools.tools[0].meta["com.nexusmcp/toolVersion"] == 1
+    assert [tool.name for tool in tools.tools] == [
+        "nexus.search_tools",
+        "directory.get_employee",
+    ]
+    assert tools.tools[1].input_schema["required"] == ["employee_id"]
+    assert tools.tools[1].meta is not None
+    assert tools.tools[1].meta["com.nexusmcp/toolVersion"] == 1

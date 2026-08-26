@@ -158,6 +158,8 @@ def published_tool_from_models(tool: ToolModel, version: ToolVersionModel) -> Pu
         visibility=ToolVisibility(version.visibility),
         side_effect=ToolSideEffect(version.side_effect),
         schema_digest=version.schema_digest,
+        owner=tool.owner,
+        tags=tuple(str(tag) for tag in version.tags_json),
     )
 
 

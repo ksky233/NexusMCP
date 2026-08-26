@@ -258,3 +258,8 @@ class IdempotencyPreviousFailedError(IdempotencyExecutionError):
 class IdempotencyRaceError(NexusMcpError):
     code = "idempotency_in_progress"
     safe_message = "The idempotent operation is already in progress."
+
+
+class ToolSearchModeUnavailableError(NexusMcpError):
+    code = "tool_search_mode_unavailable"
+    safe_message = "The requested tool search mode is not available."

@@ -20,6 +20,8 @@ class CapturingSearch:
     visibilities: tuple[ToolVisibility, ...] = ()
     query_text: str = ""
     limit: int = 0
+    namespace: str | None = None
+    side_effect: ToolSideEffect | None = None
 
     async def search_published(
         self,
@@ -27,12 +29,16 @@ class CapturingSearch:
         query_text: str,
         *,
         visibilities: tuple[ToolVisibility, ...],
+        namespace: str | None,
+        side_effect: ToolSideEffect | None,
         limit: int,
     ) -> tuple[PublishedToolSearchHit, ...]:
         _ = tenant_id
         self.visibilities = visibilities
         self.query_text = query_text
         self.limit = limit
+        self.namespace = namespace
+        self.side_effect = side_effect
         return (
             PublishedToolSearchHit(
                 tool=PublishedTool(
@@ -75,6 +81,8 @@ async def test_search_normalizes_text_limit_and_anonymous_visibility() -> None:
             context=_context("anonymous"),
             text="  reserve stock  ",
             limit=5,
+            namespace=" inventory ",
+            side_effect=ToolSideEffect.NON_IDEMPOTENT_WRITE,
         )
     )
 
@@ -82,6 +90,8 @@ async def test_search_normalizes_text_limit_and_anonymous_visibility() -> None:
     assert adapter.query_text == "reserve stock"
     assert adapter.limit == 5
     assert adapter.visibilities == (ToolVisibility.PUBLIC,)
+    assert adapter.namespace == "inventory"
+    assert adapter.side_effect is ToolSideEffect.NON_IDEMPOTENT_WRITE
 
 
 @pytest.mark.asyncio

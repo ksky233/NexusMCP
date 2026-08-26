@@ -11,6 +11,7 @@ dependencies = [
     "httpx>=0.28,<1",
     "jsonschema>=4.26,<5",
     "mcp==2.0.0",
+    "pgvector>=0.5,<1",
     "pydantic-settings>=2.10,<3",
     "sqlalchemy[asyncio]>=2.0.52,<2.1",
     "uvicorn>=0.35,<1",
@@ -33,6 +34,7 @@ addopts = "-ra"
 asyncio_mode = "auto"
 markers = [
     "integration: requires an isolated external dependency such as PostgreSQL",
+    "external: requires an explicitly enabled paid network service",
 ]
 testpaths = ["tests"]
 

@@ -55,6 +55,7 @@ _HTTP_STATUS_BY_ERROR_CODE = {
     "idempotency_already_completed": HTTPStatus.CONFLICT,
     "idempotency_outcome_unknown": HTTPStatus.CONFLICT,
     "idempotency_previous_failed": HTTPStatus.CONFLICT,
+    "tool_search_mode_unavailable": HTTPStatus.SERVICE_UNAVAILABLE,
 }
 
 
