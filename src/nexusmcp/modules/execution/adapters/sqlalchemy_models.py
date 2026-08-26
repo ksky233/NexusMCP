@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nexusmcp.infrastructure.persistence.base import Base, UUIDPrimaryKeyMixin
@@ -30,6 +30,15 @@ class ToolExecutionModel(UUIDPrimaryKeyMixin, Base):
         Index("ix_tool_execution_tenant_status_planned", "tenant_id", "status", "planned_at"),
         Index("ix_tool_execution_tenant_request", "tenant_id", "request_id"),
         Index("ix_tool_execution_tenant_trace", "tenant_id", "trace_id"),
+        Index(
+            "uq_tool_execution_idempotency_scope",
+            "tenant_id",
+            "principal_id",
+            "tool_version_id",
+            "idempotency_key",
+            unique=True,
+            postgresql_where=text("idempotency_key IS NOT NULL"),
+        ),
     )
 
     tenant_id: Mapped[uuid.UUID] = mapped_column(
@@ -66,3 +75,43 @@ class ToolExecutionModel(UUIDPrimaryKeyMixin, Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     error_code: Mapped[str | None] = mapped_column(String(128))
     error_category: Mapped[str | None] = mapped_column(String(32))
+    attempt_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+    )
+
+
+class ExecutionAttemptModel(UUIDPrimaryKeyMixin, Base):
+    __tablename__ = "execution_attempt"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('running', 'succeeded', 'failed', 'unknown', 'cancelled')",
+            name="status",
+        ),
+        CheckConstraint("attempt_number > 0", name="attempt_number_positive"),
+        Index(
+            "uq_execution_attempt_execution_number",
+            "execution_id",
+            "attempt_number",
+            unique=True,
+        ),
+        Index("ix_execution_attempt_tenant_execution", "tenant_id", "execution_id"),
+    )
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("tenant.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    execution_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("tool_execution.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    attempt_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    error_code: Mapped[str | None] = mapped_column(String(128))
+    error_category: Mapped[str | None] = mapped_column(String(32))
+    upstream_status: Mapped[int | None] = mapped_column(Integer)

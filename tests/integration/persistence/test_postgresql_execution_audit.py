@@ -1,5 +1,6 @@
 """PostgreSQL ToolExecution 与 Append-Only Audit 短事务测试。"""
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -13,6 +14,7 @@ from nexusmcp.modules.execution.adapters.sqlalchemy_uow import (
 )
 from nexusmcp.modules.execution.domain import ExecutionErrorCategory, ExecutionStatus
 from nexusmcp.modules.execution.lifecycle import ExecutionLifecycle, PlanExecutionCommand
+from nexusmcp.shared.errors import IdempotencyInProgressError, IdempotencyRaceError
 from nexusmcp.shared.request_context import ActorContext
 from tests.contract.repositories.contracts import BINDING_ID, TENANT_A_ID, TOOL_ID, VERSION_ID
 from tests.integration.persistence.test_mcp_read_only_http_call import seed_executable_tool
@@ -40,7 +42,11 @@ def context(request_id: str) -> ActorContext:
     )
 
 
-def plan_command(request_id: str) -> PlanExecutionCommand:
+def plan_command(
+    request_id: str,
+    *,
+    idempotency_key: str | None = None,
+) -> PlanExecutionCommand:
     return PlanExecutionCommand(
         context=context(request_id),
         principal_id="user-a",
@@ -50,7 +56,12 @@ def plan_command(request_id: str) -> PlanExecutionCommand:
         arguments_digest="1" * 64,
         policy_version="policy-v1",
         policy_reason_code="employee_reader_allowed",
-        side_effect=ToolSideEffect.READ_ONLY,
+        side_effect=(
+            ToolSideEffect.IDEMPOTENT_WRITE
+            if idempotency_key is not None
+            else ToolSideEffect.READ_ONLY
+        ),
+        idempotency_key=idempotency_key,
     )
 
 
@@ -102,3 +113,28 @@ async def test_execution_terminal_state_and_audit_are_persisted_together(
     serialized = repr((*executions, *successful_audits, *unknown_audits))
     assert "arguments=" not in serialized
     assert "secret" not in serialized.lower()
+
+
+@pytest.mark.asyncio
+async def test_concurrent_idempotency_claim_creates_only_one_execution(
+    pg_session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    async with pg_session_factory() as seed_session:
+        await seed_executable_tool(seed_session)
+    factory = SqlAlchemyExecutionUnitOfWorkFactory(pg_session_factory)
+    lifecycle = ExecutionLifecycle(factory, FixedClock(), UuidIdentifierGenerator())
+
+    results = await asyncio.gather(
+        lifecycle.plan(plan_command("request-a", idempotency_key="shared-write-key")),
+        lifecycle.plan(plan_command("request-b", idempotency_key="shared-write-key")),
+        return_exceptions=True,
+    )
+
+    executions = [result for result in results if not isinstance(result, BaseException)]
+    conflicts = [result for result in results if isinstance(result, BaseException)]
+    async with factory() as unit_of_work:
+        persisted = await unit_of_work.executions.list_by_tenant(TENANT_A_ID)
+    assert len(executions) == 1
+    assert len(conflicts) == 1
+    assert isinstance(conflicts[0], IdempotencyInProgressError | IdempotencyRaceError)
+    assert len(persisted) == 1

@@ -41,6 +41,7 @@ from nexusmcp.modules.execution.domain import (
     ResolvedExecutableTool,
 )
 from nexusmcp.modules.execution.lifecycle import ExecutionLifecycle
+from nexusmcp.modules.execution.retrying_executor import ExecuteWithRetry
 from nexusmcp.modules.identity.adapters.context_principal import ContextPrincipalResolver
 from nexusmcp.modules.policy.adapters.static_read_only import StaticReadOnlyPolicyEvaluator
 from nexusmcp.modules.policy.domain import (
@@ -52,8 +53,9 @@ from nexusmcp.shared.errors import (
     ApprovalRequiredError,
     AuthorizationError,
     CredentialBindingNotFoundError,
+    IdempotencyKeyRequiredError,
     InvalidArgumentsError,
-    UnknownExecutionOutcomeError,
+    UpstreamTimeoutError,
 )
 from nexusmcp.shared.request_context import ActorContext
 
@@ -78,6 +80,11 @@ class FixedIdentifierGenerator:
 class FixedApprovalIdentifierGenerator:
     def new_id(self) -> str:
         return "approval-1"
+
+
+class NoOpRetrySleeper:
+    async def sleep(self, seconds: float) -> None:
+        _ = seconds
 
 
 class StaticResolver:
@@ -254,18 +261,24 @@ def build_use_case(
     resolved_factory = unit_of_work_factory or InMemoryExecutionUnitOfWorkFactory()
     identifier_generator = FixedIdentifierGenerator()
     resolved_tool = tool or executable_tool()
+    lifecycle = ExecutionLifecycle(
+        resolved_factory,
+        FixedClock(),
+        identifier_generator,
+    )
     return (
         CallTool(
             principal_resolver=ContextPrincipalResolver(),
             tool_resolver=StaticResolver(resolved_tool),
             arguments_validator=JsonSchemaArgumentsValidator(),
             policy_evaluator=policy_evaluator or StaticReadOnlyPolicyEvaluator(),
-            execution_lifecycle=ExecutionLifecycle(
-                resolved_factory,
-                FixedClock(),
-                identifier_generator,
+            execution_lifecycle=lifecycle,
+            executor=ExecuteWithRetry(
+                executor or SuccessfulExecutor(),
+                lifecycle,
+                NoOpRetrySleeper(),
+                initial_backoff_seconds=0,
             ),
-            executor=executor or SuccessfulExecutor(),
             credential_binding_resolver=credential_binding_resolver,
             credential_provider=credential_provider,
             request_approval=request_approval,
@@ -317,6 +330,39 @@ async def test_static_policy_denies_write_tool_before_execution() -> None:
                 context=context(),
                 tool_name="directory.get_employee",
                 arguments={"employee_id": "emp-001"},
+            )
+        )
+
+    assert await repository.list_by_tenant("tenant-a") == ()
+
+
+@pytest.mark.asyncio
+async def test_idempotent_write_requires_key_before_policy_and_execution() -> None:
+    use_case, repository = build_use_case(tool=executable_tool(ToolSideEffect.IDEMPOTENT_WRITE))
+
+    with pytest.raises(IdempotencyKeyRequiredError):
+        await use_case.execute(
+            CallToolCommand(
+                context=context(),
+                tool_name="directory.get_employee",
+                arguments={"employee_id": "emp-001"},
+            )
+        )
+
+    assert await repository.list_by_tenant("tenant-a") == ()
+
+
+@pytest.mark.asyncio
+async def test_read_only_tool_rejects_write_idempotency_metadata() -> None:
+    use_case, repository = build_use_case()
+
+    with pytest.raises(InvalidArgumentsError):
+        await use_case.execute(
+            CallToolCommand(
+                context=context(),
+                tool_name="directory.get_employee",
+                arguments={"employee_id": "emp-001"},
+                idempotency_key="write-key-on-read",
             )
         )
 
@@ -490,10 +536,10 @@ async def test_required_approval_pauses_then_consumes_before_credential() -> Non
 
 
 @pytest.mark.asyncio
-async def test_unknown_executor_outcome_is_persisted_before_safe_error() -> None:
+async def test_read_only_retry_exhaustion_is_persisted_as_known_failure() -> None:
     use_case, repository = build_use_case(executor=UnknownExecutor())
 
-    with pytest.raises(UnknownExecutionOutcomeError):
+    with pytest.raises(UpstreamTimeoutError):
         await use_case.execute(
             CallToolCommand(
                 context=context(),
@@ -503,7 +549,8 @@ async def test_unknown_executor_outcome_is_persisted_before_safe_error() -> None
         )
 
     execution = await repository.get_by_id("tenant-a", "execution-1")
-    assert execution is not None and execution.status is ExecutionStatus.UNKNOWN
+    assert execution is not None and execution.status is ExecutionStatus.FAILED
+    assert execution.attempt_count == 3
 
 
 @pytest.mark.asyncio

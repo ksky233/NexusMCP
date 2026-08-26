@@ -15,8 +15,13 @@ from nexusmcp.interfaces.mcp.errors import to_call_tool_error
 from nexusmcp.modules.approval.use_cases import DecideApproval, DecideApprovalCommand
 from nexusmcp.modules.catalog.use_cases import ListVisibleTools, ListVisibleToolsQuery
 from nexusmcp.modules.execution.call_tool import CallTool
-from nexusmcp.modules.execution.domain import CallToolCommand
-from nexusmcp.shared.errors import ApprovalMismatchError, ApprovalRequiredError, NexusMcpError
+from nexusmcp.modules.execution.domain import CallToolCommand, is_valid_idempotency_key
+from nexusmcp.shared.errors import (
+    ApprovalMismatchError,
+    ApprovalRequiredError,
+    InvalidArgumentsError,
+    NexusMcpError,
+)
 from nexusmcp.shared.log_context import bind_log_context
 from nexusmcp.shared.request_context import RequestContext
 
@@ -27,6 +32,7 @@ logger = logging.getLogger(__name__)
 _APPROVAL_INPUT_KEY = "approval"
 _APPROVAL_ID_META_KEY = "com.nexusmcp/approvalId"
 _APPROVAL_EXPIRES_AT_META_KEY = "com.nexusmcp/approvalExpiresAt"
+_IDEMPOTENCY_KEY_META_KEY = "com.nexusmcp/idempotencyKey"
 
 
 class ContextResolver(Protocol):
@@ -147,6 +153,7 @@ def create_mcp_server(
                         context=request_context,
                         tool_name=params.name,
                         arguments=params.arguments or {},
+                        idempotency_key=_idempotency_key(params),
                         approval_id=params.request_state,
                     )
                 )
@@ -200,6 +207,7 @@ def create_mcp_server(
                 _meta={
                     "com.nexusmcp/executionId": result.execution_id,
                     "com.nexusmcp/upstreamStatus": result.upstream_status,
+                    "com.nexusmcp/attemptCount": result.attempt_count,
                 },
             )
 
@@ -281,3 +289,13 @@ def _approval_input_required(
             _APPROVAL_EXPIRES_AT_META_KEY: error.expires_at,
         },
     )
+
+
+def _idempotency_key(params: types.CallToolRequestParams) -> str | None:
+    metadata = params.meta or {}
+    value = metadata.get(_IDEMPOTENCY_KEY_META_KEY)
+    if value is None:
+        return None
+    if not isinstance(value, str) or not is_valid_idempotency_key(value):
+        raise InvalidArgumentsError("idempotency key metadata was invalid")
+    return value

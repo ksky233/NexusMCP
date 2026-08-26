@@ -2,8 +2,13 @@
 
 from nexusmcp.infrastructure.persistence.identifiers import as_uuid
 from nexusmcp.modules.catalog.domain import ToolSideEffect
-from nexusmcp.modules.execution.adapters.sqlalchemy_models import ToolExecutionModel
+from nexusmcp.modules.execution.adapters.sqlalchemy_models import (
+    ExecutionAttemptModel,
+    ToolExecutionModel,
+)
 from nexusmcp.modules.execution.domain import (
+    ExecutionAttempt,
+    ExecutionAttemptStatus,
     ExecutionErrorCategory,
     ExecutionStatus,
     ToolExecution,
@@ -39,6 +44,7 @@ def execution_to_model(execution: ToolExecution) -> ToolExecutionModel:
         error_category=(
             execution.error_category.value if execution.error_category is not None else None
         ),
+        attempt_count=execution.attempt_count,
     )
 
 
@@ -69,6 +75,7 @@ def execution_from_model(model: ToolExecutionModel) -> ToolExecution:
             if model.error_category is not None
             else None
         ),
+        attempt_count=model.attempt_count,
     )
 
 
@@ -80,3 +87,50 @@ def update_execution_model(model: ToolExecutionModel, execution: ToolExecution) 
     model.error_category = (
         execution.error_category.value if execution.error_category is not None else None
     )
+    model.attempt_count = execution.attempt_count
+
+
+def attempt_to_model(attempt: ExecutionAttempt) -> ExecutionAttemptModel:
+    return ExecutionAttemptModel(
+        id=as_uuid(attempt.id, field_name="execution attempt id"),
+        tenant_id=as_uuid(attempt.tenant_id, field_name="tenant id"),
+        execution_id=as_uuid(attempt.execution_id, field_name="execution id"),
+        attempt_number=attempt.attempt_number,
+        status=attempt.status.value,
+        started_at=attempt.started_at,
+        finished_at=attempt.finished_at,
+        error_code=attempt.error_code,
+        error_category=(
+            attempt.error_category.value if attempt.error_category is not None else None
+        ),
+        upstream_status=attempt.upstream_status,
+    )
+
+
+def attempt_from_model(model: ExecutionAttemptModel) -> ExecutionAttempt:
+    return ExecutionAttempt(
+        id=str(model.id),
+        tenant_id=str(model.tenant_id),
+        execution_id=str(model.execution_id),
+        attempt_number=model.attempt_number,
+        status=ExecutionAttemptStatus(model.status),
+        started_at=model.started_at,
+        finished_at=model.finished_at,
+        error_code=model.error_code,
+        error_category=(
+            ExecutionErrorCategory(model.error_category)
+            if model.error_category is not None
+            else None
+        ),
+        upstream_status=model.upstream_status,
+    )
+
+
+def update_attempt_model(model: ExecutionAttemptModel, attempt: ExecutionAttempt) -> None:
+    model.status = attempt.status.value
+    model.finished_at = attempt.finished_at
+    model.error_code = attempt.error_code
+    model.error_category = (
+        attempt.error_category.value if attempt.error_category is not None else None
+    )
+    model.upstream_status = attempt.upstream_status

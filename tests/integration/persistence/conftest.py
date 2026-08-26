@@ -13,6 +13,7 @@ from tests.integration.persistence.database import alembic_config, require_test_
 
 BUSINESS_TABLES = """
     audit_event,
+    execution_attempt,
     tool_execution,
     approval_request,
     tool_binding,

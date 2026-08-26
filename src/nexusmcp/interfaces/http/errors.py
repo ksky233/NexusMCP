@@ -48,6 +48,13 @@ _HTTP_STATUS_BY_ERROR_CODE = {
     "unknown_execution_outcome": HTTPStatus.BAD_GATEWAY,
     "tool_execution_not_found": HTTPStatus.NOT_FOUND,
     "invalid_execution_state": HTTPStatus.CONFLICT,
+    "execution_attempt_not_found": HTTPStatus.NOT_FOUND,
+    "idempotency_key_required": HTTPStatus.UNPROCESSABLE_ENTITY,
+    "idempotency_conflict": HTTPStatus.CONFLICT,
+    "idempotency_in_progress": HTTPStatus.CONFLICT,
+    "idempotency_already_completed": HTTPStatus.CONFLICT,
+    "idempotency_outcome_unknown": HTTPStatus.CONFLICT,
+    "idempotency_previous_failed": HTTPStatus.CONFLICT,
 }
 
 

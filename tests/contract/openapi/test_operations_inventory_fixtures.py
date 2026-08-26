@@ -34,7 +34,7 @@ async def test_operations_api_supports_status_and_idempotent_acknowledge() -> No
 
 
 @pytest.mark.asyncio
-async def test_inventory_api_supports_stock_query_and_reservation() -> None:
+async def test_inventory_api_supports_query_idempotent_update_and_reservation() -> None:
     transport = httpx.ASGITransport(app=inventory_app)
     async with httpx.AsyncClient(transport=transport, base_url="http://inventory.test") as client:
         stock = await client.get(
@@ -45,11 +45,23 @@ async def test_inventory_api_supports_stock_query_and_reservation() -> None:
             "/inventory/laptop-pro-14/reservations",
             json={"warehouse_id": "shanghai-01", "order_id": "order-1", "quantity": 2},
         )
+        reorder = await client.put(
+            "/inventory/laptop-pro-14/reorder-level",
+            headers={"Idempotency-Key": "fixture-key-1"},
+            json={"warehouse_id": "shanghai-01", "reorder_level": 12},
+        )
+        reorder_replay = await client.put(
+            "/inventory/laptop-pro-14/reorder-level",
+            headers={"Idempotency-Key": "fixture-key-1"},
+            json={"warehouse_id": "shanghai-01", "reorder_level": 12},
+        )
 
     assert stock.status_code == 200
     assert stock.json()["available"] == 80
     assert reservation.status_code == 200
     assert reservation.json()["status"] == "created"
+    assert reorder.status_code == 200
+    assert reorder_replay.json() == reorder.json()
 
 
 @pytest.mark.asyncio
@@ -67,6 +79,7 @@ async def test_same_operation_id_is_isolated_by_upstream_namespace() -> None:
     ]
     assert [operation.generated_tool_name for operation in inventory.operations] == [
         "inventory.get_status",
+        "inventory.set_reorder_level",
         "inventory.reserve_stock",
     ]
     assert operations.operations[0].operation_id == "getStatus"
@@ -85,6 +98,7 @@ async def test_same_operation_id_is_isolated_by_upstream_namespace() -> None:
     }
     acknowledge = operations_by_id["acknowledgeIncident"]
     reserve = inventory_by_id["reserveStock"]
+    reorder = inventory_by_id["setReorderLevel"]
     assert acknowledge["side_effect"] == "idempotent_write"
     assert acknowledge["tool_input_schema"]["required"] == [
         "incident_id",
@@ -92,6 +106,9 @@ async def test_same_operation_id_is_isolated_by_upstream_namespace() -> None:
         "body",
     ]
     assert reserve["side_effect"] == "non_idempotent_write"
+    assert reorder["side_effect"] == "idempotent_write"
+    assert reorder["method"] == "PUT"
+    assert reorder["tool_input_schema"]["required"] == ["sku", "body"]
     assert reserve["tool_input_schema"]["properties"]["body"]["required"] == [
         "warehouse_id",
         "order_id",

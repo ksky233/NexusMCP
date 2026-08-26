@@ -237,6 +237,7 @@ async def test_three_scenarios_share_pipeline_and_catalog(
     assert versions["directory.search_employees"].side_effect is ToolSideEffect.READ_ONLY
     assert versions["ops.acknowledge_incident"].side_effect is ToolSideEffect.IDEMPOTENT_WRITE
     assert versions["inventory.reserve_stock"].side_effect is ToolSideEffect.NON_IDEMPOTENT_WRITE
+    assert versions["inventory.set_reorder_level"].side_effect is ToolSideEffect.IDEMPOTENT_WRITE
     assert "ops.get_status" in versions
     assert "inventory.get_status" in versions
 
@@ -267,6 +268,7 @@ async def test_three_scenarios_share_pipeline_and_catalog(
         "directory.search_employees",
         "inventory.get_status",
         "inventory.reserve_stock",
+        "inventory.set_reorder_level",
         "ops.acknowledge_incident",
         "ops.get_status",
     ]

@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     control_plane_enabled: bool = False
     tool_execution_enabled: bool = False
     tool_call_timeout_seconds: float = 5.0
+    tool_retry_max_attempts: int = 3
+    tool_retry_initial_backoff_seconds: float = 0.05
     approval_ttl_seconds: float = 600.0
     request_state_key: SecretStr | None = None
     local_admin_principal_id: str = "local-admin"
@@ -72,6 +74,10 @@ class Settings(BaseSettings):
             raise ValueError("database_readiness_timeout_seconds must be positive")
         if self.tool_call_timeout_seconds <= 0:
             raise ValueError("tool_call_timeout_seconds must be positive")
+        if not 1 <= self.tool_retry_max_attempts <= 10:
+            raise ValueError("tool_retry_max_attempts must be between 1 and 10")
+        if self.tool_retry_initial_backoff_seconds < 0:
+            raise ValueError("tool_retry_initial_backoff_seconds must not be negative")
         if self.approval_ttl_seconds <= 0:
             raise ValueError("approval_ttl_seconds must be positive")
         if (

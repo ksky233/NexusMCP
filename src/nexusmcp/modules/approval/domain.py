@@ -27,6 +27,7 @@ class ApprovalRequest:
     status: ApprovalStatus
     requested_at: datetime
     expires_at: datetime
+    idempotency_key: str | None = None
     decided_by: str | None = None
     decided_at: datetime | None = None
     consumed_at: datetime | None = None
@@ -45,6 +46,8 @@ class ApprovalRequest:
                 raise ValueError(f"{field_name} must not be blank")
         if self.expires_at <= self.requested_at:
             raise ValueError("approval expires_at must be after requested_at")
+        if self.idempotency_key is not None and not self.idempotency_key.strip():
+            raise ValueError("approval idempotency key must not be blank")
         if self.status is ApprovalStatus.PENDING and any(
             value is not None for value in (self.decided_by, self.decided_at, self.consumed_at)
         ):
@@ -107,6 +110,7 @@ class ApprovalRequest:
         tool_version_id: str,
         arguments_digest: str,
         policy_version: str,
+        idempotency_key: str | None,
         consumed_at: datetime,
     ) -> ApprovalRequest:
         if self.status is not ApprovalStatus.APPROVED:
@@ -121,6 +125,8 @@ class ApprovalRequest:
             raise ValueError("approval arguments digest does not match call arguments")
         if policy_version != self.policy_version:
             raise ValueError("approval policy version does not match current policy")
+        if idempotency_key != self.idempotency_key:
+            raise ValueError("approval idempotency key does not match call")
         return replace(
             self,
             status=ApprovalStatus.CONSUMED,

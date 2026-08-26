@@ -247,9 +247,11 @@ examples/
 │   ├── employee_directory/
 │   ├── operations/
 │   └── inventory/
-├── demo_knowledge_mcp/
 └── demo_client/
 ```
+
+外部 Knowledge RAG Demo 已由 ADR-0013 移出主线；pgvector 改为服务 NexusMCP 内部 Tool Semantic
+Retrieval，不改变本 ADR 的 `examples → core` 单向依赖原则。
 
 允许：
 

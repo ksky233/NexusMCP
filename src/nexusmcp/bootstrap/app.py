@@ -40,6 +40,7 @@ from nexusmcp.modules.catalog.review import SubmitToolVersionForReview
 from nexusmcp.modules.catalog.search import SearchPublishedTools
 from nexusmcp.modules.catalog.use_cases import ListVisibleTools
 from nexusmcp.modules.credentials.ports import CredentialBindingResolver, CredentialProvider
+from nexusmcp.modules.execution.adapters.asyncio_sleeper import AsyncioRetrySleeper
 from nexusmcp.modules.execution.adapters.httpx_executor import HttpxToolExecutor
 from nexusmcp.modules.execution.adapters.jsonschema_validator import JsonSchemaArgumentsValidator
 from nexusmcp.modules.execution.adapters.sqlalchemy_reader import (
@@ -51,6 +52,7 @@ from nexusmcp.modules.execution.adapters.sqlalchemy_resolver import (
 )
 from nexusmcp.modules.execution.call_tool import CallTool
 from nexusmcp.modules.execution.lifecycle import ExecutionLifecycle
+from nexusmcp.modules.execution.retrying_executor import ExecuteWithRetry
 from nexusmcp.modules.identity.adapters.context_principal import ContextPrincipalResolver
 from nexusmcp.modules.identity.ports import PrincipalAuthenticator
 from nexusmcp.modules.openapi_import.adapters.local_document_reader import (
@@ -143,7 +145,13 @@ def create_app(
             arguments_validator=JsonSchemaArgumentsValidator(),
             policy_evaluator=policy_evaluator or StaticReadOnlyPolicyEvaluator(),
             execution_lifecycle=execution_lifecycle,
-            executor=HttpxToolExecutor(resolved_http_client),
+            executor=ExecuteWithRetry(
+                HttpxToolExecutor(resolved_http_client),
+                execution_lifecycle,
+                AsyncioRetrySleeper(),
+                max_attempts=resolved_settings.tool_retry_max_attempts,
+                initial_backoff_seconds=(resolved_settings.tool_retry_initial_backoff_seconds),
+            ),
             credential_binding_resolver=credential_binding_resolver,
             credential_provider=credential_provider,
             request_approval=request_approval,

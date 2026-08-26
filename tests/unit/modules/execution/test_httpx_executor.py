@@ -7,6 +7,15 @@ import pytest
 from fastapi import FastAPI, Request
 
 from examples.upstream_apis.employee_directory.app import app
+from examples.upstream_apis.inventory.app import (
+    IDEMPOTENT_RESULTS,
+    REORDER_LEVEL_REQUESTS,
+    REORDER_LEVELS,
+)
+from examples.upstream_apis.inventory.app import (
+    app as inventory_app,
+)
+from nexusmcp.modules.catalog.domain import ToolSideEffect
 from nexusmcp.modules.credentials.domain import (
     CredentialInjectionLocation,
     CredentialValueFormat,
@@ -137,3 +146,95 @@ async def test_query_credential_is_injected_at_last_moment() -> None:
         )
 
     assert result.data["api_key"] == "trusted-secret"
+
+
+@pytest.mark.asyncio
+async def test_put_executor_maps_json_body_and_trusted_idempotency_header() -> None:
+    IDEMPOTENT_RESULTS.clear()
+    REORDER_LEVELS.clear()
+    REORDER_LEVEL_REQUESTS.clear()
+    tool = replace(
+        executable_tool(),
+        canonical_name="inventory.set_reorder_level",
+        side_effect=ToolSideEffect.IDEMPOTENT_WRITE,
+        binding_config={
+            "method": "PUT",
+            "path_template": "/inventory/{sku}/reorder-level",
+            "parameters": [
+                {
+                    "argument_name": "sku",
+                    "upstream_name": "sku",
+                    "location": "path",
+                    "required": True,
+                },
+                {
+                    "argument_name": "untrusted_key",
+                    "upstream_name": "idempotency-key",
+                    "location": "header",
+                    "required": False,
+                },
+            ],
+            "request_body": {
+                "argument_name": "body",
+                "content_type": "application/json",
+                "required": True,
+            },
+        },
+    )
+    transport = httpx.ASGITransport(app=inventory_app)
+    async with httpx.AsyncClient(transport=transport) as client:
+        result = await HttpxToolExecutor(client).execute(
+            ExecutorRequest(
+                execution_id="execution-1",
+                tool=tool,
+                arguments={
+                    "sku": "laptop-pro-14",
+                    "untrusted_key": "attacker-key",
+                    "body": {"warehouse_id": "shanghai-01", "reorder_level": 12},
+                },
+                timeout_seconds=1,
+                idempotency_key="trusted-key",
+            ),
+            credential=None,
+        )
+
+    assert result.data == {
+        "sku": "laptop-pro-14",
+        "warehouse_id": "shanghai-01",
+        "reorder_level": 12,
+    }
+    assert REORDER_LEVEL_REQUESTS == ["trusted-key"]
+    assert REORDER_LEVELS[("laptop-pro-14", "shanghai-01")] == 12
+
+
+@pytest.mark.asyncio
+async def test_post_write_remains_disabled_even_with_idempotency_key() -> None:
+    tool = replace(
+        executable_tool(),
+        side_effect=ToolSideEffect.IDEMPOTENT_WRITE,
+        binding_config={
+            "method": "POST",
+            "path_template": "/inventory/laptop-pro-14/reservations",
+            "parameters": [],
+            "request_body": {
+                "argument_name": "body",
+                "content_type": "application/json",
+                "required": True,
+            },
+        },
+    )
+    transport = httpx.ASGITransport(app=inventory_app)
+    async with httpx.AsyncClient(transport=transport) as client:
+        with pytest.raises(ExecutorFailure) as captured:
+            await HttpxToolExecutor(client).execute(
+                ExecutorRequest(
+                    execution_id="execution-1",
+                    tool=tool,
+                    arguments={"body": {}},
+                    timeout_seconds=1,
+                    idempotency_key="trusted-key",
+                ),
+                credential=None,
+            )
+
+    assert captured.value.code == "write_execution_not_enabled"

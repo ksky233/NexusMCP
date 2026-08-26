@@ -219,6 +219,7 @@ class ApprovalResponse(BaseModel):
     tool_version_id: str
     arguments_digest: str
     policy_version: str
+    idempotency_key: str | None
     status: str
     requested_at: datetime
     expires_at: datetime
@@ -236,6 +237,7 @@ class ApprovalResponse(BaseModel):
             tool_version_id=approval.tool_version_id,
             arguments_digest=approval.arguments_digest,
             policy_version=approval.policy_version,
+            idempotency_key=approval.idempotency_key,
             status=approval.status.value,
             requested_at=approval.requested_at,
             expires_at=approval.expires_at,

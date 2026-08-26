@@ -212,3 +212,49 @@ class ToolExecutionNotFoundError(NexusMcpError):
 class InvalidExecutionStateError(NexusMcpError):
     code = "invalid_execution_state"
     safe_message = "The tool execution cannot be changed from its current state."
+
+
+class ExecutionAttemptNotFoundError(NexusMcpError):
+    code = "execution_attempt_not_found"
+    safe_message = "The requested execution attempt was not found."
+
+
+class IdempotencyKeyRequiredError(NexusMcpError):
+    code = "idempotency_key_required"
+    safe_message = "This tool call requires an idempotency key."
+
+
+class IdempotencyExecutionError(NexusMcpError):
+    def __init__(self, execution_id: str, internal_message: str | None = None) -> None:
+        super().__init__(internal_message)
+        self.execution_id = execution_id
+
+
+class IdempotencyConflictError(IdempotencyExecutionError):
+    code = "idempotency_conflict"
+    safe_message = "The idempotency key was already used with different arguments."
+
+
+class IdempotencyInProgressError(IdempotencyExecutionError):
+    code = "idempotency_in_progress"
+    safe_message = "The idempotent operation is already in progress."
+
+
+class IdempotencyAlreadyCompletedError(IdempotencyExecutionError):
+    code = "idempotency_already_completed"
+    safe_message = "The idempotent operation was already completed."
+
+
+class IdempotencyOutcomeUnknownError(IdempotencyExecutionError):
+    code = "idempotency_outcome_unknown"
+    safe_message = "The previous idempotent operation outcome is unknown."
+
+
+class IdempotencyPreviousFailedError(IdempotencyExecutionError):
+    code = "idempotency_previous_failed"
+    safe_message = "The previous idempotent operation did not complete successfully."
+
+
+class IdempotencyRaceError(NexusMcpError):
+    code = "idempotency_in_progress"
+    safe_message = "The idempotent operation is already in progress."

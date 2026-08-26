@@ -263,7 +263,7 @@ S3-0 不冻结：
 
 - Policy Condition DSL；
 - Secret Store 精确产品；
-- HTTP Retry 库与 Backoff 参数；
+- Retry Jitter、总时间预算与跨调用 Result Replay；
 - Execution Result 长期保留策略。
 
 这些问题需要真实执行切片、客户端兼容测试或 Benchmark 证据。
@@ -296,4 +296,7 @@ Approval、真实 Credential 与写 Tool 不进入第一条执行切片。
   `requestState` 和 `FOR UPDATE` 单次消费；等待审批不占用 HTTP 请求或数据库事务；
 - S3-5 已持久化 ToolExecution/Audit，并将 Approval Consume + Running Execution + ALLOWED Audit
   以及 Terminal Execution + Terminal Audit 分别放入两个短事务；
-- 下一步 S3-6 实现有界 Retry/Idempotency 并收口 S3；写 Tool 仍按本文边界待实现。
+- S3-6 已实现一个 Execution 多个持久化 Attempt、有界指数 Backoff、可信 Idempotency Key、数据库
+  唯一 Claim 与受控 Inventory PUT；Non-Idempotent After-Send Timeout 保持 UNKNOWN；
+- S3 Gateway 与治理执行链已收口。通用写 Tool、跨调用 Result Replay 和 Reconciliation 仍按本文
+  边界待实现。

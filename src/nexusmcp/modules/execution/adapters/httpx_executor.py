@@ -6,6 +6,7 @@ from urllib.parse import quote
 
 import httpx
 
+from nexusmcp.modules.catalog.domain import ToolSideEffect
 from nexusmcp.modules.connectors.domain import ToolBindingType
 from nexusmcp.modules.credentials.domain import (
     CredentialInjectionLocation,
@@ -40,12 +41,22 @@ class HttpxToolExecutor:
             )
         config = tool.binding_config
         method = str(config.get("method", "")).upper()
-        if method != "GET":
+        if method not in {"GET", "PUT"}:
             raise ExecutorFailure(
                 code="write_execution_not_enabled",
                 category=ExecutionErrorCategory.AUTHORIZATION,
             )
-        if config.get("request_body") is not None:
+        if method == "PUT" and tool.side_effect is not ToolSideEffect.IDEMPOTENT_WRITE:
+            raise ExecutorFailure(
+                code="put_tool_must_be_idempotent_write",
+                category=ExecutionErrorCategory.AUTHORIZATION,
+            )
+        if method == "PUT" and request.idempotency_key is None:
+            raise ExecutorFailure(
+                code="idempotency_key_required",
+                category=ExecutionErrorCategory.VALIDATION,
+            )
+        if method == "GET" and config.get("request_body") is not None:
             raise ExecutorFailure(
                 code="get_binding_must_not_have_request_body",
                 category=ExecutionErrorCategory.VALIDATION,
@@ -62,6 +73,9 @@ class HttpxToolExecutor:
             config.get("parameters", ()),
             request.arguments,
         )
+        body = _map_request_body(method, config.get("request_body"), request.arguments)
+        if request.idempotency_key is not None:
+            _set_trusted_header(headers, "Idempotency-Key", request.idempotency_key)
         _inject_credential(query, headers, credential)
         url = f"{tool.upstream_endpoint.rstrip('/')}{path}"
         try:
@@ -70,6 +84,7 @@ class HttpxToolExecutor:
                 url,
                 params=query,
                 headers=headers,
+                json=body,
                 timeout=request.timeout_seconds,
             )
         except httpx.TimeoutException:
@@ -88,16 +103,19 @@ class HttpxToolExecutor:
             raise ExecutorFailure(
                 code=f"upstream_{response.status_code}",
                 category=ExecutionErrorCategory.UPSTREAM_4XX,
+                upstream_status=response.status_code,
             )
         if response.status_code >= 500:
             raise ExecutorFailure(
                 code=f"upstream_{response.status_code}",
                 category=ExecutionErrorCategory.UPSTREAM_5XX,
+                upstream_status=response.status_code,
             )
         if not 200 <= response.status_code < 300:
             raise ExecutorFailure(
                 code=f"upstream_{response.status_code}",
                 category=ExecutionErrorCategory.UNKNOWN,
+                upstream_status=response.status_code,
             )
         if len(response.content) > self._max_response_bytes:
             raise ExecutorFailure(
@@ -181,10 +199,42 @@ def _inject_credential(
     if credential.value_format is CredentialValueFormat.BEARER:
         value = f"Bearer {value}"
     if credential.injection_location is CredentialInjectionLocation.HEADER:
-        # HTTP Header 名称大小写不敏感，先删除同名输入，避免形成两个 Authorization。
-        for header_name in tuple(headers):
-            if header_name.lower() == credential.injection_name.lower():
-                del headers[header_name]
-        headers[credential.injection_name] = value
+        _set_trusted_header(headers, credential.injection_name, value)
     elif credential.injection_location is CredentialInjectionLocation.QUERY:
         query[credential.injection_name] = value
+
+
+def _map_request_body(
+    method: str,
+    raw_request_body: object,
+    arguments: Mapping[str, Any],
+) -> Any:
+    if method == "GET":
+        return None
+    if not isinstance(raw_request_body, Mapping):
+        raise ExecutorFailure(
+            code="put_binding_requires_json_body",
+            category=ExecutionErrorCategory.VALIDATION,
+        )
+    if raw_request_body.get("content_type") != "application/json":
+        raise ExecutorFailure(
+            code="unsupported_request_body_content_type",
+            category=ExecutionErrorCategory.VALIDATION,
+        )
+    argument_name = str(raw_request_body.get("argument_name", ""))
+    if argument_name not in arguments:
+        if raw_request_body.get("required") is True:
+            raise ExecutorFailure(
+                code="required_request_body_missing_after_validation",
+                category=ExecutionErrorCategory.VALIDATION,
+            )
+        return None
+    return arguments[argument_name]
+
+
+def _set_trusted_header(headers: dict[str, str], name: str, value: str) -> None:
+    # HTTP Header 名称大小写不敏感，先删除客户端同名输入，避免形成双 Header。
+    for header_name in tuple(headers):
+        if header_name.lower() == name.lower():
+            del headers[header_name]
+    headers[name] = value

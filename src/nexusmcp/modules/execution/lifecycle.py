@@ -10,6 +10,8 @@ from nexusmcp.modules.approval.use_cases import (
 from nexusmcp.modules.audit.domain import AuditAction, AuditEvent, AuditOutcome
 from nexusmcp.modules.catalog.domain import ToolSideEffect
 from nexusmcp.modules.execution.domain import (
+    ExecutionAttempt,
+    ExecutionAttemptStatus,
     ExecutionErrorCategory,
     ExecutionStatus,
     ToolExecution,
@@ -18,6 +20,12 @@ from nexusmcp.modules.execution.ports import ExecutionUnitOfWorkFactory
 from nexusmcp.shared.clock import Clock
 from nexusmcp.shared.errors import (
     ApprovalExpiredError,
+    ExecutionAttemptNotFoundError,
+    IdempotencyAlreadyCompletedError,
+    IdempotencyConflictError,
+    IdempotencyInProgressError,
+    IdempotencyOutcomeUnknownError,
+    IdempotencyPreviousFailedError,
     InvalidExecutionStateError,
     ToolExecutionNotFoundError,
 )
@@ -85,6 +93,15 @@ class ExecutionLifecycle:
             idempotency_key=command.idempotency_key,
         ).start(now)
         async with self._unit_of_work_factory() as unit_of_work:
+            if command.idempotency_key is not None:
+                existing = await unit_of_work.executions.get_by_idempotency_key(
+                    command.context.tenant_id,
+                    command.principal_id,
+                    command.tool_version_id,
+                    command.idempotency_key,
+                )
+                if existing is not None:
+                    _raise_idempotency_reuse(existing, command.arguments_digest)
             if command.approval_id is not None:
                 consume_command = ConsumeApprovalCommand(
                     context=command.context,
@@ -93,6 +110,7 @@ class ExecutionLifecycle:
                     tool_version_id=command.tool_version_id,
                     arguments_digest=command.arguments_digest,
                     policy_version=command.policy_version,
+                    idempotency_key=command.idempotency_key,
                 )
                 try:
                     await consume_locked_approval(
@@ -109,6 +127,74 @@ class ExecutionLifecycle:
             )
             await unit_of_work.commit()
         return execution
+
+    async def start_attempt(self, tenant_id: str, execution_id: str) -> ExecutionAttempt:
+        now = self._clock.now()
+        async with self._unit_of_work_factory() as unit_of_work:
+            execution = await unit_of_work.executions.get_for_update(tenant_id, execution_id)
+            if execution is None:
+                raise ToolExecutionNotFoundError("execution did not exist in tenant")
+            if execution.status is not ExecutionStatus.RUNNING:
+                raise InvalidExecutionStateError("execution was not running")
+            execution = execution.register_attempt()
+            attempt = ExecutionAttempt(
+                id=self._identifier_generator.new_id(),
+                tenant_id=tenant_id,
+                execution_id=execution_id,
+                attempt_number=execution.attempt_count,
+                status=ExecutionAttemptStatus.RUNNING,
+                started_at=now,
+            )
+            await unit_of_work.executions.save(tenant_id, execution)
+            await unit_of_work.attempts.add(tenant_id, attempt)
+            await unit_of_work.commit()
+        return attempt
+
+    async def succeed_attempt(
+        self,
+        tenant_id: str,
+        attempt_id: str,
+        *,
+        upstream_status: int | None,
+    ) -> ExecutionAttempt:
+        return await self._finish_attempt(
+            tenant_id,
+            attempt_id,
+            status=ExecutionAttemptStatus.SUCCEEDED,
+            upstream_status=upstream_status,
+        )
+
+    async def fail_attempt(
+        self,
+        tenant_id: str,
+        attempt_id: str,
+        *,
+        error_code: str,
+        category: ExecutionErrorCategory,
+        outcome_unknown: bool,
+        upstream_status: int | None = None,
+    ) -> ExecutionAttempt:
+        return await self._finish_attempt(
+            tenant_id,
+            attempt_id,
+            status=(
+                ExecutionAttemptStatus.UNKNOWN if outcome_unknown else ExecutionAttemptStatus.FAILED
+            ),
+            error_code=error_code,
+            category=category,
+            upstream_status=upstream_status,
+        )
+
+    async def cancel_attempt(
+        self,
+        tenant_id: str,
+        attempt_id: str,
+    ) -> ExecutionAttempt:
+        return await self._finish_attempt(
+            tenant_id,
+            attempt_id,
+            status=ExecutionAttemptStatus.CANCELLED,
+        )
 
     async def record_call_decision(self, command: RecordCallDecisionCommand) -> None:
         event = AuditEvent(
@@ -202,6 +288,41 @@ class ExecutionLifecycle:
             await unit_of_work.commit()
         return terminal
 
+    async def _finish_attempt(
+        self,
+        tenant_id: str,
+        attempt_id: str,
+        *,
+        status: ExecutionAttemptStatus,
+        error_code: str | None = None,
+        category: ExecutionErrorCategory | None = None,
+        upstream_status: int | None = None,
+    ) -> ExecutionAttempt:
+        now = self._clock.now()
+        async with self._unit_of_work_factory() as unit_of_work:
+            attempt = await unit_of_work.attempts.get_for_update(tenant_id, attempt_id)
+            if attempt is None:
+                raise ExecutionAttemptNotFoundError("execution attempt did not exist in tenant")
+            if attempt.status is not ExecutionAttemptStatus.RUNNING:
+                raise InvalidExecutionStateError("execution attempt was already terminal")
+            if status is ExecutionAttemptStatus.SUCCEEDED:
+                terminal = attempt.succeed(now, upstream_status)
+            elif status is ExecutionAttemptStatus.CANCELLED:
+                terminal = attempt.cancel(now)
+            else:
+                if error_code is None or category is None:
+                    raise ValueError("failed attempt requires error code and category")
+                terminal = attempt.fail(
+                    error_code=error_code,
+                    category=category,
+                    finished_at=now,
+                    outcome_unknown=status is ExecutionAttemptStatus.UNKNOWN,
+                    upstream_status=upstream_status,
+                )
+            await unit_of_work.attempts.save(tenant_id, terminal)
+            await unit_of_work.commit()
+        return terminal
+
     def _execution_audit(
         self,
         execution: ToolExecution,
@@ -230,5 +351,33 @@ class ExecutionLifecycle:
             metadata={
                 "side_effect": execution.side_effect.value,
                 "execution_status": execution.status.value,
+                "attempt_count": execution.attempt_count,
             },
         )
+
+
+def _raise_idempotency_reuse(
+    execution: ToolExecution,
+    arguments_digest: str,
+) -> None:
+    if execution.arguments_digest != arguments_digest:
+        raise IdempotencyConflictError(
+            execution.id,
+            "idempotency key arguments digest changed",
+        )
+    if execution.status in {ExecutionStatus.PLANNED, ExecutionStatus.RUNNING}:
+        raise IdempotencyInProgressError(execution.id, "idempotent execution was in progress")
+    if execution.status is ExecutionStatus.SUCCEEDED:
+        raise IdempotencyAlreadyCompletedError(
+            execution.id,
+            "idempotent execution already succeeded",
+        )
+    if execution.status is ExecutionStatus.UNKNOWN:
+        raise IdempotencyOutcomeUnknownError(
+            execution.id,
+            "idempotent execution outcome was unknown",
+        )
+    raise IdempotencyPreviousFailedError(
+        execution.id,
+        f"idempotent execution was {execution.status.value}",
+    )

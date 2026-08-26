@@ -28,6 +28,7 @@ class RequestApprovalCommand:
     tool_version_id: str
     arguments_digest: str
     policy_version: str
+    idempotency_key: str | None = None
     policy_reason_code: str = "approval_required"
 
 
@@ -39,6 +40,7 @@ class ConsumeApprovalCommand:
     tool_version_id: str
     arguments_digest: str
     policy_version: str
+    idempotency_key: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,6 +85,7 @@ class RequestApproval:
             status=ApprovalStatus.PENDING,
             requested_at=now,
             expires_at=now + timedelta(seconds=self._ttl_seconds),
+            idempotency_key=command.idempotency_key,
         )
         async with self._unit_of_work_factory() as unit_of_work:
             await unit_of_work.approvals.add(command.context.tenant_id, approval)
@@ -227,6 +230,8 @@ def _require_matching_call(
         raise ApprovalMismatchError("approval arguments digest did not match")
     if approval.policy_version != command.policy_version:
         raise ApprovalMismatchError("approval policy version did not match")
+    if approval.idempotency_key != command.idempotency_key:
+        raise ApprovalMismatchError("approval idempotency key did not match")
 
 
 async def consume_locked_approval(
@@ -251,6 +256,7 @@ async def consume_locked_approval(
         tool_version_id=command.tool_version_id,
         arguments_digest=command.arguments_digest,
         policy_version=command.policy_version,
+        idempotency_key=command.idempotency_key,
         consumed_at=consumed_at,
     )
     await approvals.save(tenant_id, consumed)

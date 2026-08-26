@@ -1,5 +1,6 @@
 """Approval 参数绑定、过期和单次消费测试。"""
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -31,6 +32,7 @@ def test_approved_request_can_be_consumed_exactly_once() -> None:
         tool_version_id="version-1",
         arguments_digest="1" * 64,
         policy_version="policy-v1",
+        idempotency_key=None,
         consumed_at=NOW + timedelta(minutes=2),
     )
 
@@ -41,6 +43,7 @@ def test_approved_request_can_be_consumed_exactly_once() -> None:
             tool_version_id="version-1",
             arguments_digest="1" * 64,
             policy_version="policy-v1",
+            idempotency_key=None,
             consumed_at=NOW + timedelta(minutes=3),
         )
 
@@ -68,6 +71,7 @@ def test_approval_rejects_changed_call_snapshot(
             tool_version_id=version_id,
             arguments_digest=digest,
             policy_version=policy_version,
+            idempotency_key=None,
             consumed_at=NOW + timedelta(minutes=2),
         )
 
@@ -78,6 +82,23 @@ def test_expired_approval_cannot_be_decided_or_consumed() -> None:
     with pytest.raises(ValueError, match="expired"):
         pending.approve("approver-a", pending.expires_at)
     assert pending.expire(pending.expires_at).status is ApprovalStatus.EXPIRED
+
+
+def test_approval_rejects_changed_idempotency_key() -> None:
+    approved = replace(_pending(), idempotency_key="write-key-1").approve(
+        "approver-a",
+        NOW + timedelta(minutes=1),
+    )
+
+    with pytest.raises(ValueError, match="idempotency key"):
+        approved.consume(
+            principal_id="user-a",
+            tool_version_id="version-1",
+            arguments_digest="1" * 64,
+            policy_version="policy-v1",
+            idempotency_key="write-key-2",
+            consumed_at=NOW + timedelta(minutes=2),
+        )
 
 
 def test_approval_cannot_be_constructed_with_incomplete_decision_state() -> None:

@@ -11,6 +11,7 @@ from nexusmcp.modules.approval.adapters.sqlalchemy_repository import (
 )
 from nexusmcp.modules.audit.adapters.sqlalchemy_repository import SqlAlchemyAuditRepository
 from nexusmcp.modules.execution.adapters.sqlalchemy_repository import (
+    SqlAlchemyExecutionAttemptRepository,
     SqlAlchemyToolExecutionRepository,
 )
 
@@ -20,6 +21,7 @@ class SqlAlchemyExecutionUnitOfWork:
         self._session_factory = session_factory
         self._session: AsyncSession | None = None
         self._executions: SqlAlchemyToolExecutionRepository | None = None
+        self._attempts: SqlAlchemyExecutionAttemptRepository | None = None
         self._approvals: SqlAlchemyApprovalRepository | None = None
         self._audits: SqlAlchemyAuditRepository | None = None
 
@@ -36,6 +38,12 @@ class SqlAlchemyExecutionUnitOfWork:
         return self._approvals
 
     @property
+    def attempts(self) -> SqlAlchemyExecutionAttemptRepository:
+        if self._attempts is None:
+            raise RuntimeError("unit of work must be entered before accessing repositories")
+        return self._attempts
+
+    @property
     def audits(self) -> SqlAlchemyAuditRepository:
         if self._audits is None:
             raise RuntimeError("unit of work must be entered before accessing repositories")
@@ -46,6 +54,7 @@ class SqlAlchemyExecutionUnitOfWork:
             raise RuntimeError("unit of work does not support nested entry")
         self._session = self._session_factory()
         self._executions = SqlAlchemyToolExecutionRepository(self._session)
+        self._attempts = SqlAlchemyExecutionAttemptRepository(self._session)
         self._approvals = SqlAlchemyApprovalRepository(self._session)
         self._audits = SqlAlchemyAuditRepository(self._session)
         return self
@@ -64,6 +73,7 @@ class SqlAlchemyExecutionUnitOfWork:
             await session.close()
             self._session = None
             self._executions = None
+            self._attempts = None
             self._approvals = None
             self._audits = None
 

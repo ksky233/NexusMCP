@@ -24,6 +24,11 @@ from nexusmcp.modules.execution.adapters.in_memory_uow import (
 )
 from nexusmcp.modules.execution.domain import ExecutionStatus
 from nexusmcp.modules.execution.lifecycle import ExecutionLifecycle, PlanExecutionCommand
+from nexusmcp.shared.errors import (
+    IdempotencyAlreadyCompletedError,
+    IdempotencyConflictError,
+    IdempotencyInProgressError,
+)
 from nexusmcp.shared.request_context import ActorContext
 
 NOW = datetime(2026, 8, 26, 22, 0, tzinfo=UTC)
@@ -55,18 +60,24 @@ def context(principal_id: str = "user-a") -> ActorContext:
     )
 
 
-def plan_command(*, approval_id: str | None = None) -> PlanExecutionCommand:
+def plan_command(
+    *,
+    approval_id: str | None = None,
+    idempotency_key: str | None = None,
+    arguments_digest: str = "1" * 64,
+) -> PlanExecutionCommand:
     return PlanExecutionCommand(
         context=context(),
         principal_id="user-a",
         tool_id="tool-1",
         tool_version_id="version-1",
         tool_binding_id="binding-1",
-        arguments_digest="1" * 64,
+        arguments_digest=arguments_digest,
         policy_version="policy-v1",
         policy_reason_code="allowed_after_approval",
         side_effect=ToolSideEffect.READ_ONLY,
         approval_id=approval_id,
+        idempotency_key=idempotency_key,
     )
 
 
@@ -159,6 +170,10 @@ class FailingAuditUnitOfWork:
         return self._wrapped.approvals
 
     @property
+    def attempts(self):
+        return self._wrapped.attempts
+
+    @property
     def audits(self) -> FailingAuditRepository:
         return FailingAuditRepository(self._wrapped.audits)
 
@@ -209,3 +224,33 @@ async def test_audit_failure_rolls_back_approval_consumption_and_execution_plan(
     assert approval.status is ApprovalStatus.APPROVED
     assert await factory.execution_reader.list_by_tenant("tenant-a") == ()
     assert await factory.audit_reader.list_by_tenant("tenant-a") == audits_before
+
+
+@pytest.mark.asyncio
+async def test_idempotency_key_reuse_is_classified_by_digest_and_execution_status() -> None:
+    factory = InMemoryExecutionUnitOfWorkFactory()
+    lifecycle = ExecutionLifecycle(
+        factory,
+        FixedClock(),
+        SequentialIdentifierGenerator("record"),
+    )
+    running = await lifecycle.plan(plan_command(idempotency_key="write-key-1"))
+
+    with pytest.raises(IdempotencyInProgressError) as in_progress:
+        await lifecycle.plan(plan_command(idempotency_key="write-key-1"))
+    with pytest.raises(IdempotencyConflictError) as conflict:
+        await lifecycle.plan(
+            plan_command(
+                idempotency_key="write-key-1",
+                arguments_digest="2" * 64,
+            )
+        )
+
+    await lifecycle.succeed("tenant-a", running.id)
+    with pytest.raises(IdempotencyAlreadyCompletedError) as completed:
+        await lifecycle.plan(plan_command(idempotency_key="write-key-1"))
+
+    assert in_progress.value.execution_id == running.id
+    assert conflict.value.execution_id == running.id
+    assert completed.value.execution_id == running.id
+    assert len(await factory.execution_reader.list_by_tenant("tenant-a")) == 1

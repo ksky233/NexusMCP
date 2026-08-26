@@ -4,7 +4,7 @@
 
 NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，负责将企业 HTTP/OpenAPI 服务和已有 MCP Server 纳入统一 Tool Catalog，并在 MCP 调用链上执行身份、策略、凭据、审批、审计与可观测性。
 
-当前阶段：`S3-5｜持久化 ToolExecution 与 Audit 接缝完成`。
+当前阶段：`S3｜Gateway 与治理执行链完成`。
 
 ## 当前边界
 
@@ -16,13 +16,13 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，�
 - Catalog 已拆分 Tool、ToolVersion、PublishedTool，并建立 Repository/UoW Contract；
 - GitHub Actions 会在 Push/PR 上使用云端 Ubuntu Runner 执行完整质量门禁；
 - PostgreSQL、Tool/ToolVersion/ToolBinding 和 Publish 事务已经完成设计冻结；
-- PostgreSQL 18.6、SQLAlchemy Async、Alembic Baseline 和 10 张 ORM 表已经建立；
+- PostgreSQL 18.6、SQLAlchemy Async、Alembic Baseline 和 11 张 ORM 表已经建立；
 - Catalog/Binding 已具有 SQLAlchemy Async Repository、显式 ORM Mapping 和每 Command 独立 UoW；
 - 已建立协议无关安全错误、MCP/HTTP 映射接缝、结构化日志和 async Log Context；
 - Publish 已实现 Tool/Version/Binding/Upstream 锁定、Digest 校验、原子状态切换与 Domain Event；
 - Database Engine 由 Lifespan 管理，Readiness 反映 PostgreSQL 状态，正式 `tools/list` 可读取数据库；
 - Employee Directory 已跑通 Local OpenAPI Import → Review → Publish → MCP `tools/list`；
-- 三个 Demo 共 7 个接口已复用同一 Pipeline，并由 MCP 同时返回三个 Namespace；
+- 三个 Demo 共 8 个接口已复用同一 Pipeline，并由 MCP 同时返回三个 Namespace；
 - Catalog 已具有 PostgreSQL Weighted FTS、GIN Index、相关度排名和治理过滤；
 - Local Admin REST 已覆盖 Registry、Import、Review、Publish、Search，并与 `/mcp` 隔离；
 - S2 已完成；S3 已冻结 Principal、Policy、Credential、Approval、Execution/Audit 与 Retry 边界；
@@ -34,8 +34,11 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，�
   `requestState` 和行锁单次消费；
 - ToolExecution 与脱敏 Audit 已持久化；Approval Consume、Running Execution、ALLOWED Audit 在同一
   短事务，终态与终态 Audit 在另一短事务；
-- 真实 JWT/OIDC、生产 Secret Store、CredentialBinding 持久化、实际 Retry/Idempotency 执行和写
-  Tool 尚未实现。
+- 一个 Execution 支持多个持久化 Attempt；Read-Only/Idempotent Write 具有有界 Retry，幂等 Key
+  具有数据库唯一 Claim、参数冲突和并发去重；
+- Inventory `set_reorder_level` 已作为唯一受控 PUT 幂等写纵向切片，其他 POST/非幂等写仍被拒绝；
+- 真实 JWT/OIDC、生产 Secret Store、CredentialBinding 持久化、跨调用 Result Replay、通用写 Tool
+  与 Reconciliation 尚未实现。
 
 ## 代码语言约定
 
@@ -149,9 +152,11 @@ docker compose stop postgres
 - [S3-3 CredentialBinding 与 Secret Injection](./docs/实验记录/17_S3-3_CredentialBinding与SecretInjection.md)
 - [S3-4 Approval Gate 与单次消费](./docs/实验记录/18_S3-4_ApprovalGate与单次消费.md)
 - [S3-5 持久化 ToolExecution 与 Audit 接缝](./docs/实验记录/19_S3-5_持久化Execution与Audit接缝.md)
+- [S3-6 Retry/Idempotency 执行与 S3 收口](./docs/实验记录/20_S3-6_Retry与Idempotency执行.md)
 - [业务词汇、核心用例与限界上下文](./docs/架构/01_业务词汇核心用例与限界上下文.md)
 - [持久化模型与发布事务](./docs/架构/02_持久化模型与发布事务.md)
 - [tools/call 治理执行模型](./docs/架构/03_tools_call治理执行模型.md)
+- [内建 Meta Tool 与 Hybrid Tool Search](./docs/架构/04_内建MetaTool与HybridToolSearch.md)
 - [ADR-0001：Python 项目布局](./docs/adr/0001-python-project-layout.md)
 - [ADR-0002：MCP 协议与 SDK Adapter](./docs/adr/0002-mcp-protocol-and-sdk-adapter.md)
 - [ADR-0004：PostgreSQL 主存储](./docs/adr/0004-postgresql-primary-store.md)
@@ -160,3 +165,5 @@ docker compose stop postgres
 - [ADR-0007：Side Effect、Retry 与 Unknown Outcome](./docs/adr/0007-side-effect-retry-and-unknown-outcome.md)
 - [ADR-0010：同库同步 Audit 写入策略](./docs/adr/0010-synchronous-audit-write-strategy.md)
 - [ADR-0011：异步 Approval、MRTR 与恢复](./docs/adr/0011-asynchronous-approval-mrtr-and-resume.md)
+- [ADR-0012：Retry、Idempotency 与 ExecutionAttempt](./docs/adr/0012-retry-idempotency-and-attempts.md)
+- [ADR-0013：内建 Meta Tool 与 Hybrid Tool Retrieval](./docs/adr/0013-built-in-meta-tool-and-hybrid-retrieval.md)

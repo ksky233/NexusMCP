@@ -117,3 +117,5 @@ CredentialBinding Metadata 在计划事务前选择，但 Secret Value 必须在
 
 进入 `S3-6｜Retry/Idempotency 执行与 S3 收口`：把已经冻结的 Retry Matrix 接入执行链，并验证
 Read-Only 有界 Retry、Idempotent Write Key 冲突以及 Non-Idempotent Unknown 不盲目重试。
+
+实现结果见 [S3-6 Retry/Idempotency 执行](./20_S3-6_Retry与Idempotency执行.md)。

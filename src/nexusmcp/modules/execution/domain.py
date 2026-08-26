@@ -13,6 +13,10 @@ from nexusmcp.modules.connectors.domain import ToolBindingType
 from nexusmcp.shared.digests import canonical_json_digest
 from nexusmcp.shared.request_context import ActorContext
 
+_IDEMPOTENCY_KEY_CHARACTERS = frozenset(
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._:-"
+)
+
 
 class ExecutionStatus(StrEnum):
     PLANNED = "planned"
@@ -44,6 +48,14 @@ class RetryDisposition(StrEnum):
     REQUIRE_RECONCILIATION = "require_reconciliation"
 
 
+class ExecutionAttemptStatus(StrEnum):
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    UNKNOWN = "unknown"
+    CANCELLED = "cancelled"
+
+
 @dataclass(frozen=True, slots=True)
 class CallToolCommand:
     context: ActorContext
@@ -55,6 +67,10 @@ class CallToolCommand:
     def __post_init__(self) -> None:
         if not self.tool_name.strip():
             raise ValueError("tool name must not be blank")
+        if self.idempotency_key is not None:
+            key = self.idempotency_key
+            if not is_valid_idempotency_key(key):
+                raise ValueError("idempotency key must be 1-128 safe ASCII token characters")
 
     @property
     def arguments_digest(self) -> str:
@@ -103,6 +119,7 @@ class ToolExecution:
     finished_at: datetime | None = None
     error_code: str | None = None
     error_category: ExecutionErrorCategory | None = None
+    attempt_count: int = 0
 
     def __post_init__(self) -> None:
         for field_name, value in (
@@ -151,11 +168,17 @@ class ToolExecution:
             ExecutionStatus.CANCELLED,
         } and (self.error_code is None or self.error_category is None):
             raise ValueError("unsuccessful terminal execution must contain error state")
+        if self.attempt_count < 0:
+            raise ValueError("execution attempt count must not be negative")
 
     def start(self, started_at: datetime) -> ToolExecution:
         if self.status is not ExecutionStatus.PLANNED:
             raise ValueError("only planned execution can start")
         return replace(self, status=ExecutionStatus.RUNNING, started_at=started_at)
+
+    def register_attempt(self) -> ToolExecution:
+        self._require_running()
+        return replace(self, attempt_count=self.attempt_count + 1)
 
     def succeed(self, finished_at: datetime) -> ToolExecution:
         self._require_running()
@@ -214,6 +237,7 @@ class ExecutorRequest:
     tool: ResolvedExecutableTool
     arguments: Mapping[str, Any]
     timeout_seconds: float
+    idempotency_key: str | None = None
 
     def __post_init__(self) -> None:
         if self.timeout_seconds <= 0:
@@ -233,6 +257,92 @@ class CallToolResult:
     data: Any
     content_type: str | None
     upstream_status: int | None
+    attempt_count: int = 1
+
+
+@dataclass(frozen=True, slots=True)
+class ExecutionAttempt:
+    id: str
+    tenant_id: str
+    execution_id: str
+    attempt_number: int
+    status: ExecutionAttemptStatus
+    started_at: datetime
+    finished_at: datetime | None = None
+    error_code: str | None = None
+    error_category: ExecutionErrorCategory | None = None
+    upstream_status: int | None = None
+
+    def __post_init__(self) -> None:
+        for field_name, value in (
+            ("execution attempt id", self.id),
+            ("tenant id", self.tenant_id),
+            ("execution id", self.execution_id),
+        ):
+            if not value.strip():
+                raise ValueError(f"{field_name} must not be blank")
+        if self.attempt_number <= 0:
+            raise ValueError("execution attempt number must be positive")
+        if self.upstream_status is not None and not 100 <= self.upstream_status <= 599:
+            raise ValueError("execution attempt upstream status was invalid")
+        if self.status is ExecutionAttemptStatus.RUNNING and self.finished_at is not None:
+            raise ValueError("running execution attempt must not have finished_at")
+        if self.status is not ExecutionAttemptStatus.RUNNING and self.finished_at is None:
+            raise ValueError("terminal execution attempt must have finished_at")
+        if self.status in {ExecutionAttemptStatus.RUNNING, ExecutionAttemptStatus.SUCCEEDED} and (
+            self.error_code is not None or self.error_category is not None
+        ):
+            raise ValueError("running or succeeded attempt must not have error state")
+        if self.status in {
+            ExecutionAttemptStatus.FAILED,
+            ExecutionAttemptStatus.UNKNOWN,
+            ExecutionAttemptStatus.CANCELLED,
+        } and (self.error_code is None or self.error_category is None):
+            raise ValueError("unsuccessful attempt must contain error state")
+
+    def succeed(self, finished_at: datetime, upstream_status: int | None) -> ExecutionAttempt:
+        self._require_running()
+        return replace(
+            self,
+            status=ExecutionAttemptStatus.SUCCEEDED,
+            finished_at=finished_at,
+            upstream_status=upstream_status,
+        )
+
+    def fail(
+        self,
+        *,
+        error_code: str,
+        category: ExecutionErrorCategory,
+        finished_at: datetime,
+        outcome_unknown: bool,
+        upstream_status: int | None = None,
+    ) -> ExecutionAttempt:
+        self._require_running()
+        return replace(
+            self,
+            status=(
+                ExecutionAttemptStatus.UNKNOWN if outcome_unknown else ExecutionAttemptStatus.FAILED
+            ),
+            finished_at=finished_at,
+            error_code=error_code,
+            error_category=category,
+            upstream_status=upstream_status,
+        )
+
+    def cancel(self, finished_at: datetime) -> ExecutionAttempt:
+        self._require_running()
+        return replace(
+            self,
+            status=ExecutionAttemptStatus.CANCELLED,
+            finished_at=finished_at,
+            error_code="attempt_cancelled",
+            error_category=ExecutionErrorCategory.CANCELLED,
+        )
+
+    def _require_running(self) -> None:
+        if self.status is not ExecutionAttemptStatus.RUNNING:
+            raise ValueError("execution attempt must be running before terminal transition")
 
 
 class ExecutorFailure(Exception):
@@ -242,11 +352,13 @@ class ExecutorFailure(Exception):
         code: str,
         category: ExecutionErrorCategory,
         outcome_unknown: bool = False,
+        upstream_status: int | None = None,
     ) -> None:
         super().__init__(code)
         self.code = code
         self.category = category
         self.outcome_unknown = outcome_unknown
+        self.upstream_status = upstream_status
 
 
 def retry_disposition(
@@ -287,3 +399,9 @@ def retry_disposition(
     if side_effect is ToolSideEffect.IDEMPOTENT_WRITE and has_idempotency_key:
         return RetryDisposition.RETRY
     return RetryDisposition.DO_NOT_RETRY
+
+
+def is_valid_idempotency_key(value: str) -> bool:
+    return 1 <= len(value) <= 128 and all(
+        character in _IDEMPOTENCY_KEY_CHARACTERS for character in value
+    )

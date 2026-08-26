@@ -62,6 +62,17 @@ def test_argument_digest_is_stable_across_mapping_key_order() -> None:
     assert first.arguments_digest == second.arguments_digest
 
 
+@pytest.mark.parametrize("key", ["", " leading", "line\nbreak", "中文-key", "a" * 129])
+def test_idempotency_key_accepts_only_bounded_safe_token_characters(key: str) -> None:
+    with pytest.raises(ValueError, match="idempotency key"):
+        CallToolCommand(
+            context=_context(),
+            tool_name="inventory.set_reorder_level",
+            arguments={},
+            idempotency_key=key,
+        )
+
+
 def test_unknown_outcome_is_distinct_from_known_failure() -> None:
     running = _execution().start(NOW + timedelta(seconds=1))
     failed = running.fail(

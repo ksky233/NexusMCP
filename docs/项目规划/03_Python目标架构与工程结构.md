@@ -12,7 +12,7 @@
 | API | FastAPI / Starlette |
 | Contract | Pydantic v2 |
 | Persistence | SQLAlchemy 2 async + Alembic |
-| Database | PostgreSQL；RAG 使用 pgvector |
+| Database | PostgreSQL；S4 Tool Semantic Retrieval 使用 pgvector |
 | Cache/Coordination | Redis 按需引入，不作为空骨架依赖 |
 | HTTP Client | httpx async |
 | MCP | 官方 Python MCP SDK v2 |
@@ -44,7 +44,6 @@ NexusMCP/
 │   │   ├── employee_directory/
 │   │   ├── operations/
 │   │   └── inventory/
-│   ├── demo_knowledge_mcp/
 │   └── demo_client/
 ├── tests/
 │   ├── unit/

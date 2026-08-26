@@ -27,6 +27,7 @@ EXPECTED_TABLES = {
     "approval_request",
     "tool_execution",
     "audit_event",
+    "execution_attempt",
 }
 
 

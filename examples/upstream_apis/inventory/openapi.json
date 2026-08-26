@@ -39,6 +39,42 @@
         }
       }
     },
+    "/inventory/{sku}/reorder-level": {
+      "put": {
+        "operationId": "setReorderLevel",
+        "summary": "Set inventory reorder level",
+        "description": "Set the desired reorder level for one SKU in one warehouse.",
+        "tags": ["inventory", "write"],
+        "x-nexusmcp-side-effect": "idempotent_write",
+        "parameters": [
+          {
+            "name": "sku",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string", "minLength": 1}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/SetReorderLevelRequest"}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated reorder level",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ReorderLevel"}
+              }
+            }
+          },
+          "409": {"description": "Idempotency key payload conflict"}
+        }
+      }
+    },
     "/inventory/{sku}/reservations": {
       "post": {
         "operationId": "reserveStock",
@@ -101,6 +137,23 @@
           "warehouse_id": {"type": "string", "minLength": 1},
           "order_id": {"type": "string", "minLength": 1},
           "quantity": {"type": "integer", "minimum": 1, "maximum": 1000}
+        }
+      },
+      "SetReorderLevelRequest": {
+        "type": "object",
+        "required": ["warehouse_id", "reorder_level"],
+        "properties": {
+          "warehouse_id": {"type": "string", "minLength": 1},
+          "reorder_level": {"type": "integer", "minimum": 0, "maximum": 1000}
+        }
+      },
+      "ReorderLevel": {
+        "type": "object",
+        "required": ["sku", "warehouse_id", "reorder_level"],
+        "properties": {
+          "sku": {"type": "string"},
+          "warehouse_id": {"type": "string"},
+          "reorder_level": {"type": "integer", "minimum": 0}
         }
       },
       "Reservation": {

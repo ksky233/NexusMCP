@@ -4,9 +4,10 @@ from nexusmcp.infrastructure.persistence.runtime import DatabaseRuntimePort
 from nexusmcp.modules.audit.adapters.sqlalchemy_repository import SqlAlchemyAuditRepository
 from nexusmcp.modules.audit.domain import AuditEvent
 from nexusmcp.modules.execution.adapters.sqlalchemy_repository import (
+    SqlAlchemyExecutionAttemptRepository,
     SqlAlchemyToolExecutionRepository,
 )
-from nexusmcp.modules.execution.domain import ToolExecution
+from nexusmcp.modules.execution.domain import ExecutionAttempt, ToolExecution
 
 
 class SqlAlchemyToolExecutionReader:
@@ -17,6 +18,18 @@ class SqlAlchemyToolExecutionReader:
         session_factory = self._database_runtime.require_session_factory()
         async with session_factory() as session:
             return await SqlAlchemyToolExecutionRepository(session).list_by_tenant(tenant_id)
+
+    async def list_attempts(
+        self,
+        tenant_id: str,
+        execution_id: str,
+    ) -> tuple[ExecutionAttempt, ...]:
+        session_factory = self._database_runtime.require_session_factory()
+        async with session_factory() as session:
+            return await SqlAlchemyExecutionAttemptRepository(session).list_by_execution(
+                tenant_id,
+                execution_id,
+            )
 
 
 class SqlAlchemyAuditEventReader:

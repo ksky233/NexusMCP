@@ -61,6 +61,10 @@ def test_tool_execution_requires_postgresql_and_positive_timeout() -> None:
             environment="test",
             tool_call_timeout_seconds=0,
         )
+    with pytest.raises(ValidationError, match="tool_retry_max_attempts"):
+        Settings(environment="test", tool_retry_max_attempts=0)
+    with pytest.raises(ValidationError, match="backoff"):
+        Settings(environment="test", tool_retry_initial_backoff_seconds=-1)
 
 
 def test_request_state_key_and_approval_ttl_have_secure_bounds() -> None:

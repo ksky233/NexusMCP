@@ -55,8 +55,11 @@ MCP Server / OpenAPI / Enterprise Tool
 - 使用官方 Python MCP SDK v2 承担协议编解码和版本协商；
 - 第一版采用模块化单体，逻辑区分 Control Plane 与 Data Plane；
 - PostgreSQL 为主存储，Redis 不是无条件前置依赖；
-- Tool Catalog 第一版使用关键词/PostgreSQL FTS；
-- 保留一个极小的 `knowledge.search` RAG MCP Tool，用于展示受治理的检索能力；
+- Tool Catalog 先使用 PostgreSQL FTS，并在 S4 增加 Tool Embedding、pgvector 与 Hybrid Retrieval；
+- `nexus.search_tools` 是内建 Meta Tool，不属于 Catalog Managed Tool；Agent-facing 只暴露
+  `lexical | hybrid`，Vector-only 仅供 Eval，Auto 延后；
+- 外部 `knowledge.search` RAG Demo 移出当前主线，RAG/Embedding 学习直接服务 Tool Semantic
+  Retrieval；
 - Evaluation、OpenTelemetry、安全、幂等和错误分类属于主线；
 - 不建设大而全管理后台，不追求支持所有 MCP Extension。
 

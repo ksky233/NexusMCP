@@ -36,17 +36,18 @@
 - 不逐行 JavaToPython；
 - 不复制 Session Transport 和明文 Key 模型。
 
-### D-006｜Tool Search 关键词优先
+### D-006｜Tool Search 从 FTS Baseline 演进为 Hybrid
 
-- name/description/tags/namespace/owner + PostgreSQL FTS；
-- Semantic Tool Discovery 需要 Search Eval 证据。
+- S2 先完成 name/description/tags/namespace/owner + PostgreSQL FTS；
+- S4 增加内建 `nexus.search_tools`、Tool Embedding 与 Hybrid Retrieval；
+- Agent-facing 只暴露 `lexical | hybrid`，详见 ADR-0013。
 
-### D-007｜保留极小 RAG MCP
+### D-007｜外部 Knowledge RAG Demo 移出主线
 
-- `knowledge.search` 是受治理的示例 Tool；
-- 摄取用 CLI；
-- PostgreSQL + pgvector；
-- 不建设完整知识库平台。
+- Embedding/pgvector 学习直接服务 Tool Semantic Retrieval；
+- 不建设文档摄取、Chunk、Citation 或 Knowledge Platform；
+- 企业已有 RAG 未来仍可作为普通 OpenAPI/MCP Upstream 接入；
+- 原决定由 ADR-0013 取代。
 
 ### D-008｜质量能力进入主线
 
@@ -131,6 +132,8 @@ Legacy Session 本身不构成新项目必须引入 Redis 的理由。
 | Q-003 | Tool Version 独立表还是单表多版本 | Tool 与 ToolVersion 分表；Binding 精确绑定 Version | Publish/Rollback/Query 用例分析、ADR-0004 |
 | Q-005 | Approval 完全使用 MRTR 还是保留 REST resolve | 短确认使用 MRTR；长审批保留持久化 Approval + Control Plane 恢复 | S3-4 MRTR/跨进程 E2E、ADR-0011 |
 | Q-006 | Audit 同步/异步写入 | 核心 Audit 同库同步；外部投递后续使用 Outbox | S3-5 故障注入/事务 E2E、ADR-0010 |
+| Q-010 | 是否增加 Semantic Tool Search | S4 增加内部 Tool Embedding/Hybrid Retrieval，替代外部 Knowledge RAG 主线 | Tool Selection 业务分析、ADR-0013 |
+| Q-013 | Agent-facing 暴露哪些检索模式 | 一个 `nexus.search_tools`，只暴露必填 `lexical | hybrid`；Vector-only 供 Eval，Auto 延后 | 成本/Agent 自主路由分析、ADR-0013 |
 
 ### 3.2 待实验
 
@@ -140,7 +143,6 @@ Legacy Session 本身不构成新项目必须引入 Redis 的理由。
 | Q-007 | Redis 是否进入默认 Compose | S5 | Cache/rate-limit/coordination 实测 |
 | Q-008 | Embedding 模型 | S4 | 中文/英文 Retrieval Eval、成本 |
 | Q-009 | pgvector index 类型 | S4/S5 | 数据规模与 Benchmark |
-| Q-010 | 是否增加 Semantic Tool Search | 后续 | FTS Search Eval 未达标 |
 | Q-011 | 是否拆 Control/Data Plane | 后续 | 负载/权限/故障域证据 |
 | Q-012 | 是否部署 Kubernetes | 后续 | JD/部署需求，不为展示而做 |
 
@@ -172,9 +174,11 @@ Legacy Session 本身不构成新项目必须引入 Redis 的理由。
 | [0006](../adr/0006-credential-reference-and-injection.md) | Accepted | Credential Reference |
 | [0007](../adr/0007-side-effect-retry-and-unknown-outcome.md) | Accepted | Tool Retry、Side Effect 与 Unknown Outcome |
 | 0008 | Covered by ADR-0004/S2-5 | Tool Search FTS |
-| 0009 | Planned | RAG Demo 边界 |
+| 0009 | Deferred outside mainline | 外部 Knowledge RAG Demo |
 | [0010](../adr/0010-synchronous-audit-write-strategy.md) | Accepted | 同库同步 Audit 写入策略 |
 | [0011](../adr/0011-asynchronous-approval-mrtr-and-resume.md) | Accepted | 异步 Approval、MRTR 与恢复 |
+| [0012](../adr/0012-retry-idempotency-and-attempts.md) | Accepted | Retry、Idempotency 与 ExecutionAttempt |
+| [0013](../adr/0013-built-in-meta-tool-and-hybrid-retrieval.md) | Accepted | 内建 Meta Tool 与 Hybrid Tool Retrieval |
 
 不是现在一次性写完。每个 ADR 在相关实现前后完成。
 

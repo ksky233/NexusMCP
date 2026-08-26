@@ -7,7 +7,7 @@ from nexusmcp.modules.approval.use_cases import (
     RequestApprovalCommand,
 )
 from nexusmcp.modules.audit.domain import AuditOutcome
-from nexusmcp.modules.catalog.domain import ToolVisibility
+from nexusmcp.modules.catalog.domain import ToolSideEffect, ToolVisibility
 from nexusmcp.modules.credentials.domain import CredentialBinding, ResolvedCredential
 from nexusmcp.modules.credentials.ports import CredentialBindingResolver, CredentialProvider
 from nexusmcp.modules.execution.domain import (
@@ -41,6 +41,7 @@ from nexusmcp.shared.errors import (
     AuthorizationError,
     CredentialBindingNotFoundError,
     CredentialResolutionError,
+    IdempotencyKeyRequiredError,
     InvalidArgumentsError,
     NexusMcpError,
     ToolNotFoundError,
@@ -90,6 +91,13 @@ class CallTool:
             raise ToolNotVisibleError(f"tool {command.tool_name} was not visible to principal")
 
         self._arguments_validator.validate(tool.input_schema, command.arguments)
+        if (
+            command.idempotency_key is not None
+            and tool.side_effect is not ToolSideEffect.IDEMPOTENT_WRITE
+        ):
+            raise InvalidArgumentsError("idempotency key is only valid for idempotent write tools")
+        if tool.side_effect is ToolSideEffect.IDEMPOTENT_WRITE and command.idempotency_key is None:
+            raise IdempotencyKeyRequiredError("idempotent write call did not provide a key")
         policy_input = PolicyEvaluationInput(
             tenant_id=context.tenant_id,
             principal=principal,
@@ -173,6 +181,7 @@ class CallTool:
                     tool=tool,
                     arguments=command.arguments,
                     timeout_seconds=self._timeout_seconds,
+                    idempotency_key=command.idempotency_key,
                 ),
                 credential=credential,
             )
@@ -198,12 +207,13 @@ class CallTool:
             )
             raise UnknownExecutionOutcomeError("unexpected executor failure") from error
 
-        await self._execution_lifecycle.succeed(tenant_id, execution.id)
+        terminal = await self._execution_lifecycle.succeed(tenant_id, execution.id)
         return CallToolResult(
             execution_id=execution.id,
             data=executor_result.data,
             content_type=executor_result.content_type,
             upstream_status=executor_result.upstream_status,
+            attempt_count=terminal.attempt_count,
         )
 
     async def _record_policy_decision(
@@ -250,6 +260,7 @@ class CallTool:
                 tool_version_id=tool.tool_version_id,
                 arguments_digest=command.arguments_digest,
                 policy_version=policy_version,
+                idempotency_key=command.idempotency_key,
                 policy_reason_code=reason_code,
             )
         )
