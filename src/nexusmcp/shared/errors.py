@@ -202,3 +202,13 @@ class UpstreamResponseError(NexusMcpError):
 class UnknownExecutionOutcomeError(NexusMcpError):
     code = "unknown_execution_outcome"
     safe_message = "The upstream execution outcome could not be determined."
+
+
+class ToolExecutionNotFoundError(NexusMcpError):
+    code = "tool_execution_not_found"
+    safe_message = "The requested tool execution was not found."
+
+
+class InvalidExecutionStateError(NexusMcpError):
+    code = "invalid_execution_state"
+    safe_message = "The tool execution cannot be changed from its current state."

@@ -12,6 +12,8 @@ from nexusmcp.infrastructure.persistence.engine import create_engine, create_ses
 from tests.integration.persistence.database import alembic_config, require_test_database_url
 
 BUSINESS_TABLES = """
+    audit_event,
+    tool_execution,
     approval_request,
     tool_binding,
     imported_operation,

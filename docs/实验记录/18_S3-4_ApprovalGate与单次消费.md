@@ -133,3 +133,6 @@ Approval 表不保存完整 Arguments、Secret、Inbound Token 或明文 `reques
 
 进入 `S3-5｜持久化 ToolExecution 与 Audit 接缝`，把当前 InMemory Execution 升级为短事务持久化，
 并记录不含 Secret/完整 Arguments/Result 的治理证据。
+
+实现结果见 [S3-5 持久化 ToolExecution 与 Audit 接缝](./19_S3-5_持久化Execution与Audit接缝.md)，
+上述一致性窗口已关闭。

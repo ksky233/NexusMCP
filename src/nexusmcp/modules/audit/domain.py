@@ -44,6 +44,17 @@ class AuditEvent:
     metadata: Mapping[str, AuditMetadataValue] | None = None
 
     def __post_init__(self) -> None:
+        for field_name, value in (
+            ("audit id", self.id),
+            ("tenant id", self.tenant_id),
+            ("actor id", self.actor_id),
+            ("resource type", self.resource_type),
+            ("resource id", self.resource_id),
+            ("request id", self.request_id),
+            ("trace id", self.trace_id),
+        ):
+            if not value.strip():
+                raise ValueError(f"{field_name} must not be blank")
         if self.metadata is None:
             return
         sensitive_keys = {

@@ -15,8 +15,8 @@ from examples.upstream_apis.employee_directory.app import app as employee_direct
 from nexusmcp.bootstrap.app import create_app
 from nexusmcp.bootstrap.config import Settings
 from nexusmcp.modules.approval.adapters.sqlalchemy_models import ApprovalRequestModel
+from nexusmcp.modules.audit.domain import AuditAction, AuditOutcome
 from nexusmcp.modules.credentials.domain import SecretValue
-from nexusmcp.modules.execution.adapters.in_memory import InMemoryToolExecutionRepository
 from nexusmcp.modules.identity.adapters.static_bearer import (
     StaticBearerIdentity,
     StaticBearerPrincipalAuthenticator,
@@ -198,15 +198,21 @@ async def test_modern_mrtr_decline_rejects_without_creating_execution(
                         "directory.get_employee",
                         {"employee_id": "emp-001"},
                     )
-        execution_repository = app.state.execution_repository
+            execution_reader = app.state.execution_reader
+            audit_reader = app.state.audit_reader
+            executions = await execution_reader.list_by_tenant(TENANT_A_ID)
+            audits = await audit_reader.list_by_tenant(TENANT_A_ID)
 
     approvals = await consumed_approvals(pg_session_factory)
     assert result.is_error is True
     assert result.meta is not None
     assert result.meta["com.nexusmcp/errorCode"] == "approval_rejected"
     assert len(approvals) == 1 and approvals[0].status == "rejected"
-    assert isinstance(execution_repository, InMemoryToolExecutionRepository)
-    assert await execution_repository.list_by_tenant(TENANT_A_ID) == ()
+    assert executions == ()
+    assert [(event.action, event.outcome) for event in audits] == [
+        (AuditAction.TOOL_CALL, AuditOutcome.APPROVAL_REQUIRED),
+        (AuditAction.APPROVAL_DECISION, AuditOutcome.DENIED),
+    ]
 
 
 @pytest.mark.asyncio
@@ -297,6 +303,10 @@ async def test_control_plane_approval_resumes_later_and_replay_is_rejected(
                         {"employee_id": "emp-001"},
                         request_state=request_state,
                     )
+                execution_reader = resumed_app.state.execution_reader
+                audit_reader = resumed_app.state.audit_reader
+                executions = await execution_reader.list_by_tenant(TENANT_A_ID)
+                audits = await audit_reader.list_by_tenant(TENANT_A_ID)
 
     assert pending.status_code == 200
     assert pending.json()["status"] == "pending"
@@ -310,3 +320,11 @@ async def test_control_plane_approval_resumes_later_and_replay_is_rejected(
     approvals = await consumed_approvals(pg_session_factory)
     assert len(approvals) == 1
     assert approvals[0].status == "consumed"
+    assert len(executions) == 1
+    assert executions[0].approval_id == approval_id
+    assert [(event.action, event.outcome) for event in audits] == [
+        (AuditAction.TOOL_CALL, AuditOutcome.APPROVAL_REQUIRED),
+        (AuditAction.APPROVAL_DECISION, AuditOutcome.ALLOWED),
+        (AuditAction.TOOL_CALL, AuditOutcome.ALLOWED),
+        (AuditAction.TOOL_CALL, AuditOutcome.SUCCEEDED),
+    ]

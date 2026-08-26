@@ -3,6 +3,7 @@
 from nexusmcp.infrastructure.persistence.runtime import DatabaseRuntimePort
 from nexusmcp.modules.approval.adapters.sqlalchemy_uow import SqlAlchemyApprovalUnitOfWork
 from nexusmcp.modules.catalog.adapters.sqlalchemy_uow import SqlAlchemyCatalogUnitOfWork
+from nexusmcp.modules.execution.adapters.sqlalchemy_uow import SqlAlchemyExecutionUnitOfWork
 from nexusmcp.modules.openapi_import.adapters.sqlalchemy_review_uow import (
     SqlAlchemyReviewUnitOfWork,
 )
@@ -26,6 +27,14 @@ class RuntimeApprovalUnitOfWorkFactory:
 
     def __call__(self) -> SqlAlchemyApprovalUnitOfWork:
         return SqlAlchemyApprovalUnitOfWork(self._database_runtime.require_session_factory())
+
+
+class RuntimeExecutionUnitOfWorkFactory:
+    def __init__(self, database_runtime: DatabaseRuntimePort) -> None:
+        self._database_runtime = database_runtime
+
+    def __call__(self) -> SqlAlchemyExecutionUnitOfWork:
+        return SqlAlchemyExecutionUnitOfWork(self._database_runtime.require_session_factory())
 
 
 class RuntimeOpenApiImportUnitOfWorkFactory:

@@ -84,14 +84,19 @@ class ResolvedExecutableTool:
 class ToolExecution:
     id: str
     tenant_id: str
+    request_id: str
+    trace_id: str
     principal_id: str
     tool_id: str
     tool_version_id: str
     tool_binding_id: str
     arguments_digest: str
+    policy_version: str
+    policy_reason_code: str
     side_effect: ToolSideEffect
     status: ExecutionStatus
     planned_at: datetime
+    approval_id: str | None = None
     credential_binding_id: str | None = None
     idempotency_key: str | None = None
     started_at: datetime | None = None
@@ -100,6 +105,21 @@ class ToolExecution:
     error_category: ExecutionErrorCategory | None = None
 
     def __post_init__(self) -> None:
+        for field_name, value in (
+            ("execution id", self.id),
+            ("tenant id", self.tenant_id),
+            ("request id", self.request_id),
+            ("trace id", self.trace_id),
+            ("principal id", self.principal_id),
+            ("tool id", self.tool_id),
+            ("tool version id", self.tool_version_id),
+            ("tool binding id", self.tool_binding_id),
+            ("arguments digest", self.arguments_digest),
+            ("policy version", self.policy_version),
+            ("policy reason code", self.policy_reason_code),
+        ):
+            if not value.strip():
+                raise ValueError(f"{field_name} must not be blank")
         if self.status is ExecutionStatus.PLANNED and (
             self.started_at is not None or self.finished_at is not None
         ):
@@ -117,6 +137,20 @@ class ToolExecution:
             and self.finished_at is None
         ):
             raise ValueError("terminal execution must have finished_at")
+        if self.status in (ExecutionStatus.PLANNED, ExecutionStatus.RUNNING) and (
+            self.error_code is not None or self.error_category is not None
+        ):
+            raise ValueError("non-terminal execution must not have error state")
+        if self.status is ExecutionStatus.SUCCEEDED and (
+            self.error_code is not None or self.error_category is not None
+        ):
+            raise ValueError("succeeded execution must not have error state")
+        if self.status in {
+            ExecutionStatus.FAILED,
+            ExecutionStatus.UNKNOWN,
+            ExecutionStatus.CANCELLED,
+        } and (self.error_code is None or self.error_category is None):
+            raise ValueError("unsuccessful terminal execution must contain error state")
 
     def start(self, started_at: datetime) -> ToolExecution:
         if self.status is not ExecutionStatus.PLANNED:

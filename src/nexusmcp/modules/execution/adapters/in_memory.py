@@ -4,8 +4,8 @@ from nexusmcp.modules.execution.domain import ToolExecution
 
 
 class InMemoryToolExecutionRepository:
-    def __init__(self) -> None:
-        self._executions: dict[str, ToolExecution] = {}
+    def __init__(self, executions: dict[str, ToolExecution] | None = None) -> None:
+        self._executions = executions if executions is not None else {}
 
     async def add(self, tenant_id: str, execution: ToolExecution) -> None:
         _require_tenant(tenant_id, execution.tenant_id)
@@ -20,6 +20,13 @@ class InMemoryToolExecutionRepository:
     ) -> ToolExecution | None:
         execution = self._executions.get(execution_id)
         return execution if execution is not None and execution.tenant_id == tenant_id else None
+
+    async def get_for_update(
+        self,
+        tenant_id: str,
+        execution_id: str,
+    ) -> ToolExecution | None:
+        return await self.get_by_id(tenant_id, execution_id)
 
     async def save(self, tenant_id: str, execution: ToolExecution) -> None:
         _require_tenant(tenant_id, execution.tenant_id)

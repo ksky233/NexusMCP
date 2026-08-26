@@ -46,6 +46,8 @@ _HTTP_STATUS_BY_ERROR_CODE = {
     "upstream_unavailable": HTTPStatus.BAD_GATEWAY,
     "upstream_response_error": HTTPStatus.BAD_GATEWAY,
     "unknown_execution_outcome": HTTPStatus.BAD_GATEWAY,
+    "tool_execution_not_found": HTTPStatus.NOT_FOUND,
+    "invalid_execution_state": HTTPStatus.CONFLICT,
 }
 
 

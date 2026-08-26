@@ -165,18 +165,18 @@ Audit 不拥有授权决定，不保存 Secret、Token、完整 Arguments 或完
 5. Evaluate Policy
 6. DENY：立即返回，不解析 Credential
 7. REQUIRE_APPROVAL：创建或消费绑定快照的 Approval
-8. Resolve CredentialBinding
-9. Resolve SecretReference → SecretValue
-10. 创建 planned ToolExecution
-11. 标记 running
-12. 事务外执行 Connector
-13. 归一化 success/failed/unknown/cancelled
-14. 短事务保存终态
-15. 写脱敏 Audit
-16. 映射 MCP Result/Error
+8. Resolve CredentialBinding Metadata
+9. 短事务消费 Approval（如需要）+ 创建 running ToolExecution + ALLOWED Audit
+10. Resolve SecretReference → SecretValue
+11. 事务外执行 Connector
+12. 归一化 success/failed/unknown/cancelled
+13. 短事务保存终态 + Terminal Audit
+14. 映射 MCP Result/Error
 ```
 
-Credential 必须位于 Policy/Approval 之后解析，避免拒绝调用仍读取 Secret。
+Secret Value 必须位于 Policy ALLOW 和 Approval Consume 之后解析，避免拒绝或待审批调用仍读取
+Secret。CredentialBinding Metadata 可以在计划事务前选择，以便记录 `credential_binding_id`，但不读取
+Secret Value。
 
 ## 4. 主要 Port
 
@@ -203,6 +203,7 @@ Port 使用 Domain/Application 类型，不暴露 MCP SDK、FastAPI、SQLAlchemy
 → Resolve/Lock Approval（如需要）
 → Consume Approval
 → Create planned/running ToolExecution
+→ Append ALLOWED Audit
 → Commit
 
 事务外
@@ -211,13 +212,16 @@ Port 使用 Domain/Application 类型，不暴露 MCP SDK、FastAPI、SQLAlchemy
 
 短事务 B
 → Save succeeded/failed/unknown/cancelled
+→ Append Terminal Audit
 → Commit
 
-事务外或后续策略
-→ Append Audit
+后续外部投递
+→ Transactional Outbox（尚未实现）
 ```
 
-Audit 与 Execution 是否同库原子、Outbox 或异步 Sink 仍由 ADR-0010 决定。S3-0 不假装 Exactly Once。
+S3-5 已由 ADR-0010 决定：核心治理 Audit 与 Approval/Execution 使用同一 PostgreSQL 短事务同步
+写入；外部 SIEM/消息系统不进入事务，未来通过 Outbox 投递。数据库事务仍不跨越 Upstream，系统
+不宣称 Upstream Side Effect 与本地状态 Exactly Once。
 
 ## 6. Retry 与 Unknown Outcome
 
@@ -259,7 +263,6 @@ S3-0 不冻结：
 
 - Policy Condition DSL；
 - Secret Store 精确产品；
-- Audit 同步/Outbox/异步策略；
 - HTTP Retry 库与 Backoff 参数；
 - Execution Result 长期保留策略。
 
@@ -291,4 +294,6 @@ Approval、真实 Credential 与写 Tool 不进入第一条执行切片。
   Injection；同特异性冲突 Fail Closed，DENY 不读取 Secret；
 - S3-4 已接入 PostgreSQL Approval、Modern MCP MRTR、Control Plane 异步决策、加密防篡改
   `requestState` 和 `FOR UPDATE` 单次消费；等待审批不占用 HTTP 请求或数据库事务；
-- 下一步 S3-5 持久化 Execution/Audit；写 Tool 仍按本文边界待实现。
+- S3-5 已持久化 ToolExecution/Audit，并将 Approval Consume + Running Execution + ALLOWED Audit
+  以及 Terminal Execution + Terminal Audit 分别放入两个短事务；
+- 下一步 S3-6 实现有界 Retry/Idempotency 并收口 S3；写 Tool 仍按本文边界待实现。

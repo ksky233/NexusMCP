@@ -14,6 +14,7 @@ from nexusmcp.bootstrap.config import Settings, get_settings
 from nexusmcp.bootstrap.persistence_factories import (
     RuntimeApprovalUnitOfWorkFactory,
     RuntimeCatalogUnitOfWorkFactory,
+    RuntimeExecutionUnitOfWorkFactory,
     RuntimeOpenApiImportUnitOfWorkFactory,
     RuntimeRegistryUnitOfWorkFactory,
     RuntimeReviewUnitOfWorkFactory,
@@ -26,7 +27,6 @@ from nexusmcp.interfaces.health.router import create_health_router
 from nexusmcp.interfaces.mcp.context import request_headers, resolve_request_context
 from nexusmcp.interfaces.mcp.server import create_mcp_server
 from nexusmcp.modules.approval.use_cases import (
-    ConsumeApproval,
     DecideApproval,
     GetApproval,
     RequestApproval,
@@ -41,12 +41,16 @@ from nexusmcp.modules.catalog.search import SearchPublishedTools
 from nexusmcp.modules.catalog.use_cases import ListVisibleTools
 from nexusmcp.modules.credentials.ports import CredentialBindingResolver, CredentialProvider
 from nexusmcp.modules.execution.adapters.httpx_executor import HttpxToolExecutor
-from nexusmcp.modules.execution.adapters.in_memory import InMemoryToolExecutionRepository
 from nexusmcp.modules.execution.adapters.jsonschema_validator import JsonSchemaArgumentsValidator
+from nexusmcp.modules.execution.adapters.sqlalchemy_reader import (
+    SqlAlchemyAuditEventReader,
+    SqlAlchemyToolExecutionReader,
+)
 from nexusmcp.modules.execution.adapters.sqlalchemy_resolver import (
     SqlAlchemyExecutableToolResolver,
 )
 from nexusmcp.modules.execution.call_tool import CallTool
+from nexusmcp.modules.execution.lifecycle import ExecutionLifecycle
 from nexusmcp.modules.identity.adapters.context_principal import ContextPrincipalResolver
 from nexusmcp.modules.identity.ports import PrincipalAuthenticator
 from nexusmcp.modules.openapi_import.adapters.local_document_reader import (
@@ -100,7 +104,6 @@ def create_app(
     clock = SystemClock()
     identifier_generator = UuidIdentifierGenerator()
     request_approval: RequestApproval | None = None
-    consume_approval: ConsumeApproval | None = None
     decide_approval: DecideApproval | None = None
     get_approval: GetApproval | None = None
     if resolved_runtime is not None:
@@ -111,11 +114,11 @@ def create_app(
             identifier_generator,
             ttl_seconds=resolved_settings.approval_ttl_seconds,
         )
-        consume_approval = ConsumeApproval(approval_uow_factory, clock)
-        decide_approval = DecideApproval(approval_uow_factory, clock)
+        decide_approval = DecideApproval(approval_uow_factory, clock, identifier_generator)
         get_approval = GetApproval(approval_uow_factory)
     call_tool_use_case: CallTool | None = None
-    execution_repository: InMemoryToolExecutionRepository | None = None
+    execution_reader: SqlAlchemyToolExecutionReader | None = None
+    audit_reader: SqlAlchemyAuditEventReader | None = None
     resolved_http_client = tool_http_client
     owns_http_client = False
     if resolved_settings.tool_execution_enabled:
@@ -127,20 +130,23 @@ def create_app(
                 trust_env=False,
             )
             owns_http_client = True
-        execution_repository = InMemoryToolExecutionRepository()
+        execution_lifecycle = ExecutionLifecycle(
+            RuntimeExecutionUnitOfWorkFactory(resolved_runtime),
+            clock,
+            identifier_generator,
+        )
+        execution_reader = SqlAlchemyToolExecutionReader(resolved_runtime)
+        audit_reader = SqlAlchemyAuditEventReader(resolved_runtime)
         call_tool_use_case = CallTool(
             principal_resolver=ContextPrincipalResolver(),
             tool_resolver=SqlAlchemyExecutableToolResolver(resolved_runtime),
             arguments_validator=JsonSchemaArgumentsValidator(),
             policy_evaluator=policy_evaluator or StaticReadOnlyPolicyEvaluator(),
-            execution_repository=execution_repository,
+            execution_lifecycle=execution_lifecycle,
             executor=HttpxToolExecutor(resolved_http_client),
-            clock=clock,
-            identifier_generator=identifier_generator,
             credential_binding_resolver=credential_binding_resolver,
             credential_provider=credential_provider,
             request_approval=request_approval,
-            consume_approval=consume_approval,
             timeout_seconds=resolved_settings.tool_call_timeout_seconds,
         )
 
@@ -245,7 +251,8 @@ def create_app(
     app.state.mcp_server = mcp_server
     app.state.database_runtime = resolved_runtime
     app.state.admin_app = admin_app
-    app.state.execution_repository = execution_repository
+    app.state.execution_reader = execution_reader
+    app.state.audit_reader = audit_reader
     app.state.decide_approval = decide_approval
     app.state.get_approval = get_approval
 

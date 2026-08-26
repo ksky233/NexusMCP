@@ -40,8 +40,17 @@ class MutableClock:
 
 
 class FixedIdentifierGenerator:
+    def __init__(self) -> None:
+        self._count = 0
+
     def new_id(self) -> str:
-        return "approval-1"
+        self._count += 1
+        return "approval-1" if self._count == 1 else f"request-audit-{self._count - 1}"
+
+
+class DecisionAuditIdentifierGenerator:
+    def new_id(self) -> str:
+        return "decision-audit-1"
 
 
 def context(principal_id: str = "user-a") -> ActorContext:
@@ -82,7 +91,7 @@ async def test_approved_request_is_consumed_and_remains_queryable() -> None:
     factory = InMemoryApprovalUnitOfWorkFactory()
     clock = MutableClock()
     requester = RequestApproval(factory, clock, FixedIdentifierGenerator())
-    decider = DecideApproval(factory, clock)
+    decider = DecideApproval(factory, clock, DecisionAuditIdentifierGenerator())
     consumer = ConsumeApproval(factory, clock)
     reader = GetApproval(factory)
 
@@ -110,7 +119,7 @@ async def test_changed_call_snapshot_does_not_consume_approval() -> None:
     factory = InMemoryApprovalUnitOfWorkFactory()
     clock = MutableClock()
     requester = RequestApproval(factory, clock, FixedIdentifierGenerator())
-    decider = DecideApproval(factory, clock)
+    decider = DecideApproval(factory, clock, DecisionAuditIdentifierGenerator())
     consumer = ConsumeApproval(factory, clock)
     reader = GetApproval(factory)
     await requester.execute(request_command())
@@ -134,7 +143,7 @@ async def test_rejected_and_expired_approvals_cannot_be_consumed() -> None:
         clock,
         FixedIdentifierGenerator(),
     ).execute(request_command())
-    await DecideApproval(rejected_factory, clock).execute(
+    await DecideApproval(rejected_factory, clock, DecisionAuditIdentifierGenerator()).execute(
         DecideApprovalCommand(context=context("admin-a"), approval_id="approval-1", approved=False)
     )
     with pytest.raises(ApprovalRejectedError):
@@ -149,7 +158,11 @@ async def test_rejected_and_expired_approvals_cannot_be_consumed() -> None:
     ).execute(request_command())
     clock.current += timedelta(seconds=10)
     with pytest.raises(ApprovalExpiredError):
-        await DecideApproval(expired_factory, clock).execute(
+        await DecideApproval(
+            expired_factory,
+            clock,
+            DecisionAuditIdentifierGenerator(),
+        ).execute(
             DecideApprovalCommand(
                 context=context("admin-a"),
                 approval_id="approval-1",
@@ -163,7 +176,7 @@ async def test_two_concurrent_consumers_have_exactly_one_winner() -> None:
     factory = InMemoryApprovalUnitOfWorkFactory()
     clock = MutableClock()
     await RequestApproval(factory, clock, FixedIdentifierGenerator()).execute(request_command())
-    await DecideApproval(factory, clock).execute(
+    await DecideApproval(factory, clock, DecisionAuditIdentifierGenerator()).execute(
         DecideApprovalCommand(context=context("admin-a"), approval_id="approval-1", approved=True)
     )
     consumer = ConsumeApproval(factory, clock)

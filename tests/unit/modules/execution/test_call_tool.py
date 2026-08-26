@@ -6,12 +6,8 @@ from datetime import UTC, datetime
 
 import pytest
 
-from nexusmcp.modules.approval.adapters.in_memory import (
-    InMemoryApprovalUnitOfWorkFactory,
-)
 from nexusmcp.modules.approval.domain import ApprovalStatus
 from nexusmcp.modules.approval.use_cases import (
-    ConsumeApproval,
     DecideApproval,
     DecideApprovalCommand,
     GetApproval,
@@ -30,6 +26,9 @@ from nexusmcp.modules.credentials.domain import (
     SecretValue,
 )
 from nexusmcp.modules.execution.adapters.in_memory import InMemoryToolExecutionRepository
+from nexusmcp.modules.execution.adapters.in_memory_uow import (
+    InMemoryExecutionUnitOfWorkFactory,
+)
 from nexusmcp.modules.execution.adapters.jsonschema_validator import JsonSchemaArgumentsValidator
 from nexusmcp.modules.execution.call_tool import CallTool
 from nexusmcp.modules.execution.domain import (
@@ -41,6 +40,7 @@ from nexusmcp.modules.execution.domain import (
     ExecutorResult,
     ResolvedExecutableTool,
 )
+from nexusmcp.modules.execution.lifecycle import ExecutionLifecycle
 from nexusmcp.modules.identity.adapters.context_principal import ContextPrincipalResolver
 from nexusmcp.modules.policy.adapters.static_read_only import StaticReadOnlyPolicyEvaluator
 from nexusmcp.modules.policy.domain import (
@@ -67,8 +67,17 @@ class FixedClock:
 
 
 class FixedIdentifierGenerator:
+    def __init__(self) -> None:
+        self._count = 0
+
     def new_id(self) -> str:
-        return "execution-1"
+        self._count += 1
+        return "execution-1" if self._count == 1 else f"audit-{self._count - 1}"
+
+
+class FixedApprovalIdentifierGenerator:
+    def new_id(self) -> str:
+        return "approval-1"
 
 
 class StaticResolver:
@@ -240,9 +249,10 @@ def build_use_case(
     credential_provider: CountingCredentialProvider | None = None,
     policy_evaluator: StaticReadOnlyPolicyEvaluator | RequireApprovalEvaluator | None = None,
     request_approval: RequestApproval | None = None,
-    consume_approval: ConsumeApproval | None = None,
+    unit_of_work_factory: InMemoryExecutionUnitOfWorkFactory | None = None,
 ) -> tuple[CallTool, InMemoryToolExecutionRepository]:
-    repository = InMemoryToolExecutionRepository()
+    resolved_factory = unit_of_work_factory or InMemoryExecutionUnitOfWorkFactory()
+    identifier_generator = FixedIdentifierGenerator()
     resolved_tool = tool or executable_tool()
     return (
         CallTool(
@@ -250,16 +260,17 @@ def build_use_case(
             tool_resolver=StaticResolver(resolved_tool),
             arguments_validator=JsonSchemaArgumentsValidator(),
             policy_evaluator=policy_evaluator or StaticReadOnlyPolicyEvaluator(),
-            execution_repository=repository,
+            execution_lifecycle=ExecutionLifecycle(
+                resolved_factory,
+                FixedClock(),
+                identifier_generator,
+            ),
             executor=executor or SuccessfulExecutor(),
-            clock=FixedClock(),
-            identifier_generator=FixedIdentifierGenerator(),
             credential_binding_resolver=credential_binding_resolver,
             credential_provider=credential_provider,
             request_approval=request_approval,
-            consume_approval=consume_approval,
         ),
-        repository,
+        resolved_factory.execution_reader,
     )
 
 
@@ -410,10 +421,9 @@ async def test_missing_credential_binding_fails_before_execution_record() -> Non
 
 @pytest.mark.asyncio
 async def test_required_approval_pauses_then_consumes_before_credential() -> None:
-    approval_factory = InMemoryApprovalUnitOfWorkFactory()
-    requester = RequestApproval(approval_factory, FixedClock(), FixedIdentifierGenerator())
-    consumer = ConsumeApproval(approval_factory, FixedClock())
-    decider = DecideApproval(approval_factory, FixedClock())
+    approval_factory = InMemoryExecutionUnitOfWorkFactory()
+    requester = RequestApproval(approval_factory, FixedClock(), FixedApprovalIdentifierGenerator())
+    decider = DecideApproval(approval_factory, FixedClock(), FixedIdentifierGenerator())
     reader = GetApproval(approval_factory)
     credential_resolver = CountingCredentialResolver(
         CredentialBinding(
@@ -437,7 +447,7 @@ async def test_required_approval_pauses_then_consumes_before_credential() -> Non
         tool=executable_tool(auth_scheme="bearer"),
         policy_evaluator=RequireApprovalEvaluator(),
         request_approval=requester,
-        consume_approval=consumer,
+        unit_of_work_factory=approval_factory,
         credential_binding_resolver=credential_resolver,
         credential_provider=credential_provider,
     )
@@ -451,7 +461,7 @@ async def test_required_approval_pauses_then_consumes_before_credential() -> Non
         await use_case.execute(command)
 
     approval_id = captured.value.approval_id
-    assert approval_id == "execution-1"
+    assert approval_id == "approval-1"
     assert credential_resolver.calls == 0
     assert credential_provider.calls == 0
     assert await repository.list_by_tenant("tenant-a") == ()

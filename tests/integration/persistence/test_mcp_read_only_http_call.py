@@ -14,9 +14,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from examples.upstream_apis.employee_directory.app import app as employee_directory_app
 from nexusmcp.bootstrap.app import create_app
 from nexusmcp.bootstrap.config import Settings
+from nexusmcp.modules.audit.domain import AuditOutcome
 from nexusmcp.modules.catalog.adapters.sqlalchemy_models import ToolModel, ToolVersionModel
 from nexusmcp.modules.connectors.adapters.sqlalchemy_models import ToolBindingModel
-from nexusmcp.modules.execution.adapters.in_memory import InMemoryToolExecutionRepository
 from nexusmcp.modules.execution.domain import ExecutionStatus
 from nexusmcp.modules.identity.adapters.sqlalchemy_models import TenantModel
 from nexusmcp.modules.registry.adapters.sqlalchemy_models import UpstreamServiceModel
@@ -167,7 +167,10 @@ async def test_modern_mcp_read_only_http_tool_call(
                     invalid = await client.call_tool("directory.get_employee", {})
                     missing = await client.call_tool("directory.missing", {})
 
-        repository = app.state.execution_repository
+            execution_reader = app.state.execution_reader
+            audit_reader = app.state.audit_reader
+            executions = await execution_reader.list_by_tenant(TENANT_A_ID)
+            audits = await audit_reader.list_by_tenant(TENANT_A_ID)
 
     assert protocol_version == "2026-07-28"
     assert success.is_error is False
@@ -181,7 +184,11 @@ async def test_modern_mcp_read_only_http_tool_call(
     assert missing.is_error is True
     assert missing.meta is not None
     assert missing.meta["com.nexusmcp/errorCode"] == "tool_not_found"
-    assert isinstance(repository, InMemoryToolExecutionRepository)
-    executions = await repository.list_by_tenant(TENANT_A_ID)
     assert len(executions) == 1
     assert executions[0].status is ExecutionStatus.SUCCEEDED
+    assert executions[0].request_id
+    assert executions[0].trace_id
+    assert [event.outcome for event in audits] == [
+        AuditOutcome.ALLOWED,
+        AuditOutcome.SUCCEEDED,
+    ]

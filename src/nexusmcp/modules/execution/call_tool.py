@@ -1,30 +1,31 @@
-"""S3-1 Read-Only HTTP Tool Call Application Use Case。"""
+"""Tool Call 的 Policy、Approval、Credential 与 Execution 主编排。"""
 
 import asyncio
 
 from nexusmcp.modules.approval.use_cases import (
-    ConsumeApproval,
-    ConsumeApprovalCommand,
     RequestApproval,
     RequestApprovalCommand,
 )
+from nexusmcp.modules.audit.domain import AuditOutcome
 from nexusmcp.modules.catalog.domain import ToolVisibility
-from nexusmcp.modules.credentials.domain import ResolvedCredential
+from nexusmcp.modules.credentials.domain import CredentialBinding, ResolvedCredential
 from nexusmcp.modules.credentials.ports import CredentialBindingResolver, CredentialProvider
 from nexusmcp.modules.execution.domain import (
     CallToolCommand,
     CallToolResult,
     ExecutionErrorCategory,
-    ExecutionStatus,
     ExecutorFailure,
     ExecutorRequest,
     ResolvedExecutableTool,
-    ToolExecution,
+)
+from nexusmcp.modules.execution.lifecycle import (
+    ExecutionLifecycle,
+    PlanExecutionCommand,
+    RecordCallDecisionCommand,
 )
 from nexusmcp.modules.execution.ports import (
     ArgumentsValidator,
     ExecutableToolResolver,
-    ToolExecutionRepository,
     ToolExecutor,
 )
 from nexusmcp.modules.identity.domain import InternalPrincipal, PrincipalType
@@ -35,13 +36,13 @@ from nexusmcp.modules.policy.domain import (
     ToolAction,
 )
 from nexusmcp.modules.policy.ports import PolicyEvaluator
-from nexusmcp.shared.clock import Clock
 from nexusmcp.shared.errors import (
     ApprovalRequiredError,
     AuthorizationError,
     CredentialBindingNotFoundError,
     CredentialResolutionError,
     InvalidArgumentsError,
+    NexusMcpError,
     ToolNotFoundError,
     ToolNotVisibleError,
     UnknownExecutionOutcomeError,
@@ -49,7 +50,6 @@ from nexusmcp.shared.errors import (
     UpstreamTimeoutError,
     UpstreamUnavailableError,
 )
-from nexusmcp.shared.identifiers import IdentifierGenerator
 
 
 class CallTool:
@@ -60,14 +60,11 @@ class CallTool:
         tool_resolver: ExecutableToolResolver,
         arguments_validator: ArgumentsValidator,
         policy_evaluator: PolicyEvaluator,
-        execution_repository: ToolExecutionRepository,
+        execution_lifecycle: ExecutionLifecycle,
         executor: ToolExecutor,
-        clock: Clock,
-        identifier_generator: IdentifierGenerator,
         credential_binding_resolver: CredentialBindingResolver | None = None,
         credential_provider: CredentialProvider | None = None,
         request_approval: RequestApproval | None = None,
-        consume_approval: ConsumeApproval | None = None,
         timeout_seconds: float = 5.0,
     ) -> None:
         if timeout_seconds <= 0:
@@ -76,14 +73,11 @@ class CallTool:
         self._tool_resolver = tool_resolver
         self._arguments_validator = arguments_validator
         self._policy_evaluator = policy_evaluator
-        self._execution_repository = execution_repository
+        self._execution_lifecycle = execution_lifecycle
         self._executor = executor
-        self._clock = clock
-        self._identifier_generator = identifier_generator
         self._credential_binding_resolver = credential_binding_resolver
         self._credential_provider = credential_provider
         self._request_approval = request_approval
-        self._consume_approval = consume_approval
         self._timeout_seconds = timeout_seconds
 
     async def execute(self, command: CallToolCommand) -> CallToolResult:
@@ -107,6 +101,14 @@ class CallTool:
         )
         decision = await self._policy_evaluator.evaluate(policy_input)
         if decision.effect is PolicyEffect.DENY:
+            await self._record_policy_decision(
+                command=command,
+                principal=principal,
+                tool=tool,
+                policy_version=decision.policy_version,
+                reason_code=decision.reason_code,
+                outcome=AuditOutcome.DENIED,
+            )
             raise AuthorizationError(f"policy denied call with reason {decision.reason_code}")
         if decision.effect is PolicyEffect.REQUIRE_APPROVAL:
             await self._pass_approval_gate(
@@ -118,30 +120,51 @@ class CallTool:
             )
 
         tenant_id = context.tenant_id
-        credential = await self._resolve_credential(
+        credential_binding = await self._resolve_credential_binding(
             tenant_id=tenant_id,
             principal=principal,
             tool=tool,
         )
-        execution = ToolExecution(
-            id=self._identifier_generator.new_id(),
-            tenant_id=tenant_id,
-            principal_id=principal.id,
-            tool_id=tool.tool_id,
-            tool_version_id=tool.tool_version_id,
-            tool_binding_id=tool.tool_binding_id,
-            arguments_digest=command.arguments_digest,
-            side_effect=tool.side_effect,
-            status=ExecutionStatus.PLANNED,
-            planned_at=self._clock.now(),
-            credential_binding_id=(
-                credential.credential_binding_id if credential is not None else None
-            ),
-            idempotency_key=command.idempotency_key,
+        execution = await self._execution_lifecycle.plan(
+            PlanExecutionCommand(
+                context=context,
+                principal_id=principal.id,
+                tool_id=tool.tool_id,
+                tool_version_id=tool.tool_version_id,
+                tool_binding_id=tool.tool_binding_id,
+                arguments_digest=command.arguments_digest,
+                policy_version=decision.policy_version,
+                policy_reason_code=decision.reason_code,
+                side_effect=tool.side_effect,
+                approval_id=(
+                    command.approval_id
+                    if decision.effect is PolicyEffect.REQUIRE_APPROVAL
+                    else None
+                ),
+                credential_binding_id=(
+                    credential_binding.id if credential_binding is not None else None
+                ),
+                idempotency_key=command.idempotency_key,
+            )
         )
-        await self._execution_repository.add(tenant_id, execution)
-        execution = execution.start(self._clock.now())
-        await self._execution_repository.save(tenant_id, execution)
+        try:
+            credential = await self._resolve_secret(credential_binding)
+        except NexusMcpError as error:
+            await self._execution_lifecycle.fail(
+                tenant_id,
+                execution.id,
+                error_code=error.code,
+                category=ExecutionErrorCategory.CREDENTIAL,
+            )
+            raise
+        except Exception as error:
+            await self._execution_lifecycle.fail(
+                tenant_id,
+                execution.id,
+                error_code="credential_resolution_failed",
+                category=ExecutionErrorCategory.CREDENTIAL,
+            )
+            raise CredentialResolutionError("unexpected credential provider failure") from error
 
         try:
             executor_result = await self._executor.execute(
@@ -154,44 +177,55 @@ class CallTool:
                 credential=credential,
             )
         except asyncio.CancelledError:
-            await self._execution_repository.save(
-                tenant_id,
-                execution.cancel(self._clock.now()),
-            )
+            await self._execution_lifecycle.cancel(tenant_id, execution.id)
             raise
         except ExecutorFailure as error:
-            if error.outcome_unknown:
-                terminal = execution.mark_unknown(
-                    error_code=error.code,
-                    finished_at=self._clock.now(),
-                )
-            else:
-                terminal = execution.fail(
-                    error_code=error.code,
-                    category=error.category,
-                    finished_at=self._clock.now(),
-                )
-            await self._execution_repository.save(tenant_id, terminal)
+            await self._execution_lifecycle.fail(
+                tenant_id,
+                execution.id,
+                error_code=error.code,
+                category=error.category,
+                outcome_unknown=error.outcome_unknown,
+            )
             raise _public_executor_error(error) from None
         except Exception as error:
-            await self._execution_repository.save(
+            await self._execution_lifecycle.fail(
                 tenant_id,
-                execution.mark_unknown(
-                    error_code="unexpected_executor_failure",
-                    finished_at=self._clock.now(),
-                ),
+                execution.id,
+                error_code="unexpected_executor_failure",
+                category=ExecutionErrorCategory.UNKNOWN,
+                outcome_unknown=True,
             )
             raise UnknownExecutionOutcomeError("unexpected executor failure") from error
 
-        await self._execution_repository.save(
-            tenant_id,
-            execution.succeed(self._clock.now()),
-        )
+        await self._execution_lifecycle.succeed(tenant_id, execution.id)
         return CallToolResult(
             execution_id=execution.id,
             data=executor_result.data,
             content_type=executor_result.content_type,
             upstream_status=executor_result.upstream_status,
+        )
+
+    async def _record_policy_decision(
+        self,
+        *,
+        command: CallToolCommand,
+        principal: InternalPrincipal,
+        tool: ResolvedExecutableTool,
+        policy_version: str,
+        reason_code: str,
+        outcome: AuditOutcome,
+    ) -> None:
+        await self._execution_lifecycle.record_call_decision(
+            RecordCallDecisionCommand(
+                context=command.context,
+                principal_id=principal.id,
+                tool_version_id=tool.tool_version_id,
+                arguments_digest=command.arguments_digest,
+                policy_version=policy_version,
+                reason_code=reason_code,
+                outcome=outcome,
+            )
         )
 
     async def _pass_approval_gate(
@@ -203,42 +237,35 @@ class CallTool:
         policy_version: str,
         reason_code: str,
     ) -> None:
-        if self._request_approval is None or self._consume_approval is None:
+        if command.approval_id is not None:
+            # 真正消费由 ExecutionLifecycle 与 Running Execution 在同一事务中完成。
+            return
+        if self._request_approval is None:
             raise ApprovalRequiredError(f"policy requires approval with reason {reason_code}")
-        if command.approval_id is None:
-            approval = await self._request_approval.execute(
-                RequestApprovalCommand(
-                    context=command.context,
-                    principal_id=principal.id,
-                    tool_id=tool.tool_id,
-                    tool_version_id=tool.tool_version_id,
-                    arguments_digest=command.arguments_digest,
-                    policy_version=policy_version,
-                )
-            )
-            raise ApprovalRequiredError(
-                f"policy requires approval with reason {reason_code}",
-                approval_id=approval.id,
-                expires_at=approval.expires_at.isoformat(),
-            )
-        await self._consume_approval.execute(
-            ConsumeApprovalCommand(
+        approval = await self._request_approval.execute(
+            RequestApprovalCommand(
                 context=command.context,
-                approval_id=command.approval_id,
                 principal_id=principal.id,
+                tool_id=tool.tool_id,
                 tool_version_id=tool.tool_version_id,
                 arguments_digest=command.arguments_digest,
                 policy_version=policy_version,
+                policy_reason_code=reason_code,
             )
         )
+        raise ApprovalRequiredError(
+            f"policy requires approval with reason {reason_code}",
+            approval_id=approval.id,
+            expires_at=approval.expires_at.isoformat(),
+        )
 
-    async def _resolve_credential(
+    async def _resolve_credential_binding(
         self,
         *,
         tenant_id: str,
         principal: InternalPrincipal,
         tool: ResolvedExecutableTool,
-    ) -> ResolvedCredential | None:
+    ) -> CredentialBinding | None:
         auth_scheme = (tool.upstream_auth_scheme or "none").strip().lower()
         if auth_scheme == "none":
             return None
@@ -253,6 +280,16 @@ class CallTool:
         )
         if binding is None:
             raise CredentialBindingNotFoundError("no credential binding matched tool call")
+        return binding
+
+    async def _resolve_secret(
+        self,
+        binding: CredentialBinding | None,
+    ) -> ResolvedCredential | None:
+        if binding is None:
+            return None
+        if self._credential_provider is None:  # pragma: no cover - 前置组装检查已覆盖
+            raise CredentialResolutionError("credential provider was not configured")
         value = await self._credential_provider.resolve(binding.secret_reference)
         return ResolvedCredential(
             credential_binding_id=binding.id,

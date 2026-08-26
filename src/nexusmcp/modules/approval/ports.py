@@ -4,6 +4,7 @@ from types import TracebackType
 from typing import Protocol, Self
 
 from nexusmcp.modules.approval.domain import ApprovalRequest
+from nexusmcp.modules.audit.ports import AuditRepository
 
 
 class ApprovalRepository(Protocol):
@@ -27,6 +28,9 @@ class ApprovalRepository(Protocol):
 class ApprovalUnitOfWork(Protocol):
     @property
     def approvals(self) -> ApprovalRepository: ...
+
+    @property
+    def audits(self) -> AuditRepository: ...
 
     async def __aenter__(self) -> Self: ...
 

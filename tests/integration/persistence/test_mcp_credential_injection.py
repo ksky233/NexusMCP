@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from nexusmcp.bootstrap.app import create_app
 from nexusmcp.bootstrap.config import Settings
+from nexusmcp.modules.audit.domain import AuditOutcome
 from nexusmcp.modules.credentials.adapters.environment import EnvironmentCredentialProvider
 from nexusmcp.modules.credentials.adapters.in_memory import (
     InMemoryCredentialBindingResolver,
@@ -25,7 +26,6 @@ from nexusmcp.modules.credentials.domain import (
     SecretReference,
     SecretValue,
 )
-from nexusmcp.modules.execution.adapters.in_memory import InMemoryToolExecutionRepository
 from nexusmcp.modules.execution.domain import ExecutionStatus
 from nexusmcp.modules.identity.adapters.static_bearer import (
     StaticBearerIdentity,
@@ -187,7 +187,10 @@ async def test_allow_injects_secret_while_deny_never_resolves_it(
         async with app.router.lifespan_context(app):
             allowed = await call_tool(app, f"Bearer {USER_A_TOKEN}")
             denied = await call_tool(app, f"Bearer {USER_B_TOKEN}")
-        repository = app.state.execution_repository
+            execution_reader = app.state.execution_reader
+            audit_reader = app.state.audit_reader
+            executions = await execution_reader.list_by_tenant(TENANT_A_ID)
+            audits = await audit_reader.list_by_tenant(TENANT_A_ID)
 
     assert allowed.is_error is False
     assert allowed.structured_content == {"employee_id": "emp-001", "name": "Ada Chen"}
@@ -196,11 +199,15 @@ async def test_allow_injects_secret_while_deny_never_resolves_it(
     assert denied.meta["com.nexusmcp/errorCode"] == "authorization_denied"
     # 第二次调用被 Policy 拒绝，不能进入 Credential Resolver/Provider。
     assert provider.calls == 1
-    assert isinstance(repository, InMemoryToolExecutionRepository)
-    executions = await repository.list_by_tenant(TENANT_A_ID)
     assert len(executions) == 1
     assert executions[0].status is ExecutionStatus.SUCCEEDED
     assert executions[0].credential_binding_id == "credential-binding-user-a"
+    assert [event.outcome for event in audits] == [
+        AuditOutcome.ALLOWED,
+        AuditOutcome.SUCCEEDED,
+        AuditOutcome.DENIED,
+    ]
     assert UPSTREAM_SECRET not in repr(executions[0])
+    assert UPSTREAM_SECRET not in repr(audits)
     assert UPSTREAM_SECRET not in repr(allowed)
     assert UPSTREAM_SECRET not in caplog.text

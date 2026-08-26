@@ -12,8 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from examples.upstream_apis.employee_directory.app import app as employee_directory_app
 from nexusmcp.bootstrap.app import create_app
 from nexusmcp.bootstrap.config import Settings
+from nexusmcp.modules.audit.domain import AuditOutcome
 from nexusmcp.modules.credentials.domain import SecretValue
-from nexusmcp.modules.execution.adapters.in_memory import InMemoryToolExecutionRepository
 from nexusmcp.modules.identity.adapters.static_bearer import (
     StaticBearerIdentity,
     StaticBearerPrincipalAuthenticator,
@@ -152,7 +152,10 @@ async def test_same_tool_is_allowed_denied_or_unauthenticated_by_principal(
                 "Bearer unknown-token",
             )
             _anonymous_list, anonymous = await call_with_authorization(app, None)
-        execution_repository = app.state.execution_repository
+            execution_reader = app.state.execution_reader
+            audit_reader = app.state.audit_reader
+            executions = await execution_reader.list_by_tenant(TENANT_A_ID)
+            audits = await audit_reader.list_by_tenant(TENANT_A_ID)
 
     assert user_a_list is not None
     assert [tool.name for tool in user_a_list.tools] == ["directory.get_employee"]
@@ -169,7 +172,11 @@ async def test_same_tool_is_allowed_denied_or_unauthenticated_by_principal(
     assert anonymous.is_error is True
     assert anonymous.meta is not None
     assert anonymous.meta["com.nexusmcp/errorCode"] == "authorization_denied"
-    assert isinstance(execution_repository, InMemoryToolExecutionRepository)
-    executions = await execution_repository.list_by_tenant(TENANT_A_ID)
     assert len(executions) == 1
     assert executions[0].principal_id == "user-a"
+    assert [event.outcome for event in audits] == [
+        AuditOutcome.ALLOWED,
+        AuditOutcome.SUCCEEDED,
+        AuditOutcome.DENIED,
+        AuditOutcome.DENIED,
+    ]

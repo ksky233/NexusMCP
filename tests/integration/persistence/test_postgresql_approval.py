@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from nexusmcp.infrastructure.identifiers import UuidIdentifierGenerator
 from nexusmcp.modules.approval.adapters.sqlalchemy_uow import (
     SqlAlchemyApprovalUnitOfWorkFactory,
 )
@@ -82,7 +83,7 @@ async def test_postgresql_row_lock_allows_exactly_one_approval_consumer(
             policy_version="policy-v1",
         )
     )
-    await DecideApproval(factory, clock).execute(
+    await DecideApproval(factory, clock, UuidIdentifierGenerator()).execute(
         DecideApprovalCommand(
             context=context("admin-a"),
             approval_id=APPROVAL_ID,
