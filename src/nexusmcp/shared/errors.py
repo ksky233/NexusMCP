@@ -53,6 +53,16 @@ class UpstreamNotActiveError(NexusMcpError):
     safe_message = "The tool upstream is not active."
 
 
+class UpstreamNotFoundError(NexusMcpError):
+    code = "upstream_not_found"
+    safe_message = "The requested upstream service was not found."
+
+
+class UpstreamConflictError(NexusMcpError):
+    code = "upstream_conflict"
+    safe_message = "The upstream service conflicts with an existing registration."
+
+
 class SchemaDigestMismatchError(NexusMcpError):
     code = "schema_digest_mismatch"
     safe_message = "The tool schema no longer matches the reviewed version."
@@ -66,6 +76,11 @@ class BindingDigestMismatchError(NexusMcpError):
 class OpenApiSourceNotFoundError(NexusMcpError):
     code = "openapi_source_not_found"
     safe_message = "The OpenAPI source was not found."
+
+
+class OpenApiImportJobNotFoundError(NexusMcpError):
+    code = "openapi_import_job_not_found"
+    safe_message = "The OpenAPI import job was not found."
 
 
 class OpenApiDocumentInvalidError(NexusMcpError):

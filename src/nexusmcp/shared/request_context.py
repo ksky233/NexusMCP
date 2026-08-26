@@ -12,14 +12,18 @@ class ProtocolEra(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
-class RequestContext:
+class ActorContext:
     request_id: str
     trace_id: str
-    protocol_version: str
-    protocol_era: ProtocolEra
     tenant_id: str
     principal_id: str
     authn_method: str
+
+
+@dataclass(frozen=True, slots=True)
+class RequestContext(ActorContext):
+    protocol_version: str
+    protocol_era: ProtocolEra
     agent_id: str | None = None
     run_id: str | None = None
     policy_snapshot: str | None = None

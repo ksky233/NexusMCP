@@ -1,7 +1,9 @@
 """Registry 上下文的 Upstream Service 领域模型。"""
 
+from __future__ import annotations
+
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 from typing import Any
 
@@ -48,3 +50,28 @@ class UpstreamService:
         ):
             if not value.strip():
                 raise ValueError(f"{field_name} must not be blank")
+
+    def update(
+        self,
+        *,
+        description: str | None,
+        owner: str,
+        endpoint: str,
+        auth_scheme: str | None,
+        config: Mapping[str, Any],
+    ) -> UpstreamService:
+        return replace(
+            self,
+            description=description,
+            owner=owner,
+            endpoint=endpoint,
+            auth_scheme=auth_scheme,
+            config=config,
+        )
+
+    def disable(self) -> UpstreamService:
+        return (
+            self
+            if self.status is UpstreamStatus.DISABLED
+            else replace(self, status=UpstreamStatus.DISABLED)
+        )

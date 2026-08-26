@@ -11,6 +11,7 @@ from nexusmcp.shared.errors import (
     NexusMcpError,
     OpenApiDocumentInvalidError,
     OpenApiFeatureUnsupportedError,
+    OpenApiImportJobNotFoundError,
     OpenApiSourceNotFoundError,
     PublishConflictError,
     SchemaDigestMismatchError,
@@ -18,7 +19,9 @@ from nexusmcp.shared.errors import (
     ToolBindingNotFoundError,
     ToolNotFoundError,
     ToolVersionNotFoundError,
+    UpstreamConflictError,
     UpstreamNotActiveError,
+    UpstreamNotFoundError,
 )
 
 
@@ -37,9 +40,12 @@ from nexusmcp.shared.errors import (
         OpenApiSourceNotFoundError,
         OpenApiDocumentInvalidError,
         OpenApiFeatureUnsupportedError,
+        OpenApiImportJobNotFoundError,
         ImportedOperationNotFoundError,
         InvalidReviewStateError,
         InvalidArgumentsError,
+        UpstreamNotFoundError,
+        UpstreamConflictError,
     ],
 )
 def test_error_contract_uses_stable_code_and_safe_english_message(

@@ -202,3 +202,7 @@ tests/integration/persistence/test_postgresql_fts_search.py
 3. 为 Import/Review/Publish/Search 建立最小 CLI 或 Admin REST 调用接缝；
 4. 不建设复杂 UI；
 5. 完成 S2 总验收后再进入 S3 Gateway/Policy/Credential/Execution。
+
+以上内容已在
+[S2-6 S2 收口与 Control Plane 接缝](./13_S2-6_S2收口与ControlPlane接缝.md)
+完成。

@@ -22,12 +22,12 @@ from nexusmcp.shared.errors import (
     UpstreamNotActiveError,
 )
 from nexusmcp.shared.identifiers import IdentifierGenerator
-from nexusmcp.shared.request_context import RequestContext
+from nexusmcp.shared.request_context import ActorContext
 
 
 @dataclass(frozen=True, slots=True)
 class ImportOpenApiCommand:
-    context: RequestContext
+    context: ActorContext
     upstream_service_id: str
     source_ref: str
     operation_allowlist: tuple[str, ...] = ()

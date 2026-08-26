@@ -16,7 +16,9 @@ _HTTP_STATUS_BY_ERROR_CODE = {
     "tool_version_not_found": HTTPStatus.NOT_FOUND,
     "tool_binding_not_found": HTTPStatus.NOT_FOUND,
     "openapi_source_not_found": HTTPStatus.NOT_FOUND,
+    "openapi_import_job_not_found": HTTPStatus.NOT_FOUND,
     "imported_operation_not_found": HTTPStatus.NOT_FOUND,
+    "upstream_not_found": HTTPStatus.NOT_FOUND,
     "tool_not_visible": HTTPStatus.FORBIDDEN,
     "tenant_boundary_violation": HTTPStatus.FORBIDDEN,
     "invalid_tool_state": HTTPStatus.CONFLICT,
@@ -26,6 +28,7 @@ _HTTP_STATUS_BY_ERROR_CODE = {
     "binding_digest_mismatch": HTTPStatus.CONFLICT,
     "invalid_review_state": HTTPStatus.CONFLICT,
     "openapi_feature_unsupported": HTTPStatus.UNPROCESSABLE_ENTITY,
+    "upstream_conflict": HTTPStatus.CONFLICT,
 }
 
 

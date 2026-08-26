@@ -36,12 +36,12 @@ from nexusmcp.shared.errors import (
     UpstreamNotActiveError,
 )
 from nexusmcp.shared.identifiers import IdentifierGenerator
-from nexusmcp.shared.request_context import RequestContext
+from nexusmcp.shared.request_context import ActorContext
 
 
 @dataclass(frozen=True, slots=True)
 class ReviewImportedOperationCommand:
-    context: RequestContext
+    context: ActorContext
     operation_id: str
     owner: str
     visibility: ToolVisibility = ToolVisibility.PUBLIC
@@ -56,6 +56,8 @@ class ReviewImportedOperationResult:
     tool_binding_id: str
     canonical_name: str
     version: int
+    schema_digest: str
+    binding_digest: str
 
 
 class ReviewImportedOperation:
@@ -142,6 +144,8 @@ class ReviewImportedOperation:
             tool_binding_id=binding.id,
             canonical_name=tool.canonical_name,
             version=version.version,
+            schema_digest=version.schema_digest,
+            binding_digest=binding.binding_digest,
         )
 
     def _build_version(
@@ -260,6 +264,8 @@ class ReviewImportedOperation:
             tool_binding_id=binding.id,
             canonical_name=tool.canonical_name,
             version=version.version,
+            schema_digest=version.schema_digest,
+            binding_digest=binding.binding_digest,
         )
 
 

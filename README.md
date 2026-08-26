@@ -4,7 +4,7 @@
 
 NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，负责将企业 HTTP/OpenAPI 服务和已有 MCP Server 纳入统一 Tool Catalog，并在 MCP 调用链上执行身份、策略、凭据、审批、审计与可观测性。
 
-当前阶段：`S2-5｜Catalog PostgreSQL FTS 完成`。
+当前阶段：`S2-6｜S2 收口与 Control Plane 接缝完成`。
 
 ## 当前边界
 
@@ -24,7 +24,8 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，�
 - Employee Directory 已跑通 Local OpenAPI Import → Review → Publish → MCP `tools/list`；
 - 三个 Demo 共 7 个接口已复用同一 Pipeline，并由 MCP 同时返回三个 Namespace；
 - Catalog 已具有 PostgreSQL Weighted FTS、GIN Index、相关度排名和治理过滤；
-- Control Plane 接口收口和 `tools/call` 正式执行链尚未实现。
+- Local Admin REST 已覆盖 Registry、Import、Review、Publish、Search，并与 `/mcp` 隔离；
+- S2 已完成；认证、Policy、Credential、Approval、Audit 和 `tools/call` 进入 S3。
 
 ## 代码语言约定
 
@@ -60,6 +61,46 @@ $env:NEXUSMCP_TEST_DATABASE_URL = "postgresql+asyncpg://nexusmcp:nexusmcp_dev@12
 uv run python -m pytest tests/integration -q
 ```
 
+## Local Control Plane
+
+当前 `/admin` 是开发/学习阶段的 Local Control Plane，使用 Settings 中固定 Tenant/Principal，不接受
+客户端 Tenant Header，且禁止在 `production` 启用。S3 Authentication 完成前不要将它暴露到非可信网络。
+
+```powershell
+Copy-Item .env.example .env
+docker compose up -d postgres
+
+$env:NEXUSMCP_DATABASE_URL = "postgresql+asyncpg://nexusmcp:nexusmcp_dev@127.0.0.1:55432/nexusmcp"
+uv run alembic upgrade head
+
+docker compose exec -T postgres psql -U nexusmcp -d nexusmcp -c `
+  "INSERT INTO tenant (id, name, status) VALUES ('00000000-0000-0000-0000-000000000001', 'Local Tenant', 'active') ON CONFLICT (id) DO NOTHING;"
+
+uv run uvicorn nexusmcp.main:app --reload
+```
+
+打开 `http://127.0.0.1:8000/admin/docs` 可以按顺序执行：
+
+```text
+POST /admin/upstreams
+POST /admin/openapi/imports
+GET  /admin/openapi/imports/{job_id}
+POST /admin/openapi/operations/{operation_id}/review
+POST /admin/tool-versions/{version_id}/submit-review
+POST /admin/tools/{tool_id}/versions/{version_id}/publish
+GET  /admin/catalog/search?q=employee
+```
+
+注册 Employee Directory 的 Curl 示例：
+
+```powershell
+curl.exe -X POST http://127.0.0.1:8000/admin/upstreams `
+  -H "Content-Type: application/json" `
+  -d '{"namespace":"directory","name":"employee-directory-api","owner":"people-platform","endpoint":"http://127.0.0.1:9001","auth_scheme":"none","config":{}}'
+```
+
+`/admin` 负责 Control Plane，`/mcp` 保持 MCP Protocol 边界，`/health/live` 与 `/health/ready` 保持独立。
+
 停止 Container 但保留数据：
 
 ```powershell
@@ -82,6 +123,7 @@ docker compose stop postgres
 - [S2-3 Employee Directory OpenAPI 纵向切片](./docs/实验记录/10_S2-3_EmployeeDirectoryOpenAPI纵向切片.md)
 - [S2-4 Operations / Inventory 通用性验证](./docs/实验记录/11_S2-4_OperationsInventory通用性验证.md)
 - [S2-5 Catalog PostgreSQL FTS](./docs/实验记录/12_S2-5_CatalogPostgreSQLFTS.md)
+- [S2-6 S2 收口与 Control Plane 接缝](./docs/实验记录/13_S2-6_S2收口与ControlPlane接缝.md)
 - [业务词汇、核心用例与限界上下文](./docs/架构/01_业务词汇核心用例与限界上下文.md)
 - [持久化模型与发布事务](./docs/架构/02_持久化模型与发布事务.md)
 - [ADR-0001：Python 项目布局](./docs/adr/0001-python-project-layout.md)

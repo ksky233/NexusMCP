@@ -22,12 +22,12 @@ from nexusmcp.shared.errors import (
     ToolVersionNotFoundError,
     UpstreamNotActiveError,
 )
-from nexusmcp.shared.request_context import RequestContext
+from nexusmcp.shared.request_context import ActorContext
 
 
 @dataclass(frozen=True, slots=True)
 class PublishToolCommand:
-    context: RequestContext
+    context: ActorContext
     tool_id: str
     tool_version_id: str
     expected_schema_digest: str

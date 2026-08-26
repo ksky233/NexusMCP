@@ -1,7 +1,7 @@
 """运行模式与 Database Settings 组合约束测试。"""
 
 import pytest
-from pydantic import ValidationError
+from pydantic import SecretStr, ValidationError
 
 from nexusmcp.bootstrap.config import Settings
 
@@ -19,3 +19,31 @@ def test_production_cannot_silently_use_empty_memory_catalog() -> None:
 def test_database_readiness_timeout_must_be_positive() -> None:
     with pytest.raises(ValidationError, match="must be positive"):
         Settings(environment="test", database_readiness_timeout_seconds=0)
+
+
+def test_control_plane_requires_postgresql_and_uuid_tenant() -> None:
+    with pytest.raises(ValidationError, match="requires postgresql"):
+        Settings(
+            environment="test",
+            catalog_backend="memory",
+            control_plane_enabled=True,
+        )
+    with pytest.raises(ValidationError, match="UUID local_tenant_id"):
+        Settings(
+            environment="test",
+            catalog_backend="postgresql",
+            database_url=SecretStr("postgresql+asyncpg://user:password@127.0.0.1/database"),
+            control_plane_enabled=True,
+            local_tenant_id="local",
+        )
+
+
+def test_local_control_plane_is_forbidden_in_production() -> None:
+    with pytest.raises(ValidationError, match="disabled in production"):
+        Settings(
+            environment="production",
+            catalog_backend="postgresql",
+            database_url=SecretStr("postgresql+asyncpg://user:password@127.0.0.1/database"),
+            local_tenant_id="00000000-0000-0000-0000-000000000001",
+            control_plane_enabled=True,
+        )

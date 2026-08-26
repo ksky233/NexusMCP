@@ -5,12 +5,12 @@ from dataclasses import dataclass
 from nexusmcp.modules.catalog.domain import PublishedToolSearchHit, ToolVisibility
 from nexusmcp.modules.catalog.ports import PublishedToolSearch
 from nexusmcp.shared.errors import InvalidArgumentsError
-from nexusmcp.shared.request_context import ANONYMOUS_PRINCIPAL_ID, RequestContext
+from nexusmcp.shared.request_context import ANONYMOUS_PRINCIPAL_ID, ActorContext
 
 
 @dataclass(frozen=True, slots=True)
 class SearchPublishedToolsQuery:
-    context: RequestContext
+    context: ActorContext
     text: str
     limit: int = 10
 

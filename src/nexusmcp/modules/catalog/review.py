@@ -6,12 +6,12 @@ from nexusmcp.modules.catalog.domain import ToolVersionStatus
 from nexusmcp.modules.catalog.ports import CatalogUnitOfWorkFactory
 from nexusmcp.shared.clock import Clock
 from nexusmcp.shared.errors import InvalidToolStateError, ToolVersionNotFoundError
-from nexusmcp.shared.request_context import RequestContext
+from nexusmcp.shared.request_context import ActorContext
 
 
 @dataclass(frozen=True, slots=True)
 class SubmitToolVersionForReviewCommand:
-    context: RequestContext
+    context: ActorContext
     tool_version_id: str
 
 

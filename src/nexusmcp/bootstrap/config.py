@@ -1,6 +1,8 @@
 """经过校验的应用配置。"""
 
+import uuid
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal, Self
 
 from pydantic import Field, SecretStr, model_validator
@@ -28,6 +30,9 @@ class Settings(BaseSettings):
     database_url: SecretStr | None = None
     database_echo: bool = False
     database_readiness_timeout_seconds: float = 1.0
+    control_plane_enabled: bool = False
+    local_admin_principal_id: str = "local-admin"
+    openapi_fixture_root: Path = Path("examples/upstream_apis")
     transport_allowed_hosts: list[str] = Field(
         default_factory=lambda: [
             "127.0.0.1",
@@ -46,6 +51,17 @@ class Settings(BaseSettings):
             raise ValueError("database_url is required when catalog_backend is postgresql")
         if self.environment == "production" and self.catalog_backend != "postgresql":
             raise ValueError("production environment requires postgresql catalog_backend")
+        if self.environment == "production" and self.control_plane_enabled:
+            raise ValueError(
+                "local Control Plane must remain disabled in production before S3 authentication"
+            )
+        if self.control_plane_enabled and self.catalog_backend != "postgresql":
+            raise ValueError("control_plane_enabled requires postgresql catalog_backend")
+        if self.control_plane_enabled:
+            try:
+                uuid.UUID(self.local_tenant_id)
+            except ValueError:
+                raise ValueError("control_plane_enabled requires UUID local_tenant_id") from None
         if self.database_readiness_timeout_seconds <= 0:
             raise ValueError("database_readiness_timeout_seconds must be positive")
         return self
