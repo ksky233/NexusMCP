@@ -1,5 +1,6 @@
 """集中导入 ORM Model，确保 Alembic 能发现完整 Metadata。"""
 
+from nexusmcp.modules.approval.adapters.sqlalchemy_models import ApprovalRequestModel
 from nexusmcp.modules.catalog.adapters.sqlalchemy_models import ToolModel, ToolVersionModel
 from nexusmcp.modules.connectors.adapters.sqlalchemy_models import ToolBindingModel
 from nexusmcp.modules.identity.adapters.sqlalchemy_models import TenantModel
@@ -17,6 +18,7 @@ ALL_MODELS = (
     ToolModel,
     ToolVersionModel,
     ToolBindingModel,
+    ApprovalRequestModel,
 )
 
 __all__ = ["ALL_MODELS"]

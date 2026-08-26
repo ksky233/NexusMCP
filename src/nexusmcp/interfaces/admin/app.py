@@ -13,6 +13,13 @@ from starlette.middleware.base import RequestResponseEndpoint
 from starlette.responses import Response
 
 from nexusmcp.interfaces.http.errors import register_http_exception_handlers
+from nexusmcp.modules.approval.domain import ApprovalRequest
+from nexusmcp.modules.approval.use_cases import (
+    DecideApproval,
+    DecideApprovalCommand,
+    GetApproval,
+    GetApprovalQuery,
+)
 from nexusmcp.modules.catalog.domain import ToolSideEffect, ToolVisibility
 from nexusmcp.modules.catalog.publish import PublishTool, PublishToolCommand
 from nexusmcp.modules.catalog.review import (
@@ -57,6 +64,8 @@ class AdminServices:
     submit_version_review: SubmitToolVersionForReview
     publish_tool: PublishTool
     search_tools: SearchPublishedTools
+    decide_approval: DecideApproval
+    get_approval: GetApproval
 
 
 class RegisterUpstreamRequest(BaseModel):
@@ -200,6 +209,40 @@ class SearchToolResponse(BaseModel):
     visibility: ToolVisibility
     side_effect: ToolSideEffect
     rank: float
+
+
+class ApprovalResponse(BaseModel):
+    id: str
+    tenant_id: str
+    principal_id: str
+    tool_id: str
+    tool_version_id: str
+    arguments_digest: str
+    policy_version: str
+    status: str
+    requested_at: datetime
+    expires_at: datetime
+    decided_by: str | None
+    decided_at: datetime | None
+    consumed_at: datetime | None
+
+    @classmethod
+    def from_domain(cls, approval: ApprovalRequest) -> ApprovalResponse:
+        return cls(
+            id=approval.id,
+            tenant_id=approval.tenant_id,
+            principal_id=approval.principal_id,
+            tool_id=approval.tool_id,
+            tool_version_id=approval.tool_version_id,
+            arguments_digest=approval.arguments_digest,
+            policy_version=approval.policy_version,
+            status=approval.status.value,
+            requested_at=approval.requested_at,
+            expires_at=approval.expires_at,
+            decided_by=approval.decided_by,
+            decided_at=approval.decided_at,
+            consumed_at=approval.consumed_at,
+        )
 
 
 def get_admin_context(request: Request) -> ActorContext:
@@ -446,6 +489,44 @@ def create_admin_app(
             )
             for hit in hits
         ]
+
+    @app.get("/approvals/{approval_id}", response_model=ApprovalResponse)
+    async def get_approval(
+        approval_id: str,
+        context: AdminContext,
+    ) -> ApprovalResponse:
+        approval = await services.get_approval.execute(
+            GetApprovalQuery(context=context, approval_id=approval_id)
+        )
+        return ApprovalResponse.from_domain(approval)
+
+    @app.post("/approvals/{approval_id}/approve", response_model=ApprovalResponse)
+    async def approve_call(
+        approval_id: str,
+        context: AdminContext,
+    ) -> ApprovalResponse:
+        approval = await services.decide_approval.execute(
+            DecideApprovalCommand(
+                context=context,
+                approval_id=approval_id,
+                approved=True,
+            )
+        )
+        return ApprovalResponse.from_domain(approval)
+
+    @app.post("/approvals/{approval_id}/reject", response_model=ApprovalResponse)
+    async def reject_call(
+        approval_id: str,
+        context: AdminContext,
+    ) -> ApprovalResponse:
+        approval = await services.decide_approval.execute(
+            DecideApprovalCommand(
+                context=context,
+                approval_id=approval_id,
+                approved=False,
+            )
+        )
+        return ApprovalResponse.from_domain(approval)
 
     return app
 

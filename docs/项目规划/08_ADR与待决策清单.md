@@ -129,13 +129,13 @@ Legacy Session 本身不构成新项目必须引入 Redis 的理由。
 | Q-001 | Python MCP SDK 精确版本/commit | S1 锁定 `mcp==2.0.0` | Modern/Legacy Contract Test |
 | Q-002 | SDK 原生路由还是自定义 ASGI Adapter | 使用公开低层 `Server` Callback + 官方 ASGI App | Dynamic Tool/FastAPI Context Test、ADR-0002 |
 | Q-003 | Tool Version 独立表还是单表多版本 | Tool 与 ToolVersion 分表；Binding 精确绑定 Version | Publish/Rollback/Query 用例分析、ADR-0004 |
+| Q-005 | Approval 完全使用 MRTR 还是保留 REST resolve | 短确认使用 MRTR；长审批保留持久化 Approval + Control Plane 恢复 | S3-4 MRTR/跨进程 E2E、ADR-0011 |
 
 ### 3.2 待实验
 
 | ID | 问题 | 触发阶段 | 决策证据 |
 |---|---|---|---|
 | Q-004 | Policy condition 最小表达式 | S3 | 真实 Policy Case，不提前上 Rego |
-| Q-005 | Approval 完全使用 MRTR 还是保留 REST resolve | S3 | 客户端兼容与 SDK 能力 |
 | Q-006 | Audit 同步/异步写入 | S5 | 故障语义和 Benchmark |
 | Q-007 | Redis 是否进入默认 Compose | S5 | Cache/rate-limit/coordination 实测 |
 | Q-008 | Embedding 模型 | S4 | 中文/英文 Retrieval Eval、成本 |
@@ -174,6 +174,7 @@ Legacy Session 本身不构成新项目必须引入 Redis 的理由。
 | 0008 | Covered by ADR-0004/S2-5 | Tool Search FTS |
 | 0009 | Planned | RAG Demo 边界 |
 | 0010 | Planned | Audit 写入策略 |
+| [0011](../adr/0011-asynchronous-approval-mrtr-and-resume.md) | Accepted | 异步 Approval、MRTR 与恢复 |
 
 不是现在一次性写完。每个 ADR 在相关实现前后完成。
 

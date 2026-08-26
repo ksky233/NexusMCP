@@ -115,3 +115,5 @@ User B → Policy DENY  → 不解析 Secret → authorization_denied
 
 进入 `S3-4｜Approval Gate 与单次消费`：让 `REQUIRE_APPROVAL` 绑定 Principal、Tool Version 和
 Arguments Digest，并证明批准只能消费一次；Secret 仍必须在 Approval 成功消费后才解析。
+
+实现结果见 [S3-4 Approval Gate 与单次消费](./18_S3-4_ApprovalGate与单次消费.md)。

@@ -2,6 +2,12 @@
 
 import asyncio
 
+from nexusmcp.modules.approval.use_cases import (
+    ConsumeApproval,
+    ConsumeApprovalCommand,
+    RequestApproval,
+    RequestApprovalCommand,
+)
 from nexusmcp.modules.catalog.domain import ToolVisibility
 from nexusmcp.modules.credentials.domain import ResolvedCredential
 from nexusmcp.modules.credentials.ports import CredentialBindingResolver, CredentialProvider
@@ -60,6 +66,8 @@ class CallTool:
         identifier_generator: IdentifierGenerator,
         credential_binding_resolver: CredentialBindingResolver | None = None,
         credential_provider: CredentialProvider | None = None,
+        request_approval: RequestApproval | None = None,
+        consume_approval: ConsumeApproval | None = None,
         timeout_seconds: float = 5.0,
     ) -> None:
         if timeout_seconds <= 0:
@@ -74,6 +82,8 @@ class CallTool:
         self._identifier_generator = identifier_generator
         self._credential_binding_resolver = credential_binding_resolver
         self._credential_provider = credential_provider
+        self._request_approval = request_approval
+        self._consume_approval = consume_approval
         self._timeout_seconds = timeout_seconds
 
     async def execute(self, command: CallToolCommand) -> CallToolResult:
@@ -99,8 +109,12 @@ class CallTool:
         if decision.effect is PolicyEffect.DENY:
             raise AuthorizationError(f"policy denied call with reason {decision.reason_code}")
         if decision.effect is PolicyEffect.REQUIRE_APPROVAL:
-            raise ApprovalRequiredError(
-                f"policy requires approval with reason {decision.reason_code}"
+            await self._pass_approval_gate(
+                command=command,
+                principal=principal,
+                tool=tool,
+                policy_version=decision.policy_version,
+                reason_code=decision.reason_code,
             )
 
         tenant_id = context.tenant_id
@@ -178,6 +192,44 @@ class CallTool:
             data=executor_result.data,
             content_type=executor_result.content_type,
             upstream_status=executor_result.upstream_status,
+        )
+
+    async def _pass_approval_gate(
+        self,
+        *,
+        command: CallToolCommand,
+        principal: InternalPrincipal,
+        tool: ResolvedExecutableTool,
+        policy_version: str,
+        reason_code: str,
+    ) -> None:
+        if self._request_approval is None or self._consume_approval is None:
+            raise ApprovalRequiredError(f"policy requires approval with reason {reason_code}")
+        if command.approval_id is None:
+            approval = await self._request_approval.execute(
+                RequestApprovalCommand(
+                    context=command.context,
+                    principal_id=principal.id,
+                    tool_id=tool.tool_id,
+                    tool_version_id=tool.tool_version_id,
+                    arguments_digest=command.arguments_digest,
+                    policy_version=policy_version,
+                )
+            )
+            raise ApprovalRequiredError(
+                f"policy requires approval with reason {reason_code}",
+                approval_id=approval.id,
+                expires_at=approval.expires_at.isoformat(),
+            )
+        await self._consume_approval.execute(
+            ConsumeApprovalCommand(
+                context=command.context,
+                approval_id=command.approval_id,
+                principal_id=principal.id,
+                tool_version_id=tool.tool_version_id,
+                arguments_digest=command.arguments_digest,
+                policy_version=policy_version,
+            )
         )
 
     async def _resolve_credential(

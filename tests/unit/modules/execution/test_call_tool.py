@@ -6,6 +6,18 @@ from datetime import UTC, datetime
 
 import pytest
 
+from nexusmcp.modules.approval.adapters.in_memory import (
+    InMemoryApprovalUnitOfWorkFactory,
+)
+from nexusmcp.modules.approval.domain import ApprovalStatus
+from nexusmcp.modules.approval.use_cases import (
+    ConsumeApproval,
+    DecideApproval,
+    DecideApprovalCommand,
+    GetApproval,
+    GetApprovalQuery,
+    RequestApproval,
+)
 from nexusmcp.modules.catalog.domain import ToolSideEffect, ToolVisibility
 from nexusmcp.modules.connectors.domain import ToolBindingType
 from nexusmcp.modules.credentials.domain import (
@@ -31,7 +43,13 @@ from nexusmcp.modules.execution.domain import (
 )
 from nexusmcp.modules.identity.adapters.context_principal import ContextPrincipalResolver
 from nexusmcp.modules.policy.adapters.static_read_only import StaticReadOnlyPolicyEvaluator
+from nexusmcp.modules.policy.domain import (
+    PolicyDecision,
+    PolicyEffect,
+    PolicyEvaluationInput,
+)
 from nexusmcp.shared.errors import (
+    ApprovalRequiredError,
     AuthorizationError,
     CredentialBindingNotFoundError,
     InvalidArgumentsError,
@@ -125,6 +143,16 @@ class CountingCredentialProvider:
         return SecretValue("upstream-secret")
 
 
+class RequireApprovalEvaluator:
+    async def evaluate(self, policy_input: PolicyEvaluationInput) -> PolicyDecision:
+        _ = policy_input
+        return PolicyDecision(
+            effect=PolicyEffect.REQUIRE_APPROVAL,
+            policy_version="policy-v1",
+            reason_code="human_confirmation_required",
+        )
+
+
 class UnknownExecutor:
     async def execute(
         self,
@@ -210,6 +238,9 @@ def build_use_case(
     | None = None,
     credential_binding_resolver: CountingCredentialResolver | None = None,
     credential_provider: CountingCredentialProvider | None = None,
+    policy_evaluator: StaticReadOnlyPolicyEvaluator | RequireApprovalEvaluator | None = None,
+    request_approval: RequestApproval | None = None,
+    consume_approval: ConsumeApproval | None = None,
 ) -> tuple[CallTool, InMemoryToolExecutionRepository]:
     repository = InMemoryToolExecutionRepository()
     resolved_tool = tool or executable_tool()
@@ -218,13 +249,15 @@ def build_use_case(
             principal_resolver=ContextPrincipalResolver(),
             tool_resolver=StaticResolver(resolved_tool),
             arguments_validator=JsonSchemaArgumentsValidator(),
-            policy_evaluator=StaticReadOnlyPolicyEvaluator(),
+            policy_evaluator=policy_evaluator or StaticReadOnlyPolicyEvaluator(),
             execution_repository=repository,
             executor=executor or SuccessfulExecutor(),
             clock=FixedClock(),
             identifier_generator=FixedIdentifierGenerator(),
             credential_binding_resolver=credential_binding_resolver,
             credential_provider=credential_provider,
+            request_approval=request_approval,
+            consume_approval=consume_approval,
         ),
         repository,
     )
@@ -373,6 +406,77 @@ async def test_missing_credential_binding_fails_before_execution_record() -> Non
     assert resolver.calls == 1
     assert provider.calls == 0
     assert await repository.list_by_tenant("tenant-a") == ()
+
+
+@pytest.mark.asyncio
+async def test_required_approval_pauses_then_consumes_before_credential() -> None:
+    approval_factory = InMemoryApprovalUnitOfWorkFactory()
+    requester = RequestApproval(approval_factory, FixedClock(), FixedIdentifierGenerator())
+    consumer = ConsumeApproval(approval_factory, FixedClock())
+    decider = DecideApproval(approval_factory, FixedClock())
+    reader = GetApproval(approval_factory)
+    credential_resolver = CountingCredentialResolver(
+        CredentialBinding(
+            id="credential-binding-approval",
+            tenant_id="tenant-a",
+            subject_type=CredentialSubjectType.TENANT,
+            subject_id=None,
+            tool_id="tool-1",
+            upstream_service_id="upstream-1",
+            secret_reference=SecretReference(
+                provider="environment",
+                reference="EMPLOYEE_API_TOKEN",
+            ),
+            injection_location=CredentialInjectionLocation.HEADER,
+            injection_name="Authorization",
+            value_format=CredentialValueFormat.BEARER,
+        )
+    )
+    credential_provider = CountingCredentialProvider()
+    use_case, repository = build_use_case(
+        tool=executable_tool(auth_scheme="bearer"),
+        policy_evaluator=RequireApprovalEvaluator(),
+        request_approval=requester,
+        consume_approval=consumer,
+        credential_binding_resolver=credential_resolver,
+        credential_provider=credential_provider,
+    )
+    command = CallToolCommand(
+        context=context(),
+        tool_name="directory.get_employee",
+        arguments={"employee_id": "emp-001"},
+    )
+
+    with pytest.raises(ApprovalRequiredError) as captured:
+        await use_case.execute(command)
+
+    approval_id = captured.value.approval_id
+    assert approval_id == "execution-1"
+    assert credential_resolver.calls == 0
+    assert credential_provider.calls == 0
+    assert await repository.list_by_tenant("tenant-a") == ()
+
+    await decider.execute(
+        DecideApprovalCommand(
+            context=context(),
+            approval_id=approval_id,
+            approved=True,
+        )
+    )
+    result = await use_case.execute(
+        CallToolCommand(
+            context=context(),
+            tool_name=command.tool_name,
+            arguments=command.arguments,
+            approval_id=approval_id,
+        )
+    )
+    approval = await reader.execute(GetApprovalQuery(context=context(), approval_id=approval_id))
+
+    assert result.data["employee_id"] == "emp-001"
+    assert approval.status is ApprovalStatus.CONSUMED
+    assert credential_resolver.calls == 1
+    assert credential_provider.calls == 1
 
 
 @pytest.mark.asyncio

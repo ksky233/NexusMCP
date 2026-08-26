@@ -4,7 +4,7 @@
 
 NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，负责将企业 HTTP/OpenAPI 服务和已有 MCP Server 纳入统一 Tool Catalog，并在 MCP 调用链上执行身份、策略、凭据、审批、审计与可观测性。
 
-当前阶段：`S3-3｜CredentialBinding 与 Secret Injection 完成`。
+当前阶段：`S3-4｜Approval Gate 与单次消费完成`。
 
 ## 当前边界
 
@@ -16,7 +16,7 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，�
 - Catalog 已拆分 Tool、ToolVersion、PublishedTool，并建立 Repository/UoW Contract；
 - GitHub Actions 会在 Push/PR 上使用云端 Ubuntu Runner 执行完整质量门禁；
 - PostgreSQL、Tool/ToolVersion/ToolBinding 和 Publish 事务已经完成设计冻结；
-- PostgreSQL 18.6、SQLAlchemy Async、Alembic Baseline 和 7 张首批 ORM 表已经建立；
+- PostgreSQL 18.6、SQLAlchemy Async、Alembic Baseline 和 8 张 ORM 表已经建立；
 - Catalog/Binding 已具有 SQLAlchemy Async Repository、显式 ORM Mapping 和每 Command 独立 UoW；
 - 已建立协议无关安全错误、MCP/HTTP 映射接缝、结构化日志和 async Log Context；
 - Publish 已实现 Tool/Version/Binding/Upstream 锁定、Digest 校验、原子状态切换与 Domain Event；
@@ -30,8 +30,10 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，�
 - Static Bearer Principal 与 Rule-Based ALLOW/DENY Policy 已接入调用阶段；
 - CredentialBinding 已支持 Principal/Role/Tenant 特异性解析、Environment Secret Provider 与
   Header/Query Injection，DENY 不解析 Secret；
-- 真实 JWT/OIDC、生产 Secret Store、CredentialBinding 持久化、Approval、持久化 Execution/Audit
-  和写 Tool 尚未实现。
+- Approval 已支持 PostgreSQL 持久化、Modern MCP MRTR、异步 Control Plane 决策、加密防篡改
+  `requestState` 和行锁单次消费；
+- 真实 JWT/OIDC、生产 Secret Store、CredentialBinding 持久化、持久化 Execution/Audit 和写 Tool
+  尚未实现。
 
 ## 代码语言约定
 
@@ -101,6 +103,9 @@ POST /admin/openapi/operations/{operation_id}/review
 POST /admin/tool-versions/{version_id}/submit-review
 POST /admin/tools/{tool_id}/versions/{version_id}/publish
 GET  /admin/catalog/search?q=employee
+GET  /admin/approvals/{approval_id}
+POST /admin/approvals/{approval_id}/approve
+POST /admin/approvals/{approval_id}/reject
 ```
 
 注册 Employee Directory 的 Curl 示例：
@@ -140,6 +145,7 @@ docker compose stop postgres
 - [S3-1 Read-Only HTTP tools/call](./docs/实验记录/15_S3-1_ReadOnlyHTTPToolsCall.md)
 - [S3-2 Principal 与 ALLOW/DENY Policy](./docs/实验记录/16_S3-2_Principal与AllowDenyPolicy.md)
 - [S3-3 CredentialBinding 与 Secret Injection](./docs/实验记录/17_S3-3_CredentialBinding与SecretInjection.md)
+- [S3-4 Approval Gate 与单次消费](./docs/实验记录/18_S3-4_ApprovalGate与单次消费.md)
 - [业务词汇、核心用例与限界上下文](./docs/架构/01_业务词汇核心用例与限界上下文.md)
 - [持久化模型与发布事务](./docs/架构/02_持久化模型与发布事务.md)
 - [tools/call 治理执行模型](./docs/架构/03_tools_call治理执行模型.md)
@@ -149,3 +155,4 @@ docker compose stop postgres
 - [ADR-0005：Identity 与 Trust Boundary](./docs/adr/0005-identity-trust-boundary.md)
 - [ADR-0006：Credential Reference 与 Injection](./docs/adr/0006-credential-reference-and-injection.md)
 - [ADR-0007：Side Effect、Retry 与 Unknown Outcome](./docs/adr/0007-side-effect-retry-and-unknown-outcome.md)
+- [ADR-0011：异步 Approval、MRTR 与恢复](./docs/adr/0011-asynchronous-approval-mrtr-and-resume.md)

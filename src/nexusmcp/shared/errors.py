@@ -122,6 +122,52 @@ class ApprovalRequiredError(NexusMcpError):
     code = "approval_required"
     safe_message = "This tool call requires approval."
 
+    def __init__(
+        self,
+        internal_message: str | None = None,
+        *,
+        approval_id: str | None = None,
+        expires_at: str | None = None,
+    ) -> None:
+        super().__init__(internal_message)
+        self.approval_id = approval_id
+        self.expires_at = expires_at
+
+
+class ApprovalNotFoundError(NexusMcpError):
+    code = "approval_not_found"
+    safe_message = "The requested approval was not found."
+
+
+class ApprovalPendingError(NexusMcpError):
+    code = "approval_pending"
+    safe_message = "The tool call is still waiting for approval."
+
+
+class ApprovalRejectedError(NexusMcpError):
+    code = "approval_rejected"
+    safe_message = "The tool call approval was rejected."
+
+
+class ApprovalExpiredError(NexusMcpError):
+    code = "approval_expired"
+    safe_message = "The tool call approval has expired."
+
+
+class ApprovalAlreadyConsumedError(NexusMcpError):
+    code = "approval_already_consumed"
+    safe_message = "The tool call approval has already been consumed."
+
+
+class ApprovalMismatchError(NexusMcpError):
+    code = "approval_mismatch"
+    safe_message = "The approval does not match this tool call."
+
+
+class ApprovalInvalidStateError(NexusMcpError):
+    code = "approval_invalid_state"
+    safe_message = "The approval cannot be changed from its current state."
+
 
 class CredentialBindingNotFoundError(NexusMcpError):
     code = "credential_binding_not_found"

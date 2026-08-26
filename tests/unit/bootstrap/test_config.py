@@ -61,3 +61,20 @@ def test_tool_execution_requires_postgresql_and_positive_timeout() -> None:
             environment="test",
             tool_call_timeout_seconds=0,
         )
+
+
+def test_request_state_key_and_approval_ttl_have_secure_bounds() -> None:
+    with pytest.raises(ValidationError, match="approval_ttl_seconds"):
+        Settings(environment="test", approval_ttl_seconds=0)
+    with pytest.raises(ValidationError, match="at least 32 bytes"):
+        Settings(environment="test", request_state_key=SecretStr("short-key"))
+
+
+def test_production_tool_execution_requires_shared_request_state_key() -> None:
+    with pytest.raises(ValidationError, match="request_state_key"):
+        Settings(
+            environment="production",
+            catalog_backend="postgresql",
+            database_url=SecretStr("postgresql+asyncpg://user:password@127.0.0.1/database"),
+            tool_execution_enabled=True,
+        )

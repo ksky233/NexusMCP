@@ -258,7 +258,6 @@ Result。
 S3-0 不冻结：
 
 - Policy Condition DSL；
-- 使用 MRTR 还是 REST Resolve Approval；
 - Secret Store 精确产品；
 - Audit 同步/Outbox/异步策略；
 - HTTP Retry 库与 Backoff 参数；
@@ -290,4 +289,6 @@ Approval、真实 Credential 与写 Tool 不进入第一条执行切片。
 - S3-2 已完成 Static Bearer Principal 与 Rule-Based ALLOW/DENY；
 - S3-3 已在 ALLOW 之后接入 CredentialBinding、Environment Secret Provider 与 Header/Query
   Injection；同特异性冲突 Fail Closed，DENY 不读取 Secret；
-- 下一步 S3-4 接入 Approval Gate 与单次消费；持久化 Execution/Audit 和写 Tool 仍按本文边界待实现。
+- S3-4 已接入 PostgreSQL Approval、Modern MCP MRTR、Control Plane 异步决策、加密防篡改
+  `requestState` 和 `FOR UPDATE` 单次消费；等待审批不占用 HTTP 请求或数据库事务；
+- 下一步 S3-5 持久化 Execution/Audit；写 Tool 仍按本文边界待实现。

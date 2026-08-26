@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     control_plane_enabled: bool = False
     tool_execution_enabled: bool = False
     tool_call_timeout_seconds: float = 5.0
+    approval_ttl_seconds: float = 600.0
+    request_state_key: SecretStr | None = None
     local_admin_principal_id: str = "local-admin"
     openapi_fixture_root: Path = Path("examples/upstream_apis")
     transport_allowed_hosts: list[str] = Field(
@@ -70,6 +72,19 @@ class Settings(BaseSettings):
             raise ValueError("database_readiness_timeout_seconds must be positive")
         if self.tool_call_timeout_seconds <= 0:
             raise ValueError("tool_call_timeout_seconds must be positive")
+        if self.approval_ttl_seconds <= 0:
+            raise ValueError("approval_ttl_seconds must be positive")
+        if (
+            self.request_state_key is not None
+            and len(self.request_state_key.get_secret_value().encode("utf-8")) < 32
+        ):
+            raise ValueError("request_state_key must contain at least 32 bytes")
+        if (
+            self.environment == "production"
+            and self.tool_execution_enabled
+            and self.request_state_key is None
+        ):
+            raise ValueError("production tool execution requires request_state_key")
         return self
 
 

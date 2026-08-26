@@ -24,6 +24,7 @@ EXPECTED_TABLES = {
     "tool",
     "tool_version",
     "tool_binding",
+    "approval_request",
 }
 
 

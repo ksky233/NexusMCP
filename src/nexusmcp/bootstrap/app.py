@@ -7,10 +7,12 @@ from typing import Any
 import httpx
 from fastapi import FastAPI
 from mcp.server.context import ServerRequestContext
+from mcp.server.request_state import RequestStateSecurity
 from mcp.server.transport_security import TransportSecuritySettings
 
 from nexusmcp.bootstrap.config import Settings, get_settings
 from nexusmcp.bootstrap.persistence_factories import (
+    RuntimeApprovalUnitOfWorkFactory,
     RuntimeCatalogUnitOfWorkFactory,
     RuntimeOpenApiImportUnitOfWorkFactory,
     RuntimeRegistryUnitOfWorkFactory,
@@ -23,6 +25,12 @@ from nexusmcp.interfaces.admin import AdminServices, create_admin_app
 from nexusmcp.interfaces.health.router import create_health_router
 from nexusmcp.interfaces.mcp.context import request_headers, resolve_request_context
 from nexusmcp.interfaces.mcp.server import create_mcp_server
+from nexusmcp.modules.approval.use_cases import (
+    ConsumeApproval,
+    DecideApproval,
+    GetApproval,
+    RequestApproval,
+)
 from nexusmcp.modules.catalog.adapters.in_memory import InMemoryToolCatalogRepository
 from nexusmcp.modules.catalog.adapters.sqlalchemy_reader import SqlAlchemyPublishedToolReader
 from nexusmcp.modules.catalog.adapters.sqlalchemy_search import SqlAlchemyPublishedToolSearch
@@ -68,6 +76,7 @@ def create_app(
     policy_evaluator: PolicyEvaluator | None = None,
     credential_binding_resolver: CredentialBindingResolver | None = None,
     credential_provider: CredentialProvider | None = None,
+    request_state_security: RequestStateSecurity | None = None,
 ) -> FastAPI:
     """创建完整组装的应用，不让业务代码依赖全局对象。"""
 
@@ -88,6 +97,23 @@ def create_app(
     if resolved_reader is None:
         resolved_reader = InMemoryToolCatalogRepository()
     list_visible_tools = ListVisibleTools(resolved_reader)
+    clock = SystemClock()
+    identifier_generator = UuidIdentifierGenerator()
+    request_approval: RequestApproval | None = None
+    consume_approval: ConsumeApproval | None = None
+    decide_approval: DecideApproval | None = None
+    get_approval: GetApproval | None = None
+    if resolved_runtime is not None:
+        approval_uow_factory = RuntimeApprovalUnitOfWorkFactory(resolved_runtime)
+        request_approval = RequestApproval(
+            approval_uow_factory,
+            clock,
+            identifier_generator,
+            ttl_seconds=resolved_settings.approval_ttl_seconds,
+        )
+        consume_approval = ConsumeApproval(approval_uow_factory, clock)
+        decide_approval = DecideApproval(approval_uow_factory, clock)
+        get_approval = GetApproval(approval_uow_factory)
     call_tool_use_case: CallTool | None = None
     execution_repository: InMemoryToolExecutionRepository | None = None
     resolved_http_client = tool_http_client
@@ -109,10 +135,12 @@ def create_app(
             policy_evaluator=policy_evaluator or StaticReadOnlyPolicyEvaluator(),
             execution_repository=execution_repository,
             executor=HttpxToolExecutor(resolved_http_client),
-            clock=SystemClock(),
-            identifier_generator=UuidIdentifierGenerator(),
+            clock=clock,
+            identifier_generator=identifier_generator,
             credential_binding_resolver=credential_binding_resolver,
             credential_provider=credential_provider,
+            request_approval=request_approval,
+            consume_approval=consume_approval,
             timeout_seconds=resolved_settings.tool_call_timeout_seconds,
         )
 
@@ -133,6 +161,8 @@ def create_app(
         list_visible_tools=list_visible_tools,
         context_resolver=context_resolver,
         call_tool=call_tool_use_case,
+        decide_approval=decide_approval,
+        request_state_security=request_state_security or _request_state_security(resolved_settings),
     )
     transport_security = TransportSecuritySettings(
         allowed_hosts=resolved_settings.transport_allowed_hosts,
@@ -165,8 +195,8 @@ def create_app(
     if resolved_settings.control_plane_enabled:
         if resolved_runtime is None:  # pragma: no cover - Settings/Composition 已阻止该状态
             raise RuntimeError("Control Plane requires Database Runtime")
-        clock = SystemClock()
-        identifier_generator = UuidIdentifierGenerator()
+        if decide_approval is None or get_approval is None:  # pragma: no cover
+            raise RuntimeError("Control Plane requires Approval services")
         registry_uow_factory = RuntimeRegistryUnitOfWorkFactory(resolved_runtime)
         import_uow_factory = RuntimeOpenApiImportUnitOfWorkFactory(resolved_runtime)
         review_uow_factory = RuntimeReviewUnitOfWorkFactory(resolved_runtime)
@@ -199,6 +229,8 @@ def create_app(
                 ),
                 publish_tool=PublishTool(catalog_uow_factory, clock),
                 search_tools=SearchPublishedTools(SqlAlchemyPublishedToolSearch(resolved_runtime)),
+                decide_approval=decide_approval,
+                get_approval=get_approval,
             ),
             tenant_id=resolved_settings.local_tenant_id,
             principal_id=resolved_settings.local_admin_principal_id,
@@ -214,6 +246,8 @@ def create_app(
     app.state.database_runtime = resolved_runtime
     app.state.admin_app = admin_app
     app.state.execution_repository = execution_repository
+    app.state.decide_approval = decide_approval
+    app.state.get_approval = get_approval
 
     # 先注册宿主路由，再注册 Catch-all MCP Mount，避免 /health 被截获。
     app.include_router(create_health_router(readiness_probe))
@@ -221,3 +255,17 @@ def create_app(
         app.mount("/admin", admin_app)
     app.mount("/", mcp_app)
     return app
+
+
+def _request_state_security(settings: Settings) -> RequestStateSecurity:
+    key = settings.request_state_key
+    if key is None:
+        return RequestStateSecurity.ephemeral(
+            ttl=settings.approval_ttl_seconds,
+            audience="nexusmcp",
+        )
+    return RequestStateSecurity(
+        keys=[key.get_secret_value()],
+        ttl=settings.approval_ttl_seconds,
+        audience="nexusmcp",
+    )

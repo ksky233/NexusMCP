@@ -30,6 +30,7 @@ def test_approved_request_can_be_consumed_exactly_once() -> None:
         principal_id="user-a",
         tool_version_id="version-1",
         arguments_digest="1" * 64,
+        policy_version="policy-v1",
         consumed_at=NOW + timedelta(minutes=2),
     )
 
@@ -39,22 +40,25 @@ def test_approved_request_can_be_consumed_exactly_once() -> None:
             principal_id="user-a",
             tool_version_id="version-1",
             arguments_digest="1" * 64,
+            policy_version="policy-v1",
             consumed_at=NOW + timedelta(minutes=3),
         )
 
 
 @pytest.mark.parametrize(
-    ("principal_id", "version_id", "digest"),
+    ("principal_id", "version_id", "digest", "policy_version"),
     [
-        ("user-b", "version-1", "1" * 64),
-        ("user-a", "version-2", "1" * 64),
-        ("user-a", "version-1", "2" * 64),
+        ("user-b", "version-1", "1" * 64, "policy-v1"),
+        ("user-a", "version-2", "1" * 64, "policy-v1"),
+        ("user-a", "version-1", "2" * 64, "policy-v1"),
+        ("user-a", "version-1", "1" * 64, "policy-v2"),
     ],
 )
 def test_approval_rejects_changed_call_snapshot(
     principal_id: str,
     version_id: str,
     digest: str,
+    policy_version: str,
 ) -> None:
     approved = _pending().approve("approver-a", NOW + timedelta(minutes=1))
 
@@ -63,6 +67,7 @@ def test_approval_rejects_changed_call_snapshot(
             principal_id=principal_id,
             tool_version_id=version_id,
             arguments_digest=digest,
+            policy_version=policy_version,
             consumed_at=NOW + timedelta(minutes=2),
         )
 

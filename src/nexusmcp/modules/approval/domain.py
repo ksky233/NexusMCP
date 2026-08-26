@@ -32,6 +32,17 @@ class ApprovalRequest:
     consumed_at: datetime | None = None
 
     def __post_init__(self) -> None:
+        for field_name, value in (
+            ("approval id", self.id),
+            ("tenant id", self.tenant_id),
+            ("principal id", self.principal_id),
+            ("tool id", self.tool_id),
+            ("tool version id", self.tool_version_id),
+            ("arguments digest", self.arguments_digest),
+            ("policy version", self.policy_version),
+        ):
+            if not value.strip():
+                raise ValueError(f"{field_name} must not be blank")
         if self.expires_at <= self.requested_at:
             raise ValueError("approval expires_at must be after requested_at")
         if self.status is ApprovalStatus.PENDING and any(
@@ -42,12 +53,20 @@ class ApprovalRequest:
             self.decided_by is None or self.decided_at is None
         ):
             raise ValueError("decided approval must contain approver and decision time")
+        if self.status is ApprovalStatus.EXPIRED and (
+            self.decided_by is None or self.decided_at is None
+        ):
+            raise ValueError("expired approval must contain decision state")
+        if self.status is not ApprovalStatus.CONSUMED and self.consumed_at is not None:
+            raise ValueError("only consumed approval may contain consumed_at")
         if self.status is ApprovalStatus.CONSUMED and (
             self.decided_by is None or self.decided_at is None or self.consumed_at is None
         ):
             raise ValueError("consumed approval must contain decision and consume state")
 
     def approve(self, approver_id: str, decided_at: datetime) -> ApprovalRequest:
+        if not approver_id.strip():
+            raise ValueError("approval approver id must not be blank")
         self._require_pending(decided_at)
         return replace(
             self,
@@ -57,6 +76,8 @@ class ApprovalRequest:
         )
 
     def reject(self, approver_id: str, decided_at: datetime) -> ApprovalRequest:
+        if not approver_id.strip():
+            raise ValueError("approval approver id must not be blank")
         self._require_pending(decided_at)
         return replace(
             self,
@@ -66,10 +87,12 @@ class ApprovalRequest:
         )
 
     def expire(self, expired_at: datetime) -> ApprovalRequest:
-        if self.status is not ApprovalStatus.PENDING:
-            raise ValueError("only pending approval can expire")
+        if self.status not in (ApprovalStatus.PENDING, ApprovalStatus.APPROVED):
+            raise ValueError("only pending or approved approval can expire")
         if expired_at < self.expires_at:
             raise ValueError("approval cannot expire before expires_at")
+        if self.status is ApprovalStatus.APPROVED:
+            return replace(self, status=ApprovalStatus.EXPIRED)
         return replace(
             self,
             status=ApprovalStatus.EXPIRED,
@@ -83,6 +106,7 @@ class ApprovalRequest:
         principal_id: str,
         tool_version_id: str,
         arguments_digest: str,
+        policy_version: str,
         consumed_at: datetime,
     ) -> ApprovalRequest:
         if self.status is not ApprovalStatus.APPROVED:
@@ -95,6 +119,8 @@ class ApprovalRequest:
             raise ValueError("approval tool version does not match call version")
         if arguments_digest != self.arguments_digest:
             raise ValueError("approval arguments digest does not match call arguments")
+        if policy_version != self.policy_version:
+            raise ValueError("approval policy version does not match current policy")
         return replace(
             self,
             status=ApprovalStatus.CONSUMED,

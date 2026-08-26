@@ -8,19 +8,25 @@ from typing import Any, Protocol
 from mcp import types
 from mcp.server.context import ServerRequestContext
 from mcp.server.lowlevel import Server
+from mcp.server.request_state import RequestStateBoundary, RequestStateSecurity
 
 from nexusmcp.interfaces.mcp.context import resolve_request_context
 from nexusmcp.interfaces.mcp.errors import to_call_tool_error
+from nexusmcp.modules.approval.use_cases import DecideApproval, DecideApprovalCommand
 from nexusmcp.modules.catalog.use_cases import ListVisibleTools, ListVisibleToolsQuery
 from nexusmcp.modules.execution.call_tool import CallTool
 from nexusmcp.modules.execution.domain import CallToolCommand
-from nexusmcp.shared.errors import NexusMcpError
+from nexusmcp.shared.errors import ApprovalMismatchError, ApprovalRequiredError, NexusMcpError
 from nexusmcp.shared.log_context import bind_log_context
 from nexusmcp.shared.request_context import RequestContext
 
 type RawServerContext = ServerRequestContext[Any, Any]
 
 logger = logging.getLogger(__name__)
+
+_APPROVAL_INPUT_KEY = "approval"
+_APPROVAL_ID_META_KEY = "com.nexusmcp/approvalId"
+_APPROVAL_EXPIRES_AT_META_KEY = "com.nexusmcp/approvalExpiresAt"
 
 
 class ContextResolver(Protocol):
@@ -37,6 +43,8 @@ def create_mcp_server(
     list_visible_tools: ListVisibleTools,
     context_resolver: ContextResolver = _anonymous_local_context,
     call_tool: CallTool | None = None,
+    decide_approval: DecideApproval | None = None,
+    request_state_security: RequestStateSecurity | None = None,
 ) -> Server[Any]:
     """创建 SDK Server，并将 tools/list/call 适配到协议无关 Use Case。"""
 
@@ -106,7 +114,7 @@ def create_mcp_server(
     async def on_call_tool(
         ctx: RawServerContext,
         params: types.CallToolRequestParams,
-    ) -> types.CallToolResult:
+    ) -> types.CallToolResult | types.InputRequiredResult:
         started_at = perf_counter()
         try:
             request_context = context_resolver(ctx)
@@ -129,13 +137,30 @@ def create_mcp_server(
             if call_tool is None:
                 return to_call_tool_error(NexusMcpError("tools/call is not configured"))
             try:
+                await _resolve_interactive_approval(
+                    params=params,
+                    context=request_context,
+                    decide_approval=decide_approval,
+                )
                 result = await call_tool.execute(
                     CallToolCommand(
                         context=request_context,
                         tool_name=params.name,
                         arguments=params.arguments or {},
+                        approval_id=params.request_state,
                     )
                 )
+            except ApprovalRequiredError as error:
+                if error.approval_id is None or request_context.protocol_era.value != "modern":
+                    return to_call_tool_error(error)
+                logger.info(
+                    "mcp_tool_call_input_required",
+                    extra={
+                        "event": "mcp_tool_call_input_required",
+                        "duration_ms": round((perf_counter() - started_at) * 1000, 3),
+                    },
+                )
+                return _approval_input_required(params.name, error)
             except NexusMcpError as error:
                 logger.warning(
                     "mcp_tool_call_rejected",
@@ -178,11 +203,81 @@ def create_mcp_server(
                 },
             )
 
-    return Server(
+    server = Server(
         name="nexusmcp",
         title="NexusMCP",
         version="0.1.0",
         description="Enterprise MCP Gateway and Registry",
         on_list_tools=on_list_tools,
         on_call_tool=on_call_tool if call_tool is not None else None,
+    )
+    security = request_state_security or RequestStateSecurity.ephemeral(
+        ttl=600,
+        audience="nexusmcp",
+    )
+    # Low-Level Server 不会自动安装 requestState 防篡改边界，必须显式注册。
+    server.middleware.append(RequestStateBoundary(security, default_audience="nexusmcp"))
+    return server
+
+
+async def _resolve_interactive_approval(
+    *,
+    params: types.CallToolRequestParams,
+    context: RequestContext,
+    decide_approval: DecideApproval | None,
+) -> None:
+    responses = params.input_responses
+    if responses is None:
+        return
+    if params.request_state is None or decide_approval is None:
+        raise ApprovalMismatchError("approval input was missing trusted request state")
+    if set(responses) != {_APPROVAL_INPUT_KEY}:
+        raise ApprovalMismatchError("approval input response keys did not match request")
+    response = responses[_APPROVAL_INPUT_KEY]
+    if not isinstance(response, types.ElicitResult):
+        raise ApprovalMismatchError("approval input response had an invalid type")
+    if response.action == "accept":
+        if response.content is None or response.content.get("approved") is not True:
+            raise ApprovalMismatchError("accepted approval input did not confirm approval")
+        approved = True
+    else:
+        approved = False
+    await decide_approval.execute(
+        DecideApprovalCommand(
+            context=context,
+            approval_id=params.request_state,
+            approved=approved,
+        )
+    )
+
+
+def _approval_input_required(
+    tool_name: str,
+    error: ApprovalRequiredError,
+) -> types.InputRequiredResult:
+    assert error.approval_id is not None
+    return types.InputRequiredResult(
+        input_requests={
+            _APPROVAL_INPUT_KEY: types.ElicitRequest(
+                params=types.ElicitRequestFormParams(
+                    message=f"Approve one call to {tool_name}?",
+                    requested_schema={
+                        "type": "object",
+                        "properties": {
+                            "approved": {
+                                "type": "boolean",
+                                "title": "Approve this tool call",
+                            }
+                        },
+                        "required": ["approved"],
+                        "additionalProperties": False,
+                    },
+                )
+            )
+        },
+        request_state=error.approval_id,
+        _meta={
+            _APPROVAL_ID_META_KEY: error.approval_id,
+            _APPROVAL_EXPIRES_AT_META_KEY: error.expires_at,
+        },
     )
