@@ -3,7 +3,13 @@
 from types import TracebackType
 from typing import Protocol, Self
 
-from nexusmcp.modules.catalog.domain import PublishedTool, Tool, ToolVersion
+from nexusmcp.modules.catalog.domain import (
+    PublishedTool,
+    PublishedToolSearchHit,
+    Tool,
+    ToolVersion,
+    ToolVisibility,
+)
 from nexusmcp.modules.connectors.ports import ToolBindingRepository
 from nexusmcp.modules.registry.ports import UpstreamRepository
 
@@ -18,6 +24,17 @@ class PublishedToolReader(Protocol):
         tenant_id: str,
         canonical_name: str,
     ) -> PublishedTool | None: ...
+
+
+class PublishedToolSearch(Protocol):
+    async def search_published(
+        self,
+        tenant_id: str,
+        query_text: str,
+        *,
+        visibilities: tuple[ToolVisibility, ...],
+        limit: int,
+    ) -> tuple[PublishedToolSearchHit, ...]: ...
 
 
 class ToolCatalogRepository(PublishedToolReader, Protocol):

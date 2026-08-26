@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy import (
     CheckConstraint,
+    Computed,
     DateTime,
     ForeignKey,
     Index,
@@ -15,7 +16,7 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
 
 from nexusmcp.infrastructure.persistence.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -72,6 +73,11 @@ class ToolVersionModel(UUIDPrimaryKeyMixin, Base):
         ),
         Index("ix_tool_version_schema_digest", "schema_digest"),
         Index("ix_tool_version_tenant_status", "tenant_id", "status"),
+        Index(
+            "ix_tool_version_search_vector_gin",
+            "search_vector",
+            postgresql_using="gin",
+        ),
     )
 
     tenant_id: Mapped[uuid.UUID] = mapped_column(
@@ -93,6 +99,33 @@ class ToolVersionModel(UUIDPrimaryKeyMixin, Base):
         nullable=False,
         default=list,
         server_default=text("'[]'::jsonb"),
+    )
+    search_name: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="",
+        server_default="",
+    )
+    search_tags: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="",
+        server_default="",
+    )
+    search_description: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="",
+        server_default="",
+    )
+    search_vector: Mapped[Any] = mapped_column(
+        TSVECTOR,
+        Computed(
+            "setweight(to_tsvector('simple'::regconfig, COALESCE(search_name, '')), 'A') || "
+            "setweight(to_tsvector('simple'::regconfig, COALESCE(search_tags, '')), 'B') || "
+            "setweight(to_tsvector('simple'::regconfig, COALESCE(search_description, '')), 'C')",
+            persisted=True,
+        ),
     )
     side_effect: Mapped[str] = mapped_column(String(32), nullable=False)
     visibility: Mapped[str] = mapped_column(String(16), nullable=False)

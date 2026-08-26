@@ -4,7 +4,7 @@
 
 NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，负责将企业 HTTP/OpenAPI 服务和已有 MCP Server 纳入统一 Tool Catalog，并在 MCP 调用链上执行身份、策略、凭据、审批、审计与可观测性。
 
-当前阶段：`S2-4｜Operations / Inventory 通用性验证完成`。
+当前阶段：`S2-5｜Catalog PostgreSQL FTS 完成`。
 
 ## 当前边界
 
@@ -23,7 +23,8 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，�
 - Database Engine 由 Lifespan 管理，Readiness 反映 PostgreSQL 状态，正式 `tools/list` 可读取数据库；
 - Employee Directory 已跑通 Local OpenAPI Import → Review → Publish → MCP `tools/list`；
 - 三个 Demo 共 7 个接口已复用同一 Pipeline，并由 MCP 同时返回三个 Namespace；
-- Catalog FTS 和 `tools/call` 正式执行链尚未实现。
+- Catalog 已具有 PostgreSQL Weighted FTS、GIN Index、相关度排名和治理过滤；
+- Control Plane 接口收口和 `tools/call` 正式执行链尚未实现。
 
 ## 代码语言约定
 
@@ -80,6 +81,7 @@ docker compose stop postgres
 - [S2-2B-5 Database Bootstrap 与正式 Catalog Query](./docs/实验记录/09_S2-2B-5_DatabaseBootstrap与正式CatalogQuery.md)
 - [S2-3 Employee Directory OpenAPI 纵向切片](./docs/实验记录/10_S2-3_EmployeeDirectoryOpenAPI纵向切片.md)
 - [S2-4 Operations / Inventory 通用性验证](./docs/实验记录/11_S2-4_OperationsInventory通用性验证.md)
+- [S2-5 Catalog PostgreSQL FTS](./docs/实验记录/12_S2-5_CatalogPostgreSQLFTS.md)
 - [业务词汇、核心用例与限界上下文](./docs/架构/01_业务词汇核心用例与限界上下文.md)
 - [持久化模型与发布事务](./docs/架构/02_持久化模型与发布事务.md)
 - [ADR-0001：Python 项目布局](./docs/adr/0001-python-project-layout.md)

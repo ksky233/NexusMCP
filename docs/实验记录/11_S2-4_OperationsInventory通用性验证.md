@@ -156,3 +156,5 @@ tests/integration/persistence/test_multi_scenario_openapi_reuse.py
 5. 验证 Namespace、Name、Description、Tags 的 Keyword Search；
 6. 确保 Draft/Disabled/Cross-Tenant Tool 不进入结果；
 7. 保留未来 pgvector/RAG 扩展边界，不在当前加入 Embedding。
+
+以上内容已在 [S2-5 Catalog PostgreSQL FTS](./12_S2-5_CatalogPostgreSQLFTS.md) 完成。

@@ -2,6 +2,7 @@
 
 from nexusmcp.modules.catalog.domain import PublishedTool, Tool, ToolVersion
 from nexusmcp.modules.catalog.publish import PublishTool, PublishToolCommand, PublishToolResult
+from nexusmcp.modules.catalog.search import SearchPublishedTools, SearchPublishedToolsQuery
 from nexusmcp.modules.catalog.use_cases import ListVisibleTools
 
 __all__ = [
@@ -10,6 +11,8 @@ __all__ = [
     "PublishToolCommand",
     "PublishToolResult",
     "PublishedTool",
+    "SearchPublishedTools",
+    "SearchPublishedToolsQuery",
     "Tool",
     "ToolVersion",
 ]

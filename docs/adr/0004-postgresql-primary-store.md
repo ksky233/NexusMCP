@@ -24,6 +24,9 @@ NexusMCP 的 Registry、OpenAPI Import、Catalog、Tool Version/Binding、Policy
 2. Python Persistence 使用 SQLAlchemy 2 Async；Migration 使用 Alembic；Driver 使用 asyncpg。
 3. JSON Schema、Normalized Operation、Binding Config 使用 JSONB。
 4. Tool Catalog 第一版搜索使用 PostgreSQL FTS；RAG 阶段按需启用 pgvector。
+
+S2-5 已落实该决策：使用 Stored Generated `tsvector`、`simple` Regconfig、Weighted Search Field 与
+GIN Index；未引入 pgvector、Embedding 或外部搜索服务。
 5. Redis 不进入默认持久化基线，只在分布式限流、缓存、锁或 Subscription Bus 有实证需求时引入。
 6. 数据库精确版本在 Docker Compose/Migration 实现时锁定，并记录在部署文档和 CI Integration Job 中。
 7. Alembic 是唯一 Schema Source of Truth，不使用 `create_all()` 管理开发或生产 Schema。

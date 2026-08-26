@@ -46,7 +46,17 @@ def tool_from_model(model: ToolModel) -> Tool:
     )
 
 
-def tool_version_to_model(version: ToolVersion) -> ToolVersionModel:
+def tool_version_to_model(
+    version: ToolVersion,
+    *,
+    namespace: str = "",
+    canonical_name: str = "",
+) -> ToolVersionModel:
+    search_name, search_tags, search_description = tool_version_search_fields(
+        version,
+        namespace=namespace,
+        canonical_name=canonical_name,
+    )
     return ToolVersionModel(
         id=as_uuid(version.id, field_name="tool version id"),
         tenant_id=as_uuid(version.tenant_id, field_name="tenant id"),
@@ -60,6 +70,9 @@ def tool_version_to_model(version: ToolVersion) -> ToolVersionModel:
         ),
         schema_digest=version.schema_digest,
         tags_json=list(version.tags),
+        search_name=search_name,
+        search_tags=search_tags,
+        search_description=search_description,
         side_effect=version.side_effect.value,
         visibility=version.visibility.value,
         status=version.status.value,
@@ -71,7 +84,13 @@ def tool_version_to_model(version: ToolVersion) -> ToolVersionModel:
     )
 
 
-def update_tool_version_model(model: ToolVersionModel, version: ToolVersion) -> None:
+def update_tool_version_model(
+    model: ToolVersionModel,
+    version: ToolVersion,
+    *,
+    namespace: str = "",
+    canonical_name: str = "",
+) -> None:
     """保存 Domain 已验证的版本状态；发布后内容不可变由 Use Case/Domain 保证。"""
 
     model.version = version.version
@@ -83,6 +102,15 @@ def update_tool_version_model(model: ToolVersionModel, version: ToolVersion) -> 
     )
     model.schema_digest = version.schema_digest
     model.tags_json = list(version.tags)
+    (
+        model.search_name,
+        model.search_tags,
+        model.search_description,
+    ) = tool_version_search_fields(
+        version,
+        namespace=namespace,
+        canonical_name=canonical_name,
+    )
     model.side_effect = version.side_effect.value
     model.visibility = version.visibility.value
     model.status = version.status.value
@@ -131,3 +159,17 @@ def published_tool_from_models(tool: ToolModel, version: ToolVersionModel) -> Pu
         side_effect=ToolSideEffect(version.side_effect),
         schema_digest=version.schema_digest,
     )
+
+
+def tool_version_search_fields(
+    version: ToolVersion,
+    *,
+    namespace: str,
+    canonical_name: str,
+) -> tuple[str, str, str]:
+    """构建 Version Search Snapshot；Domain 不感知 PostgreSQL FTS 字段。"""
+
+    search_name = " ".join(
+        part for part in (namespace, canonical_name, version.display_name) if part
+    )
+    return search_name, " ".join(version.tags), version.description

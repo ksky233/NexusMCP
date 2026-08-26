@@ -86,3 +86,8 @@ class ImportedOperationNotFoundError(NexusMcpError):
 class InvalidReviewStateError(NexusMcpError):
     code = "invalid_review_state"
     safe_message = "The imported operation cannot be reviewed from its current state."
+
+
+class InvalidArgumentsError(NexusMcpError):
+    code = "invalid_arguments"
+    safe_message = "The request arguments are invalid."

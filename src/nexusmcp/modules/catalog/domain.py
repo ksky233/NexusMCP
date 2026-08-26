@@ -178,6 +178,14 @@ class PublishedTool:
         return False
 
 
+@dataclass(frozen=True, slots=True)
+class PublishedToolSearchHit:
+    """搜索结果携带 Published Projection 与数据库相关度。"""
+
+    tool: PublishedTool
+    rank: float
+
+
 def _require_non_blank(field_name: str, value: str) -> None:
     if not value.strip():
         raise ValueError(f"{field_name} must not be blank")

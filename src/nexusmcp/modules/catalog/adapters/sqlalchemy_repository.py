@@ -93,7 +93,16 @@ class SqlAlchemyToolCatalogRepository:
 
     async def add_version(self, tenant_id: str, version: ToolVersion) -> None:
         _require_matching_tenant(tenant_id, version.tenant_id)
-        self._session.add(tool_version_to_model(version))
+        tool_model = await self._get_tool_model(tenant_id, version.tool_id)
+        if tool_model is None:
+            raise ValueError("tool version parent does not exist in tenant")
+        self._session.add(
+            tool_version_to_model(
+                version,
+                namespace=tool_model.namespace,
+                canonical_name=tool_model.canonical_name,
+            )
+        )
         await self._session.flush()
 
     async def save_version(self, tenant_id: str, version: ToolVersion) -> None:
@@ -101,7 +110,15 @@ class SqlAlchemyToolCatalogRepository:
         model = await self._get_version_model(tenant_id, version.id)
         if model is None:
             raise ValueError("tool version does not exist in tenant")
-        update_tool_version_model(model, version)
+        tool_model = await self._get_tool_model(tenant_id, version.tool_id)
+        if tool_model is None:
+            raise ValueError("tool version parent does not exist in tenant")
+        update_tool_version_model(
+            model,
+            version,
+            namespace=tool_model.namespace,
+            canonical_name=tool_model.canonical_name,
+        )
         await self._session.flush()
 
     async def get_version_by_id(
