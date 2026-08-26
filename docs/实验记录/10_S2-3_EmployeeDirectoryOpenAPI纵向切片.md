@@ -175,3 +175,7 @@ tests/integration/persistence/test_employee_directory_openapi_slice.py
 4. 覆盖 Header/Body、写副作用和跨服务 Operation Name Collision；
 5. 三个 Namespace 的 Published Tool 同时通过 MCP Catalog 可见；
 6. 完成后再加入 PostgreSQL FTS。
+
+以上内容已在
+[S2-4 Operations / Inventory 通用性验证](./11_S2-4_OperationsInventory通用性验证.md)
+完成。

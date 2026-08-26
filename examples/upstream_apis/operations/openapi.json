@@ -1,0 +1,107 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "IT Operations API",
+    "version": "1.0.0"
+  },
+  "servers": [{"url": "http://127.0.0.1:9002"}],
+  "paths": {
+    "/incidents/{incident_id}": {
+      "get": {
+        "operationId": "getStatus",
+        "summary": "Get incident status",
+        "description": "Get the current status and severity of one operations incident.",
+        "tags": ["operations"],
+        "parameters": [
+          {
+            "name": "incident_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string", "minLength": 1}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Incident",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Incident"}
+              }
+            }
+          },
+          "404": {"description": "Incident not found"}
+        }
+      }
+    },
+    "/incidents/{incident_id}/acknowledge": {
+      "post": {
+        "operationId": "acknowledgeIncident",
+        "summary": "Acknowledge incident",
+        "description": "Record that an operator has acknowledged an incident.",
+        "tags": ["operations", "write"],
+        "x-nexusmcp-side-effect": "idempotent_write",
+        "parameters": [
+          {
+            "name": "incident_id",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string", "minLength": 1}
+          },
+          {
+            "name": "X-Operator-Id",
+            "in": "header",
+            "required": true,
+            "schema": {"type": "string", "minLength": 1}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/AcknowledgeIncidentRequest"}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Acknowledged incident",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Incident"}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "IncidentStatus": {
+        "type": "string",
+        "enum": ["open", "investigating", "acknowledged", "resolved"]
+      },
+      "IncidentSeverity": {
+        "type": "string",
+        "enum": ["low", "medium", "high", "critical"]
+      },
+      "Incident": {
+        "type": "object",
+        "required": ["incident_id", "service", "status", "severity", "summary"],
+        "properties": {
+          "incident_id": {"type": "string"},
+          "service": {"type": "string"},
+          "status": {"$ref": "#/components/schemas/IncidentStatus"},
+          "severity": {"$ref": "#/components/schemas/IncidentSeverity"},
+          "summary": {"type": "string"}
+        }
+      },
+      "AcknowledgeIncidentRequest": {
+        "type": "object",
+        "properties": {
+          "note": {"type": ["string", "null"], "maxLength": 500}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Inventory API",
+    "version": "1.0.0"
+  },
+  "servers": [{"url": "http://127.0.0.1:9003"}],
+  "paths": {
+    "/inventory/{sku}": {
+      "get": {
+        "operationId": "getStatus",
+        "summary": "Get inventory status",
+        "description": "Get stock status for one SKU in one warehouse.",
+        "tags": ["inventory"],
+        "parameters": [
+          {
+            "name": "sku",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string", "minLength": 1}
+          },
+          {
+            "name": "warehouse_id",
+            "in": "query",
+            "required": true,
+            "schema": {"type": "string", "minLength": 1}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stock level",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/StockLevel"}
+              }
+            }
+          },
+          "404": {"description": "Stock item not found"}
+        }
+      }
+    },
+    "/inventory/{sku}/reservations": {
+      "post": {
+        "operationId": "reserveStock",
+        "summary": "Reserve stock",
+        "description": "Create a new stock reservation for an order.",
+        "tags": ["inventory", "write"],
+        "x-nexusmcp-side-effect": "non_idempotent_write",
+        "parameters": [
+          {
+            "name": "sku",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string", "minLength": 1}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/CreateReservationRequest"}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reservation",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Reservation"}
+              }
+            }
+          },
+          "409": {"description": "Insufficient stock"}
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "StockStatus": {
+        "type": "string",
+        "enum": ["in_stock", "low", "out_of_stock"]
+      },
+      "StockLevel": {
+        "type": "object",
+        "required": ["sku", "warehouse_id", "on_hand", "reserved", "available", "status"],
+        "properties": {
+          "sku": {"type": "string"},
+          "warehouse_id": {"type": "string"},
+          "on_hand": {"type": "integer", "minimum": 0},
+          "reserved": {"type": "integer", "minimum": 0},
+          "available": {"type": "integer", "minimum": 0},
+          "status": {"$ref": "#/components/schemas/StockStatus"}
+        }
+      },
+      "CreateReservationRequest": {
+        "type": "object",
+        "required": ["warehouse_id", "order_id", "quantity"],
+        "properties": {
+          "warehouse_id": {"type": "string", "minLength": 1},
+          "order_id": {"type": "string", "minLength": 1},
+          "quantity": {"type": "integer", "minimum": 1, "maximum": 1000}
+        }
+      },
+      "Reservation": {
+        "type": "object",
+        "required": ["reservation_id", "sku", "warehouse_id", "order_id", "quantity", "status"],
+        "properties": {
+          "reservation_id": {"type": "string"},
+          "sku": {"type": "string"},
+          "warehouse_id": {"type": "string"},
+          "order_id": {"type": "string"},
+          "quantity": {"type": "integer"},
+          "status": {"type": "string", "enum": ["created"]}
+        }
+      }
+    }
+  }
+}
