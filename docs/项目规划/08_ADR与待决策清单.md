@@ -112,6 +112,19 @@
 
 决策记录：[ADR-0017](../adr/0017-defer-remote-mcp-and-focus-web-control-plane.md)。
 
+### D-015｜Web Control Plane 使用单一 Vite SPA 与生成式 API Client
+
+- 唯一前端应用位于 `web/`，产品名为 NexusMCP Control Plane；
+- React + TypeScript Strict + Vite + React Router；
+- TanStack Query 管理 Server State，RHF/Zod 管理 Form，Zustand 按需；
+- FastAPI Admin OpenAPI 通过 Hey API 生成 DTO/Fetch SDK，Feature 手写 Query/Mutation Hook；
+- shadcn/Base UI/Tailwind 作为源码拥有型 UI；
+- 第一版保持 Local Development Admin，不制作 Login；
+- 使用 Vitest/RTL/MSW/Playwright 与 Oxlint/Oxfmt；
+- Same-Origin 使用相对 `/admin`，Production-like Demo 由 Nginx 提供静态资源和 Proxy。
+
+决策记录：[ADR-0018](../adr/0018-web-control-plane-engineering.md)。
+
 ## 2. 推荐但需在初始化时确认
 
 ### R-001｜Persistence 工程工具
@@ -194,6 +207,7 @@ Legacy Session 本身不构成新项目必须引入 Redis 的理由。
 | [0015](../adr/0015-manual-opentelemetry-boundary.md) | Accepted | 手工 OpenTelemetry Boundary 与安全 Attribute 白名单 |
 | [0016](../adr/0016-upstream-egress-and-ssrf-boundary.md) | Accepted | Upstream Egress 与 SSRF 防护边界 |
 | [0017](../adr/0017-defer-remote-mcp-and-focus-web-control-plane.md) | Accepted | 延后 Remote MCP，优先 Web Control Plane |
+| [0018](../adr/0018-web-control-plane-engineering.md) | Accepted | Web Control Plane 工程布局与技术栈 |
 
 不是现在一次性写完。每个 ADR 在相关实现前后完成。
 

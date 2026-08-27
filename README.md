@@ -242,3 +242,4 @@ docker compose stop postgres
 - [ADR-0015：手工 OpenTelemetry Boundary](./docs/adr/0015-manual-opentelemetry-boundary.md)
 - [ADR-0016：Upstream Egress 与 SSRF 防护边界](./docs/adr/0016-upstream-egress-and-ssrf-boundary.md)
 - [ADR-0017：延后 Remote MCP，优先 Web Control Plane](./docs/adr/0017-defer-remote-mcp-and-focus-web-control-plane.md)
+- [ADR-0018：Web Control Plane 工程布局与技术栈](./docs/adr/0018-web-control-plane-engineering.md)

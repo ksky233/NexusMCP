@@ -1,8 +1,9 @@
 # 09｜S6 前置 Web Control Plane 与 Remote MCP 边界
 
-> 状态：规划冻结，尚未开工
+> 状态：产品与工程规划已冻结，尚未开工
 > 日期：2026-08-27
 > 决策：Remote MCP Deferred；优先 Admin Query API 与 Web UI MVP
+> 工程基线：见 ADR-0018
 
 ## 1. 目标
 
@@ -151,7 +152,10 @@
 
 ## 6. 技术方案
 
-建议：
+工程布局、状态所有权、API Code Generation、质量和部署已由
+[ADR-0018](../adr/0018-web-control-plane-engineering.md) 冻结。
+
+采用：
 
 ```text
 React
@@ -159,8 +163,11 @@ TypeScript
 Vite
 React Router
 TanStack Query
-Ant Design 或 MUI
+React Hook Form + Zod
+shadcn + Base UI + Tailwind
 Vitest
+React Testing Library
+MSW
 Playwright（1 条核心 E2E）
 ```
 
@@ -169,10 +176,16 @@ Playwright（1 条核心 E2E）
 ```text
 web/
 ├── src/
+│   ├── app/
+│   ├── features/
+│   ├── components/
+│   └── generated/api/
 ├── tests/
 ├── package.json
 └── vite.config.ts
 ```
+
+不预建 `admin-web/user-web`；只有未来出现独立 Employee Portal 后才根据真实用户、认证和部署边界拆分。
 
 Development：
 
