@@ -1,0 +1,95 @@
+{
+  "run": {
+    "recorded_at": "2026-08-27T03:52:39.856876+00:00",
+    "provider": "SiliconFlow",
+    "model": "Qwen/Qwen3-Embedding-8B",
+    "dimensions": 2048,
+    "distance": "cosine",
+    "vector_index": "exact_scan",
+    "rank_fusion": "rrf_k_60",
+    "query_embedding_mode": "precomputed_batch_for_cost_control",
+    "retrieval_latency_scope": "database_and_fusion_without_remote_embedding",
+    "index_embedding_batch_count": 1,
+    "query_embedding_batch_count": 2,
+    "total_paid_batch_count": 3,
+    "query_embedding_batch_latency_ms": 788.8631,
+    "monetary_cost": null,
+    "monetary_cost_note": "Provider usage billing was not exposed by the current adapter."
+  },
+  "dataset": {
+    "version": 1,
+    "catalog": "three-scenario-demo-v1",
+    "case_count": 24,
+    "positive_case_count": 22,
+    "no_match_case_count": 2,
+    "tool_count": 8
+  },
+  "index": {
+    "published_count": 8,
+    "embedded_count": 8,
+    "coverage": 1.0
+  },
+  "metrics": {
+    "lexical": {
+      "top_1_accuracy": 0.454545,
+      "hit_at_3": 0.454545,
+      "mrr": 0.454545,
+      "ndcg_at_3": 0.454545,
+      "no_match_accuracy": 1.0,
+      "latency_p50_ms": 6.77655,
+      "latency_p95_ms": 13.46516,
+      "unauthorized_leakage_count": 0
+    },
+    "vector": {
+      "top_1_accuracy": 0.954545,
+      "hit_at_3": 1.0,
+      "mrr": 0.977273,
+      "ndcg_at_3": 0.983224,
+      "no_match_accuracy": 0.0,
+      "latency_p50_ms": 11.33415,
+      "latency_p95_ms": 20.08479,
+      "unauthorized_leakage_count": 0
+    },
+    "hybrid": {
+      "top_1_accuracy": 0.954545,
+      "hit_at_3": 1.0,
+      "mrr": 0.977273,
+      "ndcg_at_3": 0.983224,
+      "no_match_accuracy": 0.0,
+      "latency_p50_ms": 12.65585,
+      "latency_p95_ms": 19.950655,
+      "unauthorized_leakage_count": 0
+    }
+  },
+  "metrics_by_category": {
+    "exact_keyword": {
+      "lexical_top_1": 1.0,
+      "vector_top_1": 1.0,
+      "hybrid_top_1": 1.0
+    },
+    "semantic_fuzzy": {
+      "lexical_top_1": 0.0,
+      "vector_top_1": 1.0,
+      "hybrid_top_1": 1.0
+    },
+    "cross_language": {
+      "lexical_top_1": 0.0,
+      "vector_top_1": 0.666667,
+      "hybrid_top_1": 0.666667,
+      "vector_hit_at_3": 1.0,
+      "hybrid_hit_at_3": 1.0
+    },
+    "filter": {
+      "lexical_top_1": 1.0,
+      "vector_top_1": 1.0,
+      "hybrid_top_1": 1.0
+    }
+  },
+  "findings": [
+    "Vector and Hybrid recovered every positive case within Top-3.",
+    "Hybrid matched Vector on this small dataset because lexical results either agreed or were empty.",
+    "The cross-language contact query ranked directory.search_employees before directory.get_employee.",
+    "Exact Vector and Hybrid returned nearest tools for both No-Match cases because no confidence threshold exists.",
+    "No forbidden filter candidate or cross-tenant candidate leaked in the regression evidence."
+  ]
+}

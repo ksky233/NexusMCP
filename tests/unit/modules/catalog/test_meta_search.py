@@ -3,15 +3,24 @@
 import pytest
 
 from nexusmcp.modules.catalog.adapters.in_memory import InMemoryToolCatalogRepository
-from nexusmcp.modules.catalog.domain import PublishedTool, ToolSideEffect, ToolVisibility
-from nexusmcp.modules.catalog.meta_search import (
-    SearchTools,
-    SearchToolsQuery,
-    ToolRetrievalMode,
+from nexusmcp.modules.catalog.domain import (
+    PublishedTool,
+    PublishedToolSearchHit,
+    ToolSideEffect,
+    ToolVisibility,
 )
 from nexusmcp.modules.catalog.search import SearchPublishedTools
 from nexusmcp.modules.identity.adapters.context_principal import ContextPrincipalResolver
 from nexusmcp.modules.policy.domain import PolicyDecision, PolicyEffect, PolicyEvaluationInput
+from nexusmcp.modules.tool_search.domain import (
+    EmbeddingVector,
+    ToolRetrievalMode,
+    VectorSearchResult,
+)
+from nexusmcp.modules.tool_search.hybrid_search import SearchHybridTools
+from nexusmcp.modules.tool_search.rank_fusion import ReciprocalRankFusion
+from nexusmcp.modules.tool_search.search_tools import SearchTools, SearchToolsQuery
+from nexusmcp.modules.tool_search.vector_search import SearchVectorTools
 from nexusmcp.shared.errors import ToolSearchModeUnavailableError
 from nexusmcp.shared.request_context import ProtocolEra, RequestContext
 
@@ -23,6 +32,43 @@ class SelectivePolicyEvaluator:
             effect=PolicyEffect.ALLOW if allowed else PolicyEffect.DENY,
             policy_version="policy-v1",
             reason_code="allowed" if allowed else "denied",
+        )
+
+
+class FakeQueryEmbeddingProvider:
+    model = "test/embedding"
+    dimensions = 3
+
+    async def embed(self, texts: tuple[str, ...]) -> tuple[EmbeddingVector, ...]:
+        assert texts == ("inventory",)
+        return (
+            EmbeddingVector(
+                model=self.model,
+                dimensions=self.dimensions,
+                values=(1.0, 0.0, 0.0),
+            ),
+        )
+
+
+class ReserveFirstVectorSearch:
+    def __init__(self, reserve_tool: PublishedTool) -> None:
+        self._reserve_tool = reserve_tool
+
+    async def search_published_by_vector(
+        self,
+        tenant_id: str,
+        query_vector: EmbeddingVector,
+        *,
+        visibilities: tuple[ToolVisibility, ...],
+        namespace: str | None,
+        side_effect: ToolSideEffect | None,
+        limit: int,
+    ) -> VectorSearchResult:
+        _ = (tenant_id, query_vector, visibilities, namespace, side_effect, limit)
+        return VectorSearchResult(
+            hits=(PublishedToolSearchHit(tool=self._reserve_tool, rank=0.99),),
+            eligible_count=2,
+            indexed_count=2,
         )
 
 
@@ -81,7 +127,7 @@ def use_case() -> SearchTools:
 
 @pytest.mark.asyncio
 async def test_lexical_search_filters_denied_candidates_after_overfetch() -> None:
-    hits = await use_case().execute(
+    result = await use_case().execute(
         SearchToolsQuery(
             context=context(),
             text="inventory",
@@ -91,7 +137,8 @@ async def test_lexical_search_filters_denied_candidates_after_overfetch() -> Non
         )
     )
 
-    assert [hit.tool.canonical_name for hit in hits] == ["inventory.get_status"]
+    assert [hit.tool.canonical_name for hit in result.hits] == ["inventory.get_status"]
+    assert result.index_version is None
 
 
 @pytest.mark.asyncio
@@ -104,3 +151,46 @@ async def test_hybrid_mode_is_stable_but_unavailable_before_vector_index() -> No
                 retrieval_mode=ToolRetrievalMode.HYBRID,
             )
         )
+
+
+@pytest.mark.asyncio
+async def test_hybrid_rrf_candidates_still_pass_dynamic_policy_filter() -> None:
+    get_tool = published_tool(
+        "tool-get",
+        "inventory.get_status",
+        ToolSideEffect.READ_ONLY,
+    )
+    reserve_tool = published_tool(
+        "tool-reserve",
+        "inventory.reserve_stock",
+        ToolSideEffect.NON_IDEMPOTENT_WRITE,
+    )
+    repository = InMemoryToolCatalogRepository(published_tools=[get_tool, reserve_tool])
+    lexical_search = SearchPublishedTools(repository)
+    hybrid_search = SearchHybridTools(
+        lexical_search=lexical_search,
+        vector_search=SearchVectorTools(
+            embedding_provider=FakeQueryEmbeddingProvider(),
+            vector_search=ReserveFirstVectorSearch(reserve_tool),
+        ),
+        rank_fusion=ReciprocalRankFusion(),
+    )
+    search = SearchTools(
+        lexical_search=lexical_search,
+        hybrid_search=hybrid_search,
+        hybrid_index_version=hybrid_search.index_version,
+        principal_resolver=ContextPrincipalResolver(),
+        policy_evaluator=SelectivePolicyEvaluator(),
+    )
+
+    result = await search.execute(
+        SearchToolsQuery(
+            context=context(),
+            text="inventory",
+            retrieval_mode=ToolRetrievalMode.HYBRID,
+            limit=5,
+        )
+    )
+
+    assert [hit.tool.canonical_name for hit in result.hits] == ["inventory.get_status"]
+    assert result.index_version == "test/embedding@3"

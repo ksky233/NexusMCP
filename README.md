@@ -4,7 +4,7 @@
 
 NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，负责将企业 HTTP/OpenAPI 服务和已有 MCP Server 纳入统一 Tool Catalog，并在 MCP 调用链上执行身份、策略、凭据、审批、审计与可观测性。
 
-当前阶段：`S4-2a｜pgvector 与 Embedding API 基础设施完成`。
+当前阶段：`S4｜Meta Tool 与 Hybrid Tool Retrieval 已完成`；下一阶段进入 `S5｜工程证据`。
 
 ## 当前边界
 
@@ -39,10 +39,16 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，�
 - Inventory `set_reorder_level` 已作为唯一受控 PUT 幂等写纵向切片，其他 POST/非幂等写仍被拒绝；
 - 内建 `nexus.search_tools` 已接通 PostgreSQL FTS；Eager 模式与业务 Tool 一起返回，Search-First
   模式初始只返回 Meta Tool；Top-K 候选携带可动态激活的完整 Schema；
-- Agent-facing Search Contract 只暴露必填 `lexical | hybrid`；Hybrid 在 pgvector Index 完成前返回
-  稳定的 `tool_search_mode_unavailable`；
+- Agent-facing Search Contract 只暴露必填 `lexical | hybrid`；Hybrid 已接通 Query Embedding、
+  pgvector Exact Cosine Search、RRF 与治理过滤，零索引覆盖时不静默降级；
 - SiliconFlow `Qwen/Qwen3-Embedding-8B` 2048 维 Smoke Test 已通过；`VECTOR(2048)` Projection、
   pgvector Extension、Exact Cosine Round-Trip 已完成，第一版不建立 HNSW；
+- 独立 `tool_search` Module 已建立；Canonical Search Document、EmbeddingProvider Port、SiliconFlow
+  Adapter、PostgreSQL Repository/UoW 与幂等 Reindex CLI 已跑通；
+- Hybrid 的 FTS/Vector Candidate 并发获取并使用 RRF 融合；MCP `_meta` 返回实际 Strategy 与
+  `Model@Dimensions` Index Version；
+- Retrieval Eval 使用 8 个 Demo Tool 与 24 条人工标注 Query；真实 SiliconFlow 快照中 Hybrid
+  `Top-1=95.45%`、`Hit@3=100%`、Leakage=0，同时确认 No-Match Confidence Threshold 尚未实现；
 - 真实 JWT/OIDC、生产 Secret Store、CredentialBinding 持久化、跨调用 Result Replay、通用写 Tool
   与 Reconciliation 尚未实现。
 
@@ -129,6 +135,38 @@ curl.exe -X POST http://127.0.0.1:8000/admin/upstreams `
 
 `/admin` 负责 Control Plane，`/mcp` 保持 MCP Protocol 边界，`/health/live` 与 `/health/ready` 保持独立。
 
+## Tool Embedding Reindex
+
+真实 Key 只放在 Git 忽略的 `.env`：
+
+```text
+NEXUSMCP_EMBEDDING_MODEL=Qwen/Qwen3-Embedding-8B
+NEXUSMCP_EMBEDDING_DIMENSIONS=2048
+NEXUSMCP_EMBEDDING_API_URL=https://api.siliconflow.cn/v1/embeddings
+NEXUSMCP_EMBEDDING_API_KEY=<secret>
+```
+
+先检查 Missing/Stale Projection，不调用付费 API：
+
+```powershell
+uv run nexusmcp reindex-tools --dry-run
+```
+
+执行幂等 Reindex：
+
+```powershell
+uv run nexusmcp reindex-tools
+```
+
+可选参数：
+
+```text
+--tenant-id <uuid>
+--batch-size 16
+--force
+--dry-run
+```
+
 停止 Container 但保留数据：
 
 ```powershell
@@ -161,10 +199,14 @@ docker compose stop postgres
 - [S3-6 Retry/Idempotency 执行与 S3 收口](./docs/实验记录/20_S3-6_Retry与Idempotency执行.md)
 - [S4-0/1 Meta Tool 与 Lexical Search](./docs/实验记录/21_S4-0_MetaTool与LexicalSearch.md)
 - [S4-2a pgvector 与 Embedding API 基础设施](./docs/实验记录/22_S4-2_pgvector与Embedding基础设施.md)
+- [S4-2b Tool Embedding Reindex Pipeline](./docs/实验记录/23_S4-2b_ToolEmbeddingReindex.md)
+- [S4-3 Query Embedding、Exact Vector Search 与 Hybrid RRF](./docs/实验记录/24_S4-3_QueryEmbedding与HybridRRF.md)
+- [S4-4 Retrieval Eval 与 S4 收口](./docs/实验记录/25_S4-4_RetrievalEval与S4收口.md)
 - [业务词汇、核心用例与限界上下文](./docs/架构/01_业务词汇核心用例与限界上下文.md)
 - [持久化模型与发布事务](./docs/架构/02_持久化模型与发布事务.md)
 - [tools/call 治理执行模型](./docs/架构/03_tools_call治理执行模型.md)
 - [内建 Meta Tool 与 Hybrid Tool Search](./docs/架构/04_内建MetaTool与HybridToolSearch.md)
+- [Tool 混合检索与 RRF 算法选择](./docs/学习笔记/07_Tool混合检索与RRF算法选择.md)
 - [ADR-0001：Python 项目布局](./docs/adr/0001-python-project-layout.md)
 - [ADR-0002：MCP 协议与 SDK Adapter](./docs/adr/0002-mcp-protocol-and-sdk-adapter.md)
 - [ADR-0004：PostgreSQL 主存储](./docs/adr/0004-postgresql-primary-store.md)

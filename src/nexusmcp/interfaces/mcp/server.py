@@ -19,10 +19,10 @@ from nexusmcp.interfaces.mcp.meta_tools import (
     search_tools_result,
 )
 from nexusmcp.modules.approval.use_cases import DecideApproval, DecideApprovalCommand
-from nexusmcp.modules.catalog.meta_search import SearchTools
 from nexusmcp.modules.catalog.use_cases import ListVisibleTools, ListVisibleToolsQuery
 from nexusmcp.modules.execution.call_tool import CallTool
 from nexusmcp.modules.execution.domain import CallToolCommand, is_valid_idempotency_key
+from nexusmcp.modules.tool_search.search_tools import SearchTools
 from nexusmcp.shared.errors import (
     ApprovalMismatchError,
     ApprovalRequiredError,
@@ -163,7 +163,7 @@ def create_mcp_server(
                         request_context,
                         params.arguments or {},
                     )
-                    hits = await search_tools.execute(query)
+                    result = await search_tools.execute(query)
                 except NexusMcpError as error:
                     logger.warning(
                         "mcp_meta_tool_call_rejected",
@@ -195,11 +195,11 @@ def create_mcp_server(
                     extra={
                         "event": "mcp_tool_search_completed",
                         "retrieval_mode": query.retrieval_mode.value,
-                        "candidate_count": len(hits),
+                        "candidate_count": len(result.hits),
                         "duration_ms": round((perf_counter() - started_at) * 1000, 3),
                     },
                 )
-                return search_tools_result(hits, query.retrieval_mode)
+                return search_tools_result(result)
             if call_tool is None:
                 return to_call_tool_error(NexusMcpError("tools/call is not configured"))
             try:

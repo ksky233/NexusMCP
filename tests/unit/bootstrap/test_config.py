@@ -81,6 +81,16 @@ def test_embedding_settings_validate_model_dimensions_and_url() -> None:
         Settings(environment="test", embedding_dimensions=32)
     with pytest.raises(ValidationError, match="embedding_api_url"):
         Settings(environment="test", embedding_api_url="file:///tmp/embedding")
+    with pytest.raises(ValidationError, match="embedding_timeout_seconds"):
+        Settings(environment="test", embedding_timeout_seconds=0)
+    with pytest.raises(ValidationError, match="embedding_batch_size"):
+        Settings(environment="test", embedding_batch_size=65)
+
+
+def test_empty_embedding_api_key_means_provider_is_not_configured() -> None:
+    settings = Settings.model_validate({"environment": "test", "embedding_api_key": ""})
+
+    assert settings.embedding_api_key is None
 
 
 def test_production_tool_execution_requires_shared_request_state_key() -> None:

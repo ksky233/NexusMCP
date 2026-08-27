@@ -1,21 +1,17 @@
 """内建 Meta Tool 使用的 Lexical/Hybrid Tool Search 编排。"""
 
 from dataclasses import dataclass
-from enum import StrEnum
+from typing import Protocol
 
 from nexusmcp.modules.catalog.domain import PublishedToolSearchHit, ToolSideEffect
-from nexusmcp.modules.catalog.search import SearchPublishedTools, SearchPublishedToolsQuery
+from nexusmcp.modules.catalog.search import SearchPublishedToolsQuery
 from nexusmcp.modules.identity.ports import PrincipalResolver
 from nexusmcp.modules.policy.domain import PolicyEffect, PolicyEvaluationInput, ToolAction
 from nexusmcp.modules.policy.ports import PolicyEvaluator
+from nexusmcp.modules.tool_search.domain import ToolRetrievalMode
 from nexusmcp.shared.digests import canonical_json_digest
 from nexusmcp.shared.errors import InvalidArgumentsError, ToolSearchModeUnavailableError
 from nexusmcp.shared.request_context import RequestContext
-
-
-class ToolRetrievalMode(StrEnum):
-    LEXICAL = "lexical"
-    HYBRID = "hybrid"
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,25 +24,43 @@ class SearchToolsQuery:
     side_effect: ToolSideEffect | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class SearchToolsResult:
+    hits: tuple[PublishedToolSearchHit, ...]
+    retrieval_mode: ToolRetrievalMode
+    index_version: str | None = None
+
+
+class ToolCandidateSearch(Protocol):
+    async def execute(
+        self,
+        query: SearchPublishedToolsQuery,
+    ) -> tuple[PublishedToolSearchHit, ...]: ...
+
+
 class SearchTools:
     def __init__(
         self,
         *,
-        lexical_search: SearchPublishedTools,
+        lexical_search: ToolCandidateSearch,
         principal_resolver: PrincipalResolver,
         policy_evaluator: PolicyEvaluator,
-        hybrid_search: SearchPublishedTools | None = None,
+        hybrid_search: ToolCandidateSearch | None = None,
+        hybrid_index_version: str | None = None,
         overfetch_factor: int = 4,
     ) -> None:
         if overfetch_factor <= 0:
             raise ValueError("tool search overfetch factor must be positive")
         self._lexical_search = lexical_search
         self._hybrid_search = hybrid_search
+        if hybrid_search is not None and not (hybrid_index_version or "").strip():
+            raise ValueError("hybrid tool search must declare an index version")
+        self._hybrid_index_version = hybrid_index_version
         self._principal_resolver = principal_resolver
         self._policy_evaluator = policy_evaluator
         self._overfetch_factor = overfetch_factor
 
-    async def execute(self, query: SearchToolsQuery) -> tuple[PublishedToolSearchHit, ...]:
+    async def execute(self, query: SearchToolsQuery) -> SearchToolsResult:
         if not 1 <= query.limit <= 10:
             raise InvalidArgumentsError("Meta Tool search limit must be between 1 and 10")
         if query.retrieval_mode is ToolRetrievalMode.HYBRID:
@@ -83,4 +97,12 @@ class SearchTools:
                 visible.append(hit)
             if len(visible) == query.limit:
                 break
-        return tuple(visible)
+        return SearchToolsResult(
+            hits=tuple(visible),
+            retrieval_mode=query.retrieval_mode,
+            index_version=(
+                self._hybrid_index_version
+                if query.retrieval_mode is ToolRetrievalMode.HYBRID
+                else None
+            ),
+        )

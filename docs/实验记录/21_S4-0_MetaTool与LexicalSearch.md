@@ -70,7 +70,8 @@ Request Context
 
 ## 5. Eval Baseline
 
-新增 `evals/tool_search/lexical_cases.json`：
+当时新增 12 条 Lexical Baseline；S4-4 已将其升级并替换为
+`evals/tool_search/retrieval_cases.json` 的 24 条统一 Retrieval Dataset：
 
 - 8 个明确名称/关键词 Positive Cases；
 - 4 个模糊、同义或中文跨语言 Semantic Target Cases；

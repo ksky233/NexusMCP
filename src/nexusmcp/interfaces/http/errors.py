@@ -56,6 +56,10 @@ _HTTP_STATUS_BY_ERROR_CODE = {
     "idempotency_outcome_unknown": HTTPStatus.CONFLICT,
     "idempotency_previous_failed": HTTPStatus.CONFLICT,
     "tool_search_mode_unavailable": HTTPStatus.SERVICE_UNAVAILABLE,
+    "embedding_authentication_failed": HTTPStatus.BAD_GATEWAY,
+    "embedding_rate_limited": HTTPStatus.TOO_MANY_REQUESTS,
+    "embedding_unavailable": HTTPStatus.SERVICE_UNAVAILABLE,
+    "embedding_response_invalid": HTTPStatus.BAD_GATEWAY,
 }
 
 

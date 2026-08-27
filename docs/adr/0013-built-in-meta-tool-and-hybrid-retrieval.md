@@ -98,3 +98,18 @@ S4-0/S4-1 已确认：
 - SDK 可以调用未在初始 `tools/list` 中列出、但由 Search Result 激活的业务 Tool；
 - Hybrid 在 Vector Index 缺失时返回稳定 Unavailable，不静默降级；
 - 当前 8 个 Demo Tool 已建立 Lexical Eval Baseline 和已知 Semantic Gap Cases。
+- S4-2b 已建立独立 `tool_search` Module；Catalog 只提供 Published Projection，不反向依赖 Tool
+  Search；
+- Canonical Document、Provider Port、SiliconFlow Adapter、Projection Repository/UoW 和幂等 Reindex
+  CLI 已实现；
+- Reindex 通过 Source Digest 跳过未变化 Tool，Embedding API 不进入 Publish 事务。
+- S4-3 已实现临时 Query Embedding 与 PostgreSQL Exact Cosine Search；Query Vector 不持久化；
+- FTS/Vector Candidate 并发读取，使用 `k=60` 的 RRF 按名次融合，Raw Score 不相加；
+- Tenant、Lifecycle、Binding、Visibility 与静态 Filter 在 Vector SQL 中生效，Dynamic Policy 在
+  Over-fetch + Fusion 后生效；
+- 当前 Scope 零 Index Coverage 返回稳定 Unavailable，Partial Coverage 暂时允许并交由 Eval 量化；
+- Hybrid MCP Result `_meta` 返回实际 Strategy、Candidate Count 与 `Model@Dimensions` Index Version。
+- S4-4 的 24 Case SiliconFlow Snapshot 中，Hybrid Top-1 为 95.45%、Hit@3 为 100%，Leakage 为 0；
+- 当前 Dataset 未证明 Hybrid 优于 Vector-only，但证明了 Semantic/Cross-Language 相对 FTS 的召回收益；
+- 两个 No-Match Case 暴露 Exact Vector 无 Confidence Threshold 的 False Activation；阈值决策延后到
+  扩充 Hard Negative 并获得正负 Cosine Score Distribution 后，不在 S4 以少量样本拍参数。

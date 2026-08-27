@@ -249,8 +249,10 @@ tool_discovery_mode = search_first
 禁止用一个无 Schema 的通用 `nexus.call_any_tool(name, arguments)` 绕过 Tool Contract、Policy 与模型
 参数校验。
 
-当前 Hybrid 枚举已进入稳定 Schema，但在 Vector Index 完成前返回
-`tool_search_mode_unavailable`，不把 FTS Fallback 伪装成 Hybrid。
+Hybrid 已进入正式 Data Plane。没有 Embedding Provider，或当前 Tenant/Filter Scope 存在 Published
+Tool 但配置的 `Model@Dimensions` 完全没有 Projection 时，返回
+`tool_search_mode_unavailable`，不把 FTS Fallback 伪装成 Hybrid。部分覆盖允许继续检索，其风险和收益
+由 S4-4 的 Index Coverage/Freshness 指标评估。
 
 ## 10. Eval
 
@@ -289,6 +291,7 @@ Unauthorized Leakage。Agent-facing Contract Test 额外证明只暴露 `lexical
 
 ## 12. 关联决策
 
+- [Tool 混合检索与 RRF 算法选择](../学习笔记/07_Tool混合检索与RRF算法选择.md)
 - [ADR-0013｜内建 Meta Tool 与 Hybrid Tool Retrieval](../adr/0013-built-in-meta-tool-and-hybrid-retrieval.md)
 - [ADR-0014｜PostgreSQL 18 pgvector 与 Vector Storage](../adr/0014-pgvector-infrastructure-and-vector-storage.md)
 - [S4 阶段路书](../项目规划/06_阶段路书与验收标准.md)
@@ -306,3 +309,82 @@ Unauthorized Leakage。Agent-facing Contract Test 额外证明只暴露 `lexical
 - Projection Table：`tool_search_embedding`；
 - Python Adapter：pgvector SQLAlchemy Type Processor；不叠加 asyncpg Binary Codec；
 - 真实 2048 维 Round-Trip 与 Exact Nearest Neighbor Integration Test 已通过。
+
+## 14. S4-2b Reindex Pipeline Confirmation
+
+代码所有权已迁移到独立 `modules/tool_search`：
+
+```text
+tool_search/
+├── domain.py
+├── ports.py
+├── document_builder.py
+├── search_tools.py
+├── reindex_tools.py
+└── adapters/
+    ├── siliconflow.py
+    ├── sqlalchemy_models.py
+    ├── sqlalchemy_repository.py
+    ├── sqlalchemy_uow.py
+    └── in_memory.py
+```
+
+已完成：
+
+- Published Tool → Canonical Document → SHA-256 Source Digest；
+- Top-Level/Nested Input Field Summary，不 Embedding 完整 JSON Schema；
+- Provider-neutral `EmbeddingProvider` Port；
+- SiliconFlow Batch Adapter 的 Auth/Timeout/429/5xx/Count/Index/Dimension/Finite Value 验证；
+- Projection Repository/UoW 的 Scope Query 与 PostgreSQL Upsert；
+- Reindex 按 Digest 只处理 Missing/Stale Tool，每 Batch 短事务提交；
+- `--dry-run/--force/--batch-size/--tenant-id` CLI；
+- 真实首次索引后再次运行 `Embedded=0`，不重复调用付费 API。
+
+## 15. S4-3 Hybrid Retrieval Confirmation
+
+正式查询链路：
+
+```text
+SearchTools(over-fetch = final limit × 4)
+→ SearchHybridTools
+   ├── SearchPublishedTools → PostgreSQL Weighted FTS
+   └── SearchVectorTools
+       → EmbeddingProvider.embed((query,))
+       → PostgreSQL Exact Cosine Search
+→ ReciprocalRankFusion(k = 60)
+→ Dynamic Policy Filter
+→ Final Top-K
+```
+
+实现边界：
+
+- Query Vector 只存在于单次请求内存，不写入 Projection；
+- FTS 与 Query Embedding/Vector Search 使用 `asyncio.gather` 并发执行；
+- Vector SQL 在距离计算前下推 Tenant、Active、Published Binding、Visibility、Namespace 与 Side Effect；
+- Exact Scan 按 Cosine Distance 升序，同距离按 Canonical Name 稳定排序；
+- RRF 只消费策略内名次，按 `tool_version_id` 去重，不混合 `ts_rank` 与 Cosine Raw Score；
+- RRF 并列按 Canonical Name 和 Tool Version ID 确定性排序；
+- Dynamic Policy 在融合后的 Over-fetched Candidate 上执行，再截取最终 Top-K；
+- Agent-facing 仍只有 `lexical | hybrid`，Vector-only 只作为内部 Query/Eval 能力；
+- MCP `_meta` 返回 `searchStrategyUsed`、`candidateCount` 和 Hybrid 的 `indexVersion`；
+- `indexVersion` 第一版定义为 `Embedding Model@Dimensions`。
+
+## 16. S4-4 Retrieval Eval Confirmation
+
+Eval Dataset 已冻结为 8 个 Demo Tool、24 条人工标注 Query。确定性 Fake Embedding 只进入 CI 契约；
+SiliconFlow Quality Snapshot 必须显式开启，并通过 Batch Precompute 把一次运行限制为 3 个付费请求。
+
+真实 `Qwen/Qwen3-Embedding-8B` 快照：
+
+```text
+Lexical Top-1/Hit@3 = 45.45% / 45.45%
+Vector  Top-1/Hit@3 = 95.45% / 100%
+Hybrid  Top-1/Hit@3 = 95.45% / 100%
+Unauthorized/Forbidden Leakage = 0
+```
+
+Hybrid 在该小 Dataset 上没有超过 Vector：精确 Query 中两路一致，模糊 Query 中 FTS 通常为空。该结果
+支持继续保留 RRF 的量纲隔离与精确词保护，但不支持宣称 Fusion 已带来统计显著收益。
+
+两个 No-Match Case 都被 Exact Vector 返回最近候选。S4 不用 2 个负例拍脑袋设置阈值；后续需要扩充
+Hard Negative、记录正负 Cosine Score Distribution，再按 False Activation Cost 选择 Confidence Gate。

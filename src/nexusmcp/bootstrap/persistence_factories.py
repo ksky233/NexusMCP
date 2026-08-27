@@ -11,6 +11,9 @@ from nexusmcp.modules.openapi_import.adapters.sqlalchemy_uow import (
     SqlAlchemyOpenApiImportUnitOfWork,
 )
 from nexusmcp.modules.registry.adapters.sqlalchemy_uow import SqlAlchemyRegistryUnitOfWork
+from nexusmcp.modules.tool_search.adapters.sqlalchemy_uow import (
+    SqlAlchemyToolSearchUnitOfWork,
+)
 
 
 class RuntimeCatalogUnitOfWorkFactory:
@@ -35,6 +38,14 @@ class RuntimeExecutionUnitOfWorkFactory:
 
     def __call__(self) -> SqlAlchemyExecutionUnitOfWork:
         return SqlAlchemyExecutionUnitOfWork(self._database_runtime.require_session_factory())
+
+
+class RuntimeToolSearchUnitOfWorkFactory:
+    def __init__(self, database_runtime: DatabaseRuntimePort) -> None:
+        self._database_runtime = database_runtime
+
+    def __call__(self) -> SqlAlchemyToolSearchUnitOfWork:
+        return SqlAlchemyToolSearchUnitOfWork(self._database_runtime.require_session_factory())
 
 
 class RuntimeOpenApiImportUnitOfWorkFactory:

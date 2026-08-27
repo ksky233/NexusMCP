@@ -7,10 +7,8 @@ from typing import Any
 from mcp import types
 
 from nexusmcp.modules.catalog.domain import PublishedToolSearchHit, ToolSideEffect
-from nexusmcp.modules.catalog.meta_search import (
-    SearchToolsQuery,
-    ToolRetrievalMode,
-)
+from nexusmcp.modules.tool_search.domain import ToolRetrievalMode
+from nexusmcp.modules.tool_search.search_tools import SearchToolsQuery, SearchToolsResult
 from nexusmcp.shared.errors import InvalidArgumentsError
 from nexusmcp.shared.request_context import RequestContext
 
@@ -104,23 +102,25 @@ def parse_search_tools_query(
 
 
 def search_tools_result(
-    hits: tuple[PublishedToolSearchHit, ...],
-    retrieval_mode: ToolRetrievalMode,
+    result: SearchToolsResult,
 ) -> types.CallToolResult:
-    tools = [_candidate(hit) for hit in hits]
+    tools = [_candidate(hit) for hit in result.hits]
     data: dict[str, Any] = {
-        "retrievalMode": retrieval_mode.value,
+        "retrievalMode": result.retrieval_mode.value,
         "tools": tools,
     }
+    metadata: dict[str, Any] = {
+        "com.nexusmcp/searchStrategyUsed": result.retrieval_mode.value,
+        "com.nexusmcp/candidateCount": len(tools),
+    }
+    if result.index_version is not None:
+        metadata["com.nexusmcp/indexVersion"] = result.index_version
     return types.CallToolResult(
         content=[
             types.TextContent(text=json.dumps(data, ensure_ascii=False, separators=(",", ":")))
         ],
         structured_content=data,
-        _meta={
-            "com.nexusmcp/searchStrategyUsed": retrieval_mode.value,
-            "com.nexusmcp/candidateCount": len(tools),
-        },
+        _meta=metadata,
     )
 
 

@@ -7,7 +7,7 @@ import pytest
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from nexusmcp.modules.catalog.adapters.sqlalchemy_embedding_models import (
+from nexusmcp.modules.tool_search.adapters.sqlalchemy_models import (
     TOOL_EMBEDDING_DIMENSIONS,
     ToolSearchEmbeddingModel,
 )

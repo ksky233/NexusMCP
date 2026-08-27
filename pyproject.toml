@@ -29,6 +29,9 @@ dev = [
 requires = ["uv_build>=0.12.5,<0.13"]
 build-backend = "uv_build"
 
+[project.scripts]
+nexusmcp = "nexusmcp.interfaces.cli.app:main"
+
 [tool.pytest.ini_options]
 addopts = "-ra"
 asyncio_mode = "auto"

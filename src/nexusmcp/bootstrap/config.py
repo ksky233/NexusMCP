@@ -5,7 +5,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal, Self
 
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     embedding_dimensions: int = 2048
     embedding_api_url: str = "https://api.siliconflow.cn/v1/embeddings"
     embedding_api_key: SecretStr | None = None
+    embedding_timeout_seconds: float = 60.0
+    embedding_batch_size: int = 16
     local_tenant_id: str = "local"
     database_url: SecretStr | None = None
     database_echo: bool = False
@@ -55,6 +57,12 @@ class Settings(BaseSettings):
         ]
     )
     transport_allowed_origins: list[str] = Field(default_factory=list)
+
+    @field_validator("embedding_api_key", mode="before")
+    @classmethod
+    def normalize_empty_embedding_api_key(cls, value: object) -> object:
+        # `.env.example` 有意保留空值；空 Key 表示未配置 Hybrid Provider，而不是一个可用 Secret。
+        return None if value == "" else value
 
     @model_validator(mode="after")
     def validate_runtime_mode(self) -> Self:
@@ -83,6 +91,10 @@ class Settings(BaseSettings):
             raise ValueError("embedding_dimensions must be between 64 and 8192")
         if not self.embedding_api_url.startswith(("https://", "http://")):
             raise ValueError("embedding_api_url must use http or https")
+        if self.embedding_timeout_seconds <= 0:
+            raise ValueError("embedding_timeout_seconds must be positive")
+        if not 1 <= self.embedding_batch_size <= 64:
+            raise ValueError("embedding_batch_size must be between 1 and 64")
         if self.tool_call_timeout_seconds <= 0:
             raise ValueError("tool_call_timeout_seconds must be positive")
         if not 1 <= self.tool_retry_max_attempts <= 10:

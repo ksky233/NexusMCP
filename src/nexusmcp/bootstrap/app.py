@@ -34,12 +34,12 @@ from nexusmcp.modules.approval.use_cases import (
 from nexusmcp.modules.catalog.adapters.in_memory import InMemoryToolCatalogRepository
 from nexusmcp.modules.catalog.adapters.sqlalchemy_reader import SqlAlchemyPublishedToolReader
 from nexusmcp.modules.catalog.adapters.sqlalchemy_search import SqlAlchemyPublishedToolSearch
-from nexusmcp.modules.catalog.meta_search import SearchTools
 from nexusmcp.modules.catalog.ports import PublishedToolReader, PublishedToolSearch
 from nexusmcp.modules.catalog.publish import PublishTool
 from nexusmcp.modules.catalog.review import SubmitToolVersionForReview
 from nexusmcp.modules.catalog.search import SearchPublishedTools
 from nexusmcp.modules.catalog.use_cases import ListVisibleTools
+from nexusmcp.modules.credentials.domain import SecretValue
 from nexusmcp.modules.credentials.ports import CredentialBindingResolver, CredentialProvider
 from nexusmcp.modules.execution.adapters.asyncio_sleeper import AsyncioRetrySleeper
 from nexusmcp.modules.execution.adapters.httpx_executor import HttpxToolExecutor
@@ -71,6 +71,15 @@ from nexusmcp.modules.registry.use_cases import (
     RegisterUpstream,
     UpdateUpstream,
 )
+from nexusmcp.modules.tool_search.adapters.siliconflow import SiliconFlowEmbeddingProvider
+from nexusmcp.modules.tool_search.adapters.sqlalchemy_vector_search import (
+    SqlAlchemyExactVectorToolSearch,
+)
+from nexusmcp.modules.tool_search.hybrid_search import SearchHybridTools
+from nexusmcp.modules.tool_search.ports import EmbeddingProvider
+from nexusmcp.modules.tool_search.rank_fusion import ReciprocalRankFusion
+from nexusmcp.modules.tool_search.search_tools import SearchTools
+from nexusmcp.modules.tool_search.vector_search import SearchVectorTools
 from nexusmcp.shared.request_context import RequestContext
 
 
@@ -85,6 +94,7 @@ def create_app(
     credential_provider: CredentialProvider | None = None,
     request_state_security: RequestStateSecurity | None = None,
     published_tool_search: PublishedToolSearch | None = None,
+    embedding_provider: EmbeddingProvider | None = None,
 ) -> FastAPI:
     """创建完整组装的应用，不让业务代码依赖全局对象。"""
 
@@ -112,13 +122,54 @@ def create_app(
         search_backend = SqlAlchemyPublishedToolSearch(resolved_runtime)
     if search_backend is None and isinstance(resolved_reader, InMemoryToolCatalogRepository):
         search_backend = resolved_reader
+    resolved_embedding_provider = embedding_provider
+    embedding_http_client: httpx.AsyncClient | None = None
+    if (
+        resolved_embedding_provider is None
+        and resolved_runtime is not None
+        and resolved_settings.catalog_backend == "postgresql"
+        and resolved_settings.embedding_api_key is not None
+    ):
+        embedding_http_client = httpx.AsyncClient(
+            follow_redirects=False,
+            trust_env=False,
+        )
+        resolved_embedding_provider = SiliconFlowEmbeddingProvider(
+            embedding_http_client,
+            api_url=resolved_settings.embedding_api_url,
+            api_key=SecretValue(resolved_settings.embedding_api_key.get_secret_value()),
+            model=resolved_settings.embedding_model,
+            dimensions=resolved_settings.embedding_dimensions,
+            timeout_seconds=resolved_settings.embedding_timeout_seconds,
+            max_batch_size=resolved_settings.embedding_batch_size,
+        )
+    lexical_search = SearchPublishedTools(search_backend) if search_backend is not None else None
+    hybrid_search: SearchHybridTools | None = None
+    if (
+        lexical_search is not None
+        and resolved_runtime is not None
+        and resolved_settings.catalog_backend == "postgresql"
+        and resolved_embedding_provider is not None
+    ):
+        hybrid_search = SearchHybridTools(
+            lexical_search=lexical_search,
+            vector_search=SearchVectorTools(
+                embedding_provider=resolved_embedding_provider,
+                vector_search=SqlAlchemyExactVectorToolSearch(resolved_runtime),
+            ),
+            rank_fusion=ReciprocalRankFusion(),
+        )
     search_tools = (
         SearchTools(
-            lexical_search=SearchPublishedTools(search_backend),
+            lexical_search=lexical_search,
             principal_resolver=principal_resolver,
             policy_evaluator=resolved_policy_evaluator,
+            hybrid_search=hybrid_search,
+            hybrid_index_version=(
+                hybrid_search.index_version if hybrid_search is not None else None
+            ),
         )
-        if search_backend is not None
+        if lexical_search is not None
         else None
     )
     clock = SystemClock()
@@ -217,6 +268,8 @@ def create_app(
         finally:
             if owns_http_client and resolved_http_client is not None:
                 await resolved_http_client.aclose()
+            if embedding_http_client is not None:
+                await embedding_http_client.aclose()
             if resolved_runtime is not None and runtime_started:
                 await resolved_runtime.stop()
 
@@ -283,6 +336,7 @@ def create_app(
     app.state.audit_reader = audit_reader
     app.state.decide_approval = decide_approval
     app.state.get_approval = get_approval
+    app.state.embedding_provider = resolved_embedding_provider
 
     # 先注册宿主路由，再注册 Catch-all MCP Mount，避免 /health 被截获。
     app.include_router(create_health_router(readiness_probe))

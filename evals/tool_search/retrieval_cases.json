@@ -1,0 +1,179 @@
+{
+  "version": 1,
+  "catalog": "three-scenario-demo-v1",
+  "cases": [
+    {
+      "id": "exact-get-employee",
+      "category": "exact_keyword",
+      "query": "get employee",
+      "relevance": {"directory.get_employee": 3},
+      "lexical_expected": true
+    },
+    {
+      "id": "exact-list-employees",
+      "category": "exact_keyword",
+      "query": "list employees",
+      "relevance": {"directory.list_employees": 3},
+      "lexical_expected": true
+    },
+    {
+      "id": "exact-search-employees",
+      "category": "exact_keyword",
+      "query": "search employees",
+      "relevance": {"directory.search_employees": 3},
+      "lexical_expected": true
+    },
+    {
+      "id": "exact-incident-status",
+      "category": "exact_keyword",
+      "query": "incident status",
+      "relevance": {"ops.get_status": 3},
+      "lexical_expected": true
+    },
+    {
+      "id": "exact-acknowledge-incident",
+      "category": "exact_keyword",
+      "query": "acknowledge incident",
+      "relevance": {"ops.acknowledge_incident": 3},
+      "lexical_expected": true
+    },
+    {
+      "id": "exact-inventory-status",
+      "category": "exact_keyword",
+      "query": "inventory status",
+      "relevance": {"inventory.get_status": 3},
+      "lexical_expected": true
+    },
+    {
+      "id": "exact-reserve-stock",
+      "category": "exact_keyword",
+      "query": "reserve stock",
+      "relevance": {"inventory.reserve_stock": 3},
+      "lexical_expected": true
+    },
+    {
+      "id": "exact-reorder-level",
+      "category": "exact_keyword",
+      "query": "reorder level",
+      "relevance": {"inventory.set_reorder_level": 3},
+      "lexical_expected": true
+    },
+    {
+      "id": "fuzzy-reorder-trigger",
+      "category": "semantic_fuzzy",
+      "query": "things are almost sold out set the trigger",
+      "relevance": {"inventory.set_reorder_level": 3},
+      "lexical_expected": false
+    },
+    {
+      "id": "fuzzy-employee-identifier",
+      "category": "semantic_fuzzy",
+      "query": "retrieve one worker record using its identifier",
+      "relevance": {"directory.get_employee": 3},
+      "lexical_expected": false
+    },
+    {
+      "id": "fuzzy-list-department",
+      "category": "semantic_fuzzy",
+      "query": "show active people in the engineering department",
+      "relevance": {"directory.list_employees": 3},
+      "lexical_expected": false
+    },
+    {
+      "id": "fuzzy-nested-staff-search",
+      "category": "semantic_fuzzy",
+      "query": "find staff with a nested department and status filter",
+      "relevance": {"directory.search_employees": 3},
+      "lexical_expected": false
+    },
+    {
+      "id": "fuzzy-outage-severity",
+      "category": "semantic_fuzzy",
+      "query": "how severe is outage INC-42 right now",
+      "relevance": {"ops.get_status": 3},
+      "lexical_expected": false
+    },
+    {
+      "id": "fuzzy-acknowledge-outage",
+      "category": "semantic_fuzzy",
+      "query": "mark an outage as handled",
+      "relevance": {"ops.acknowledge_incident": 3},
+      "lexical_expected": false
+    },
+    {
+      "id": "fuzzy-stock-availability",
+      "category": "semantic_fuzzy",
+      "query": "how many units are available in warehouse A",
+      "relevance": {"inventory.get_status": 3},
+      "lexical_expected": false
+    },
+    {
+      "id": "fuzzy-hold-order-units",
+      "category": "semantic_fuzzy",
+      "query": "hold five units for a customer order",
+      "relevance": {"inventory.reserve_stock": 3},
+      "lexical_expected": false
+    },
+    {
+      "id": "fuzzy-replenishment-point",
+      "category": "semantic_fuzzy",
+      "query": "change the replenishment point for this SKU",
+      "relevance": {"inventory.set_reorder_level": 3},
+      "lexical_expected": false
+    },
+    {
+      "id": "cross-language-contact",
+      "category": "cross_language",
+      "query": "查找公司员工的联系方式",
+      "relevance": {"directory.get_employee": 3},
+      "lexical_expected": false
+    },
+    {
+      "id": "cross-language-acknowledge",
+      "category": "cross_language",
+      "query": "确认这个故障已经有人接手处理",
+      "relevance": {"ops.acknowledge_incident": 3},
+      "lexical_expected": false
+    },
+    {
+      "id": "cross-language-reorder",
+      "category": "cross_language",
+      "query": "设置库存补货阈值",
+      "relevance": {"inventory.set_reorder_level": 3},
+      "lexical_expected": false
+    },
+    {
+      "id": "filter-inventory-status",
+      "category": "filter",
+      "query": "status",
+      "relevance": {"inventory.get_status": 3},
+      "lexical_expected": true,
+      "namespace": "inventory",
+      "forbidden_tools": ["ops.get_status"]
+    },
+    {
+      "id": "filter-idempotent-incident",
+      "category": "filter",
+      "query": "incident",
+      "relevance": {"ops.acknowledge_incident": 3},
+      "lexical_expected": true,
+      "namespace": "ops",
+      "side_effect": "idempotent_write",
+      "forbidden_tools": ["ops.get_status"]
+    },
+    {
+      "id": "no-match-meeting-room",
+      "category": "no_match",
+      "query": "book a meeting room for tomorrow",
+      "relevance": {},
+      "lexical_expected": true
+    },
+    {
+      "id": "no-match-payroll-tax",
+      "category": "no_match",
+      "query": "calculate quarterly payroll tax",
+      "relevance": {},
+      "lexical_expected": true
+    }
+  ]
+}

@@ -263,3 +263,23 @@ class IdempotencyRaceError(NexusMcpError):
 class ToolSearchModeUnavailableError(NexusMcpError):
     code = "tool_search_mode_unavailable"
     safe_message = "The requested tool search mode is not available."
+
+
+class EmbeddingAuthenticationError(NexusMcpError):
+    code = "embedding_authentication_failed"
+    safe_message = "The embedding provider could not be authenticated."
+
+
+class EmbeddingRateLimitError(NexusMcpError):
+    code = "embedding_rate_limited"
+    safe_message = "The embedding provider rate limit was exceeded."
+
+
+class EmbeddingUnavailableError(NexusMcpError):
+    code = "embedding_unavailable"
+    safe_message = "The embedding provider is unavailable."
+
+
+class EmbeddingResponseError(NexusMcpError):
+    code = "embedding_response_invalid"
+    safe_message = "The embedding provider returned an invalid response."
