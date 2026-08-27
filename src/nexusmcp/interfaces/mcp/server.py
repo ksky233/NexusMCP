@@ -2,6 +2,7 @@
 
 import json
 import logging
+from dataclasses import replace
 from time import perf_counter
 from typing import Any, Protocol
 
@@ -10,7 +11,8 @@ from mcp.server.context import ServerRequestContext
 from mcp.server.lowlevel import Server
 from mcp.server.request_state import RequestStateBoundary, RequestStateSecurity
 
-from nexusmcp.interfaces.mcp.context import resolve_request_context
+from nexusmcp.infrastructure.observability import NexusTelemetry
+from nexusmcp.interfaces.mcp.context import request_headers, resolve_request_context
 from nexusmcp.interfaces.mcp.errors import to_call_tool_error
 from nexusmcp.interfaces.mcp.meta_tools import (
     NEXUS_SEARCH_TOOLS_NAME,
@@ -59,9 +61,12 @@ def create_mcp_server(
     search_tools: SearchTools | None = None,
     search_first: bool = False,
     decide_approval: DecideApproval | None = None,
+    telemetry: NexusTelemetry | None = None,
     request_state_security: RequestStateSecurity | None = None,
 ) -> Server[Any]:
     """创建 SDK Server，并将 tools/list/call 适配到协议无关 Use Case。"""
+
+    resolved_telemetry = telemetry or NexusTelemetry.noop()
 
     async def on_list_tools(
         ctx: RawServerContext,
@@ -69,68 +74,86 @@ def create_mcp_server(
     ) -> types.ListToolsResult:
         request_context = context_resolver(ctx)
         started_at = perf_counter()
-        with bind_log_context(
-            request_id=request_context.request_id,
-            trace_id=request_context.trace_id,
-            tenant_id=request_context.tenant_id,
+        with resolved_telemetry.observe_mcp_request(
+            operation="tools.list",
             protocol_era=request_context.protocol_era.value,
-        ):
-            try:
-                tools = (
-                    ()
-                    if search_first
-                    else await list_visible_tools.execute(ListVisibleToolsQuery(request_context))
-                )
-                protocol_tools = [
-                    types.Tool(
-                        name=tool.canonical_name,
-                        title=tool.display_name,
-                        description=tool.description,
-                        input_schema=dict(tool.input_schema),
-                        output_schema=dict(tool.output_schema) if tool.output_schema else None,
-                        _meta={
-                            "com.nexusmcp/toolId": tool.tool_id,
-                            "com.nexusmcp/toolVersionId": tool.tool_version_id,
-                            "com.nexusmcp/toolVersion": tool.version,
+            tenant_id=request_context.tenant_id,
+            principal_type=request_context.principal_type,
+            carrier=request_headers(ctx),
+        ) as observation:
+            request_context = replace(
+                request_context,
+                trace_id=observation.trace_id or request_context.trace_id,
+            )
+            with bind_log_context(
+                request_id=request_context.request_id,
+                trace_id=request_context.trace_id,
+                tenant_id=request_context.tenant_id,
+                protocol_era=request_context.protocol_era.value,
+            ):
+                try:
+                    tools = (
+                        ()
+                        if search_first
+                        else await list_visible_tools.execute(
+                            ListVisibleToolsQuery(request_context)
+                        )
+                    )
+                    protocol_tools = [
+                        types.Tool(
+                            name=tool.canonical_name,
+                            title=tool.display_name,
+                            description=tool.description,
+                            input_schema=dict(tool.input_schema),
+                            output_schema=(
+                                dict(tool.output_schema) if tool.output_schema else None
+                            ),
+                            _meta={
+                                "com.nexusmcp/toolId": tool.tool_id,
+                                "com.nexusmcp/toolVersionId": tool.tool_version_id,
+                                "com.nexusmcp/toolVersion": tool.version,
+                            },
+                        )
+                        for tool in tools
+                    ]
+                    if search_tools is not None:
+                        protocol_tools.insert(0, search_tools_definition())
+                except NexusMcpError as error:
+                    observation.finish(outcome="rejected", error_code=error.code)
+                    logger.warning(
+                        "mcp_request_rejected",
+                        extra={
+                            "event": "mcp_request_rejected",
+                            "error_code": error.code,
+                            "duration_ms": round((perf_counter() - started_at) * 1000, 3),
                         },
                     )
-                    for tool in tools
-                ]
-                if search_tools is not None:
-                    protocol_tools.insert(0, search_tools_definition())
-            except NexusMcpError as error:
-                logger.warning(
-                    "mcp_request_rejected",
+                    raise
+                except Exception:
+                    observation.finish(outcome="error", error_code="unexpected_error")
+                    logger.exception(
+                        "mcp_request_failed",
+                        extra={
+                            "event": "mcp_request_failed",
+                            "error_code": "unexpected_error",
+                            "duration_ms": round((perf_counter() - started_at) * 1000, 3),
+                        },
+                    )
+                    raise
+                observation.finish(outcome="success")
+                logger.info(
+                    "mcp_tools_list_completed",
                     extra={
-                        "event": "mcp_request_rejected",
-                        "error_code": error.code,
+                        "event": "mcp_tools_list_completed",
+                        "tool_count": len(protocol_tools),
                         "duration_ms": round((perf_counter() - started_at) * 1000, 3),
                     },
                 )
-                raise
-            except Exception:
-                logger.exception(
-                    "mcp_request_failed",
-                    extra={
-                        "event": "mcp_request_failed",
-                        "error_code": "unexpected_error",
-                        "duration_ms": round((perf_counter() - started_at) * 1000, 3),
-                    },
+                return types.ListToolsResult(
+                    tools=protocol_tools,
+                    cache_scope="private",
+                    ttl_ms=0,
                 )
-                raise
-            logger.info(
-                "mcp_tools_list_completed",
-                extra={
-                    "event": "mcp_tools_list_completed",
-                    "tool_count": len(protocol_tools),
-                    "duration_ms": round((perf_counter() - started_at) * 1000, 3),
-                },
-            )
-            return types.ListToolsResult(
-                tools=protocol_tools,
-                cache_scope="private",
-                ttl_ms=0,
-            )
 
     async def on_call_tool(
         ctx: RawServerContext,
@@ -149,127 +172,151 @@ def create_mcp_server(
                 },
             )
             return to_call_tool_error(error)
-        with bind_log_context(
-            request_id=request_context.request_id,
-            trace_id=request_context.trace_id,
-            tenant_id=request_context.tenant_id,
+        with resolved_telemetry.observe_mcp_request(
+            operation="tools.call",
             protocol_era=request_context.protocol_era.value,
-        ):
-            if params.name == NEXUS_SEARCH_TOOLS_NAME:
-                if search_tools is None:
-                    return to_call_tool_error(NexusMcpError("Tool search is not configured"))
-                try:
-                    query = parse_search_tools_query(
-                        request_context,
-                        params.arguments or {},
-                    )
-                    result = await search_tools.execute(query)
-                except NexusMcpError as error:
-                    logger.warning(
-                        "mcp_meta_tool_call_rejected",
+            tenant_id=request_context.tenant_id,
+            principal_type=request_context.principal_type,
+            carrier=request_headers(ctx),
+        ) as observation:
+            request_context = replace(
+                request_context,
+                trace_id=observation.trace_id or request_context.trace_id,
+            )
+            with bind_log_context(
+                request_id=request_context.request_id,
+                trace_id=request_context.trace_id,
+                tenant_id=request_context.tenant_id,
+                protocol_era=request_context.protocol_era.value,
+            ):
+                if params.name == NEXUS_SEARCH_TOOLS_NAME:
+                    if search_tools is None:
+                        error = NexusMcpError("Tool search is not configured")
+                        observation.finish(outcome="rejected", error_code=error.code)
+                        return to_call_tool_error(error)
+                    try:
+                        query = parse_search_tools_query(
+                            request_context,
+                            params.arguments or {},
+                        )
+                        observation.set_search_mode(query.retrieval_mode.value)
+                        result = await search_tools.execute(query)
+                    except NexusMcpError as error:
+                        observation.finish(outcome="rejected", error_code=error.code)
+                        logger.warning(
+                            "mcp_meta_tool_call_rejected",
+                            extra={
+                                "event": "mcp_meta_tool_call_rejected",
+                                "error_code": error.code,
+                                "duration_ms": round(
+                                    (perf_counter() - started_at) * 1000,
+                                    3,
+                                ),
+                            },
+                        )
+                        return to_call_tool_error(error)
+                    except Exception:
+                        observation.finish(outcome="error", error_code="unexpected_error")
+                        logger.exception(
+                            "mcp_meta_tool_call_failed",
+                            extra={
+                                "event": "mcp_meta_tool_call_failed",
+                                "error_code": "unexpected_error",
+                                "duration_ms": round(
+                                    (perf_counter() - started_at) * 1000,
+                                    3,
+                                ),
+                            },
+                        )
+                        return to_call_tool_error(NexusMcpError())
+                    observation.finish(outcome="success")
+                    logger.info(
+                        "mcp_tool_search_completed",
                         extra={
-                            "event": "mcp_meta_tool_call_rejected",
+                            "event": "mcp_tool_search_completed",
+                            "retrieval_mode": query.retrieval_mode.value,
+                            "candidate_count": len(result.hits),
+                            "duration_ms": round((perf_counter() - started_at) * 1000, 3),
+                        },
+                    )
+                    return search_tools_result(result)
+                if call_tool is None:
+                    error = NexusMcpError("tools/call is not configured")
+                    observation.finish(outcome="rejected", error_code=error.code)
+                    return to_call_tool_error(error)
+                try:
+                    await _resolve_interactive_approval(
+                        params=params,
+                        context=request_context,
+                        decide_approval=decide_approval,
+                    )
+                    result = await call_tool.execute(
+                        CallToolCommand(
+                            context=request_context,
+                            tool_name=params.name,
+                            arguments=params.arguments or {},
+                            idempotency_key=_idempotency_key(params),
+                            approval_id=params.request_state,
+                        )
+                    )
+                except ApprovalRequiredError as error:
+                    if error.approval_id is None or request_context.protocol_era.value != "modern":
+                        observation.finish(outcome="rejected", error_code=error.code)
+                        return to_call_tool_error(error)
+                    observation.finish(outcome="input_required")
+                    logger.info(
+                        "mcp_tool_call_input_required",
+                        extra={
+                            "event": "mcp_tool_call_input_required",
+                            "duration_ms": round((perf_counter() - started_at) * 1000, 3),
+                        },
+                    )
+                    return _approval_input_required(params.name, error)
+                except NexusMcpError as error:
+                    observation.finish(outcome="rejected", error_code=error.code)
+                    logger.warning(
+                        "mcp_tool_call_rejected",
+                        extra={
+                            "event": "mcp_tool_call_rejected",
                             "error_code": error.code,
-                            "duration_ms": round(
-                                (perf_counter() - started_at) * 1000,
-                                3,
-                            ),
+                            "duration_ms": round((perf_counter() - started_at) * 1000, 3),
                         },
                     )
                     return to_call_tool_error(error)
                 except Exception:
+                    observation.finish(outcome="error", error_code="unexpected_error")
                     logger.exception(
-                        "mcp_meta_tool_call_failed",
+                        "mcp_tool_call_failed",
                         extra={
-                            "event": "mcp_meta_tool_call_failed",
+                            "event": "mcp_tool_call_failed",
                             "error_code": "unexpected_error",
-                            "duration_ms": round(
-                                (perf_counter() - started_at) * 1000,
-                                3,
-                            ),
+                            "duration_ms": round((perf_counter() - started_at) * 1000, 3),
                         },
                     )
                     return to_call_tool_error(NexusMcpError())
-                logger.info(
-                    "mcp_tool_search_completed",
-                    extra={
-                        "event": "mcp_tool_search_completed",
-                        "retrieval_mode": query.retrieval_mode.value,
-                        "candidate_count": len(result.hits),
-                        "duration_ms": round((perf_counter() - started_at) * 1000, 3),
-                    },
-                )
-                return search_tools_result(result)
-            if call_tool is None:
-                return to_call_tool_error(NexusMcpError("tools/call is not configured"))
-            try:
-                await _resolve_interactive_approval(
-                    params=params,
-                    context=request_context,
-                    decide_approval=decide_approval,
-                )
-                result = await call_tool.execute(
-                    CallToolCommand(
-                        context=request_context,
-                        tool_name=params.name,
-                        arguments=params.arguments or {},
-                        idempotency_key=_idempotency_key(params),
-                        approval_id=params.request_state,
-                    )
-                )
-            except ApprovalRequiredError as error:
-                if error.approval_id is None or request_context.protocol_era.value != "modern":
-                    return to_call_tool_error(error)
-                logger.info(
-                    "mcp_tool_call_input_required",
-                    extra={
-                        "event": "mcp_tool_call_input_required",
-                        "duration_ms": round((perf_counter() - started_at) * 1000, 3),
-                    },
-                )
-                return _approval_input_required(params.name, error)
-            except NexusMcpError as error:
-                logger.warning(
-                    "mcp_tool_call_rejected",
-                    extra={
-                        "event": "mcp_tool_call_rejected",
-                        "error_code": error.code,
-                        "duration_ms": round((perf_counter() - started_at) * 1000, 3),
-                    },
-                )
-                return to_call_tool_error(error)
-            except Exception:
-                logger.exception(
-                    "mcp_tool_call_failed",
-                    extra={
-                        "event": "mcp_tool_call_failed",
-                        "error_code": "unexpected_error",
-                        "duration_ms": round((perf_counter() - started_at) * 1000, 3),
-                    },
-                )
-                return to_call_tool_error(NexusMcpError())
 
-            logger.info(
-                "mcp_tool_call_completed",
-                extra={
-                    "event": "mcp_tool_call_completed",
-                    "duration_ms": round((perf_counter() - started_at) * 1000, 3),
-                },
-            )
-            text = (
-                result.data
-                if isinstance(result.data, str)
-                else json.dumps(result.data, ensure_ascii=False, separators=(",", ":"))
-            )
-            return types.CallToolResult(
-                content=[types.TextContent(text=text)],
-                structured_content=result.data,
-                _meta={
-                    "com.nexusmcp/executionId": result.execution_id,
-                    "com.nexusmcp/upstreamStatus": result.upstream_status,
-                    "com.nexusmcp/attemptCount": result.attempt_count,
-                },
-            )
+                observation.finish(outcome="success")
+                logger.info(
+                    "mcp_tool_call_completed",
+                    extra={
+                        "event": "mcp_tool_call_completed",
+                        "duration_ms": round((perf_counter() - started_at) * 1000, 3),
+                    },
+                )
+                text = (
+                    result.data
+                    if isinstance(result.data, str)
+                    else json.dumps(result.data, ensure_ascii=False, separators=(",", ":"))
+                )
+                return types.CallToolResult(
+                    content=[types.TextContent(text=text)],
+                    structured_content=result.data,
+                    _meta={
+                        "com.nexusmcp/executionId": result.execution_id,
+                        "com.nexusmcp/upstreamStatus": result.upstream_status,
+                        "com.nexusmcp/attemptCount": result.attempt_count,
+                    },
+                )
 
     server = Server(
         name="nexusmcp",

@@ -180,6 +180,8 @@ Legacy Session 本身不构成新项目必须引入 Redis 的理由。
 | [0012](../adr/0012-retry-idempotency-and-attempts.md) | Accepted | Retry、Idempotency 与 ExecutionAttempt |
 | [0013](../adr/0013-built-in-meta-tool-and-hybrid-retrieval.md) | Accepted | 内建 Meta Tool 与 Hybrid Tool Retrieval |
 | [0014](../adr/0014-pgvector-infrastructure-and-vector-storage.md) | Accepted | PostgreSQL 18 pgvector 与 Vector Storage |
+| [0015](../adr/0015-manual-opentelemetry-boundary.md) | Accepted | 手工 OpenTelemetry Boundary 与安全 Attribute 白名单 |
+| [0016](../adr/0016-upstream-egress-and-ssrf-boundary.md) | Accepted | Upstream Egress 与 SSRF 防护边界 |
 
 不是现在一次性写完。每个 ADR 在相关实现前后完成。
 

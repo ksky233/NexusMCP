@@ -93,6 +93,17 @@ def test_empty_embedding_api_key_means_provider_is_not_configured() -> None:
     assert settings.embedding_api_key is None
 
 
+def test_telemetry_exporter_requires_safe_endpoint_and_positive_timing() -> None:
+    with pytest.raises(ValidationError, match="telemetry_otlp_endpoint"):
+        Settings(environment="test", telemetry_exporter="otlp_http")
+    with pytest.raises(ValidationError, match="must use http or https"):
+        Settings(environment="test", telemetry_otlp_endpoint="file:///tmp/otel")
+    with pytest.raises(ValidationError, match="telemetry_export_interval_ms"):
+        Settings(environment="test", telemetry_export_interval_ms=0)
+    with pytest.raises(ValidationError, match="telemetry_export_timeout_seconds"):
+        Settings(environment="test", telemetry_export_timeout_seconds=0)
+
+
 def test_production_tool_execution_requires_shared_request_state_key() -> None:
     with pytest.raises(ValidationError, match="request_state_key"):
         Settings(

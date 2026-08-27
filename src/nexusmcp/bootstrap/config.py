@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     debug: bool = False
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     log_format: Literal["console", "json"] = "console"
+    telemetry_enabled: bool = False
+    telemetry_exporter: Literal["none", "console", "otlp_http"] = "none"
+    telemetry_otlp_endpoint: str | None = None
+    telemetry_export_interval_ms: int = 60_000
+    telemetry_export_timeout_seconds: float = 10.0
     catalog_backend: Literal["memory", "postgresql"] = "memory"
     tool_discovery_mode: Literal["eager", "search_first"] = "eager"
     embedding_model: str = "Qwen/Qwen3-Embedding-8B"
@@ -85,6 +90,16 @@ class Settings(BaseSettings):
                 raise ValueError("control_plane_enabled requires UUID local_tenant_id") from None
         if self.database_readiness_timeout_seconds <= 0:
             raise ValueError("database_readiness_timeout_seconds must be positive")
+        if self.telemetry_export_interval_ms <= 0:
+            raise ValueError("telemetry_export_interval_ms must be positive")
+        if self.telemetry_export_timeout_seconds <= 0:
+            raise ValueError("telemetry_export_timeout_seconds must be positive")
+        if self.telemetry_exporter == "otlp_http" and not self.telemetry_otlp_endpoint:
+            raise ValueError("otlp_http telemetry exporter requires telemetry_otlp_endpoint")
+        if self.telemetry_otlp_endpoint is not None and not self.telemetry_otlp_endpoint.startswith(
+            ("https://", "http://")
+        ):
+            raise ValueError("telemetry_otlp_endpoint must use http or https")
         if not self.embedding_model.strip():
             raise ValueError("embedding_model must not be blank")
         if not 64 <= self.embedding_dimensions <= 8192:

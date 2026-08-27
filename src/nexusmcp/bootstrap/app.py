@@ -21,6 +21,11 @@ from nexusmcp.bootstrap.persistence_factories import (
 )
 from nexusmcp.infrastructure.clock import SystemClock
 from nexusmcp.infrastructure.identifiers import UuidIdentifierGenerator
+from nexusmcp.infrastructure.observability import (
+    NexusTelemetry,
+    TelemetrySettings,
+    create_telemetry_runtime,
+)
 from nexusmcp.infrastructure.persistence.runtime import DatabaseRuntime, DatabaseRuntimePort
 from nexusmcp.interfaces.admin import AdminServices, create_admin_app
 from nexusmcp.interfaces.health.router import create_health_router
@@ -95,10 +100,26 @@ def create_app(
     request_state_security: RequestStateSecurity | None = None,
     published_tool_search: PublishedToolSearch | None = None,
     embedding_provider: EmbeddingProvider | None = None,
+    telemetry: NexusTelemetry | None = None,
 ) -> FastAPI:
     """创建完整组装的应用，不让业务代码依赖全局对象。"""
 
     resolved_settings = settings or get_settings()
+    owned_telemetry_runtime = None
+    resolved_telemetry = telemetry
+    if resolved_telemetry is None:
+        owned_telemetry_runtime = create_telemetry_runtime(
+            TelemetrySettings(
+                enabled=resolved_settings.telemetry_enabled,
+                exporter=resolved_settings.telemetry_exporter,
+                service_name=resolved_settings.service_name,
+                environment=resolved_settings.environment,
+                otlp_endpoint=resolved_settings.telemetry_otlp_endpoint,
+                export_interval_ms=resolved_settings.telemetry_export_interval_ms,
+                export_timeout_seconds=resolved_settings.telemetry_export_timeout_seconds,
+            )
+        )
+        resolved_telemetry = owned_telemetry_runtime.telemetry
     resolved_runtime = database_runtime
     resolved_reader = tool_reader
     if resolved_reader is None and resolved_settings.catalog_backend == "postgresql":
@@ -247,6 +268,7 @@ def create_app(
         search_tools=search_tools,
         search_first=resolved_settings.tool_discovery_mode == "search_first",
         decide_approval=decide_approval,
+        telemetry=resolved_telemetry,
         request_state_security=request_state_security or _request_state_security(resolved_settings),
     )
     transport_security = TransportSecuritySettings(
@@ -272,6 +294,8 @@ def create_app(
                 await embedding_http_client.aclose()
             if resolved_runtime is not None and runtime_started:
                 await resolved_runtime.stop()
+            if owned_telemetry_runtime is not None:
+                owned_telemetry_runtime.shutdown()
 
     async def readiness_probe() -> bool:
         if resolved_runtime is None:
@@ -337,6 +361,8 @@ def create_app(
     app.state.decide_approval = decide_approval
     app.state.get_approval = get_approval
     app.state.embedding_provider = resolved_embedding_provider
+    app.state.telemetry = resolved_telemetry
+    app.state.telemetry_runtime = owned_telemetry_runtime
 
     # 先注册宿主路由，再注册 Catch-all MCP Mount，避免 /health 被截获。
     app.include_router(create_health_router(readiness_probe))
