@@ -104,6 +104,29 @@ def test_telemetry_exporter_requires_safe_endpoint_and_positive_timing() -> None
         Settings(environment="test", telemetry_export_timeout_seconds=0)
 
 
+def test_egress_policy_requires_allowlist_and_production_fail_closed() -> None:
+    with pytest.raises(ValidationError, match="requires an allowlist"):
+        Settings(environment="test", upstream_egress_policy_enabled=True)
+    with pytest.raises(ValidationError, match="invalid network"):
+        Settings(environment="test", upstream_allowed_cidrs=["not-a-network"])
+    with pytest.raises(ValidationError, match="valid ports"):
+        Settings(environment="test", upstream_allowed_ports=[0])
+    with pytest.raises(ValidationError, match="production requires upstream egress policy"):
+        Settings(
+            environment="production",
+            catalog_backend="postgresql",
+            database_url=SecretStr("postgresql+asyncpg://user:password@127.0.0.1/database"),
+        )
+    with pytest.raises(ValidationError, match="cannot allow local demo"):
+        Settings(
+            environment="production",
+            catalog_backend="postgresql",
+            database_url=SecretStr("postgresql+asyncpg://user:password@127.0.0.1/database"),
+            upstream_egress_policy_enabled=True,
+            upstream_allow_local_demo=True,
+        )
+
+
 def test_production_tool_execution_requires_shared_request_state_key() -> None:
     with pytest.raises(ValidationError, match="request_state_key"):
         Settings(

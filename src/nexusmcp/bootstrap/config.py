@@ -2,6 +2,7 @@
 
 import uuid
 from functools import lru_cache
+from ipaddress import ip_network
 from pathlib import Path
 from typing import Literal, Self
 
@@ -30,6 +31,11 @@ class Settings(BaseSettings):
     telemetry_otlp_endpoint: str | None = None
     telemetry_export_interval_ms: int = 60_000
     telemetry_export_timeout_seconds: float = 10.0
+    upstream_egress_policy_enabled: bool = False
+    upstream_allowed_hosts: list[str] = Field(default_factory=list)
+    upstream_allowed_cidrs: list[str] = Field(default_factory=list)
+    upstream_allowed_ports: list[int] = Field(default_factory=lambda: [80, 443])
+    upstream_allow_local_demo: bool = False
     catalog_backend: Literal["memory", "postgresql"] = "memory"
     tool_discovery_mode: Literal["eager", "search_first"] = "eager"
     embedding_model: str = "Qwen/Qwen3-Embedding-8B"
@@ -100,6 +106,17 @@ class Settings(BaseSettings):
             ("https://", "http://")
         ):
             raise ValueError("telemetry_otlp_endpoint must use http or https")
+        if any(not host.strip() for host in self.upstream_allowed_hosts):
+            raise ValueError("upstream_allowed_hosts must not contain blank values")
+        try:
+            for cidr in self.upstream_allowed_cidrs:
+                ip_network(cidr, strict=False)
+        except ValueError:
+            raise ValueError("upstream_allowed_cidrs contained an invalid network") from None
+        if not self.upstream_allowed_ports or any(
+            isinstance(port, bool) or not 1 <= port <= 65535 for port in self.upstream_allowed_ports
+        ):
+            raise ValueError("upstream_allowed_ports must contain valid ports")
         if not self.embedding_model.strip():
             raise ValueError("embedding_model must not be blank")
         if not 64 <= self.embedding_dimensions <= 8192:
@@ -129,6 +146,17 @@ class Settings(BaseSettings):
             and self.request_state_key is None
         ):
             raise ValueError("production tool execution requires request_state_key")
+        if self.environment == "production" and not self.upstream_egress_policy_enabled:
+            raise ValueError("production requires upstream egress policy")
+        if self.environment == "production" and self.upstream_allow_local_demo:
+            raise ValueError("production cannot allow local demo upstreams")
+        if (
+            self.upstream_egress_policy_enabled
+            and not self.upstream_allow_local_demo
+            and not self.upstream_allowed_hosts
+            and not self.upstream_allowed_cidrs
+        ):
+            raise ValueError("enabled upstream egress policy requires an allowlist")
         return self
 
 

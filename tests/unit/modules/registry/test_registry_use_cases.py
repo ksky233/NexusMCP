@@ -16,7 +16,11 @@ from nexusmcp.modules.registry.use_cases import (
     UpdateUpstream,
     UpdateUpstreamCommand,
 )
-from nexusmcp.shared.errors import InvalidArgumentsError, UpstreamConflictError
+from nexusmcp.shared.errors import (
+    InvalidArgumentsError,
+    UnsafeUpstreamEndpointError,
+    UpstreamConflictError,
+)
 from nexusmcp.shared.request_context import ActorContext
 
 
@@ -26,6 +30,15 @@ class SequenceIdentifierGenerator:
 
     def new_id(self) -> str:
         return next(self._values)
+
+
+class RejectingEndpointPolicy:
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    async def validate(self, endpoint: str) -> None:
+        self.calls.append(endpoint)
+        raise UnsafeUpstreamEndpointError("test endpoint was denied")
 
 
 def context() -> ActorContext:
@@ -99,6 +112,51 @@ async def test_duplicate_upstream_is_rejected() -> None:
 
     with pytest.raises(UpstreamConflictError):
         await register.execute(register_command())
+
+
+@pytest.mark.asyncio
+async def test_egress_rejection_happens_before_registry_persistence() -> None:
+    repository = InMemoryUpstreamRepository()
+    policy = RejectingEndpointPolicy()
+    use_case = RegisterUpstream(
+        InMemoryRegistryUnitOfWorkFactory(repository),
+        SequenceIdentifierGenerator("upstream-1"),
+        policy,
+    )
+
+    with pytest.raises(UnsafeUpstreamEndpointError):
+        await use_case.execute(register_command())
+
+    assert policy.calls == ["http://127.0.0.1:9001"]
+    assert await repository.list_by_tenant("tenant-a") == ()
+
+
+@pytest.mark.asyncio
+async def test_update_egress_rejection_preserves_existing_endpoint() -> None:
+    repository = InMemoryUpstreamRepository()
+    factory = InMemoryRegistryUnitOfWorkFactory(repository)
+    registered = await RegisterUpstream(
+        factory,
+        SequenceIdentifierGenerator("upstream-1"),
+    ).execute(register_command())
+    policy = RejectingEndpointPolicy()
+
+    with pytest.raises(UnsafeUpstreamEndpointError):
+        await UpdateUpstream(factory, policy).execute(
+            UpdateUpstreamCommand(
+                context=context(),
+                upstream_service_id=registered.id,
+                description="Unsafe update",
+                owner="platform-team",
+                endpoint="http://169.254.169.254",
+                auth_scheme="none",
+                config={},
+            )
+        )
+
+    persisted = await repository.get_by_id("tenant-a", registered.id)
+    assert persisted is not None
+    assert persisted.endpoint == "http://127.0.0.1:9001"
 
 
 @pytest.mark.asyncio

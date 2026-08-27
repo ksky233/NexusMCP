@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "egress-approved-private-target",
+      "category": "ssrf",
+      "expected": "allow_explicit_host_or_cidr",
+      "evidence": "tests/security/test_egress_policy.py::test_allowlisted_enterprise_host_and_private_cidr_are_permitted"
+    },
+    {
+      "id": "egress-metadata-hard-deny",
+      "category": "ssrf",
+      "expected": "unsafe_upstream_endpoint",
+      "evidence": "tests/integration/persistence/test_mcp_read_only_http_call.py::test_mcp_call_hard_denies_metadata_endpoint_before_http_and_execution"
+    },
+    {
+      "id": "egress-dns-rebinding",
+      "category": "ssrf",
+      "expected": "fail_closed_on_any_denied_answer",
+      "evidence": "tests/security/test_egress_policy.py::test_mixed_dns_answer_and_rebinding_change_fail_closed"
+    },
+    {
+      "id": "egress-loopback-mode",
+      "category": "ssrf",
+      "expected": "explicit_local_demo_only",
+      "evidence": "tests/security/test_egress_policy.py::test_loopback_requires_explicit_local_demo_mode"
+    },
+    {
+      "id": "principal-allow-deny-unauthenticated",
+      "category": "identity_policy",
+      "expected": "principal_specific_decision",
+      "evidence": "tests/integration/persistence/test_mcp_principal_policy.py::test_same_tool_is_allowed_denied_or_unauthenticated_by_principal"
+    },
+    {
+      "id": "policy-golden-matrix",
+      "category": "identity_policy",
+      "expected": "ten_cases_match_golden_decision",
+      "evidence": "tests/security/test_policy_regression.py::test_policy_golden_matrix_is_complete_and_deterministic"
+    },
+    {
+      "id": "cross-tenant-vector-search",
+      "category": "tenant",
+      "expected": "zero_cross_tenant_candidates",
+      "evidence": "tests/integration/persistence/test_postgresql_exact_vector_search.py::test_exact_vector_search_ranks_by_cosine_and_applies_governance_scope"
+    },
+    {
+      "id": "cross-tenant-credential",
+      "category": "tenant",
+      "expected": "tenant_boundary_violation",
+      "evidence": "tests/unit/modules/credentials/test_binding_resolver.py::test_principal_cannot_cross_credential_tenant_boundary"
+    },
+    {
+      "id": "deny-before-secret",
+      "category": "secret",
+      "expected": "zero_secret_provider_calls",
+      "evidence": "tests/integration/persistence/test_mcp_credential_injection.py::test_allow_injects_secret_while_deny_never_resolves_it"
+    },
+    {
+      "id": "unsafe-egress-before-secret",
+      "category": "secret",
+      "expected": "zero_secret_and_execution_calls",
+      "evidence": "tests/unit/modules/execution/test_call_tool.py::test_unsafe_egress_is_rejected_before_secret_or_execution_plan"
+    },
+    {
+      "id": "log-redaction",
+      "category": "secret",
+      "expected": "no_sensitive_value_in_log",
+      "evidence": "tests/security/test_logging_redaction.py::test_sensitive_extra_fields_and_values_are_not_logged"
+    },
+    {
+      "id": "telemetry-redaction",
+      "category": "secret",
+      "expected": "no_query_or_authorization_in_span",
+      "evidence": "tests/contract/mcp/test_telemetry_evidence.py::test_mcp_boundary_exports_trace_metrics_without_query_or_authorization"
+    },
+    {
+      "id": "approval-replay",
+      "category": "approval",
+      "expected": "single_consumption",
+      "evidence": "tests/integration/persistence/test_mcp_approval.py::test_control_plane_approval_resumes_later_and_replay_is_rejected"
+    },
+    {
+      "id": "approval-snapshot-tamper",
+      "category": "approval",
+      "expected": "approval_mismatch_without_consumption",
+      "evidence": "tests/unit/modules/approval/test_approval_use_cases.py::test_changed_call_snapshot_does_not_consume_approval"
+    },
+    {
+      "id": "idempotency-duplicate-conflict",
+      "category": "idempotency",
+      "expected": "duplicate_and_payload_conflict_rejected",
+      "evidence": "tests/integration/persistence/test_mcp_retry_idempotency.py::test_idempotent_put_retries_then_rejects_duplicate_and_conflicting_keys"
+    }
+  ]
+}

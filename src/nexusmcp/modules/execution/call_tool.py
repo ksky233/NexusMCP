@@ -36,6 +36,10 @@ from nexusmcp.modules.policy.domain import (
     ToolAction,
 )
 from nexusmcp.modules.policy.ports import PolicyEvaluator
+from nexusmcp.modules.registry.egress_ports import (
+    AllowAllUpstreamEndpointPolicy,
+    UpstreamEndpointPolicy,
+)
 from nexusmcp.shared.errors import (
     ApprovalRequiredError,
     AuthorizationError,
@@ -66,6 +70,7 @@ class CallTool:
         credential_binding_resolver: CredentialBindingResolver | None = None,
         credential_provider: CredentialProvider | None = None,
         request_approval: RequestApproval | None = None,
+        upstream_endpoint_policy: UpstreamEndpointPolicy | None = None,
         timeout_seconds: float = 5.0,
     ) -> None:
         if timeout_seconds <= 0:
@@ -79,6 +84,9 @@ class CallTool:
         self._credential_binding_resolver = credential_binding_resolver
         self._credential_provider = credential_provider
         self._request_approval = request_approval
+        self._upstream_endpoint_policy = (
+            upstream_endpoint_policy or AllowAllUpstreamEndpointPolicy()
+        )
         self._timeout_seconds = timeout_seconds
 
     async def execute(self, command: CallToolCommand) -> CallToolResult:
@@ -128,6 +136,8 @@ class CallTool:
             )
 
         tenant_id = context.tenant_id
+        # Egress 必须在 Secret 解析和 Execution Plan 之前通过，拒绝危险目标时不接触 Credential。
+        await self._upstream_endpoint_policy.validate(tool.upstream_endpoint)
         credential_binding = await self._resolve_credential_binding(
             tenant_id=tenant_id,
             principal=principal,

@@ -49,12 +49,14 @@ from nexusmcp.modules.policy.domain import (
     PolicyEffect,
     PolicyEvaluationInput,
 )
+from nexusmcp.modules.registry.egress_ports import UpstreamEndpointPolicy
 from nexusmcp.shared.errors import (
     ApprovalRequiredError,
     AuthorizationError,
     CredentialBindingNotFoundError,
     IdempotencyKeyRequiredError,
     InvalidArgumentsError,
+    UnsafeUpstreamEndpointError,
     UpstreamTimeoutError,
 )
 from nexusmcp.shared.request_context import ActorContext
@@ -159,6 +161,16 @@ class CountingCredentialProvider:
         return SecretValue("upstream-secret")
 
 
+class RejectingEndpointPolicy:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def validate(self, endpoint: str) -> None:
+        _ = endpoint
+        self.calls += 1
+        raise UnsafeUpstreamEndpointError("test endpoint was denied")
+
+
 class RequireApprovalEvaluator:
     async def evaluate(self, policy_input: PolicyEvaluationInput) -> PolicyDecision:
         _ = policy_input
@@ -257,6 +269,7 @@ def build_use_case(
     policy_evaluator: StaticReadOnlyPolicyEvaluator | RequireApprovalEvaluator | None = None,
     request_approval: RequestApproval | None = None,
     unit_of_work_factory: InMemoryExecutionUnitOfWorkFactory | None = None,
+    upstream_endpoint_policy: UpstreamEndpointPolicy | None = None,
 ) -> tuple[CallTool, InMemoryToolExecutionRepository]:
     resolved_factory = unit_of_work_factory or InMemoryExecutionUnitOfWorkFactory()
     identifier_generator = FixedIdentifierGenerator()
@@ -282,6 +295,7 @@ def build_use_case(
             credential_binding_resolver=credential_binding_resolver,
             credential_provider=credential_provider,
             request_approval=request_approval,
+            upstream_endpoint_policy=upstream_endpoint_policy,
         ),
         resolved_factory.execution_reader,
     )
@@ -436,6 +450,33 @@ async def test_denied_call_does_not_resolve_or_read_credential() -> None:
             )
         )
 
+    assert resolver.calls == 0
+    assert provider.calls == 0
+    assert await repository.list_by_tenant("tenant-a") == ()
+
+
+@pytest.mark.asyncio
+async def test_unsafe_egress_is_rejected_before_secret_or_execution_plan() -> None:
+    resolver = CountingCredentialResolver(None)
+    provider = CountingCredentialProvider()
+    endpoint_policy = RejectingEndpointPolicy()
+    use_case, repository = build_use_case(
+        tool=executable_tool(auth_scheme="bearer"),
+        credential_binding_resolver=resolver,
+        credential_provider=provider,
+        upstream_endpoint_policy=endpoint_policy,
+    )
+
+    with pytest.raises(UnsafeUpstreamEndpointError):
+        await use_case.execute(
+            CallToolCommand(
+                context=context(),
+                tool_name="directory.get_employee",
+                arguments={"employee_id": "emp-001"},
+            )
+        )
+
+    assert endpoint_policy.calls == 1
     assert resolver.calls == 0
     assert provider.calls == 0
     assert await repository.list_by_tenant("tenant-a") == ()

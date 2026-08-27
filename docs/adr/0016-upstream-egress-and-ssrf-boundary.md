@@ -149,3 +149,16 @@ Private Address 不是 Hard Deny：只有同时匹配 `allowed_hosts` 或 `allow
 
 - [OWASP SSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html)
 - [RFC 6890｜Special-Purpose Address Registries](https://www.rfc-editor.org/info/rfc6890/)
+
+## Implementation Confirmation
+
+S5-2 已实现：
+
+- Static Host/CIDR/Port Allowlist 与 System DNS Resolver；
+- Metadata/Link-Local/Unspecified/Multicast/Reserved Hard Deny；
+- Registry Register/Update、CallTool Secret 前置、Executor Connect 前复检；
+- Production Fail-Closed 与显式 Local Demo；
+- A/AAAA Mixed Answer、DNS Change、Metadata E2E；
+- Policy Golden Matrix 与 Security Evidence Manifest。
+
+严格 DNS Pinning、Egress Proxy 和动态管理继续作为本 ADR 已声明的 Deferred Hardening。

@@ -199,6 +199,11 @@ class UpstreamResponseError(NexusMcpError):
     safe_message = "The upstream service returned an invalid response."
 
 
+class UnsafeUpstreamEndpointError(NexusMcpError):
+    code = "unsafe_upstream_endpoint"
+    safe_message = "The upstream endpoint is not permitted by the egress policy."
+
+
 class UnknownExecutionOutcomeError(NexusMcpError):
     code = "unknown_execution_outcome"
     safe_message = "The upstream execution outcome could not be determined."

@@ -19,13 +19,25 @@ from nexusmcp.modules.execution.domain import (
     ExecutorRequest,
     ExecutorResult,
 )
+from nexusmcp.modules.registry.egress_ports import (
+    AllowAllUpstreamEndpointPolicy,
+    UpstreamEndpointPolicy,
+)
+from nexusmcp.shared.errors import UnsafeUpstreamEndpointError
 
 
 class HttpxToolExecutor:
-    def __init__(self, client: httpx.AsyncClient, *, max_response_bytes: int = 1_048_576) -> None:
+    def __init__(
+        self,
+        client: httpx.AsyncClient,
+        *,
+        endpoint_policy: UpstreamEndpointPolicy | None = None,
+        max_response_bytes: int = 1_048_576,
+    ) -> None:
         if max_response_bytes <= 0:
             raise ValueError("max response bytes must be positive")
         self._client = client
+        self._endpoint_policy = endpoint_policy or AllowAllUpstreamEndpointPolicy()
         self._max_response_bytes = max_response_bytes
 
     async def execute(
@@ -61,6 +73,15 @@ class HttpxToolExecutor:
                 code="get_binding_must_not_have_request_body",
                 category=ExecutionErrorCategory.VALIDATION,
             )
+
+        try:
+            # 紧邻实际 Connect 再次复检，缩短 DNS 检查与网络连接之间的窗口。
+            await self._endpoint_policy.validate(tool.upstream_endpoint)
+        except UnsafeUpstreamEndpointError:
+            raise ExecutorFailure(
+                code="unsafe_upstream_endpoint",
+                category=ExecutionErrorCategory.AUTHORIZATION,
+            ) from None
 
         path_template = str(config.get("path_template", ""))
         if not path_template.startswith("/"):

@@ -35,6 +35,7 @@ async def seed_executable_tool(
     session: AsyncSession,
     *,
     auth_scheme: str | None = "none",
+    upstream_endpoint: str = "http://employee.test",
 ) -> None:
     tenant_id = uuid.UUID(TENANT_A_ID)
     tool_id = uuid.UUID(TOOL_ID)
@@ -53,7 +54,7 @@ async def seed_executable_tool(
             owner="execution-test",
             service_type="http",
             transport_type="http",
-            endpoint="http://employee.test",
+            endpoint=upstream_endpoint,
             auth_scheme=auth_scheme,
             config_json={},
             status="active",
@@ -135,7 +136,10 @@ async def test_modern_mcp_read_only_http_tool_call(
     migrated_database_url: str,
 ) -> None:
     async with pg_session_factory() as seed_session:
-        await seed_executable_tool(seed_session)
+        await seed_executable_tool(
+            seed_session,
+            upstream_endpoint="http://127.0.0.1:9001",
+        )
     upstream_transport = httpx.ASGITransport(app=employee_directory_app)
     async with httpx.AsyncClient(transport=upstream_transport) as upstream_client:
         app = create_app(
@@ -145,6 +149,9 @@ async def test_modern_mcp_read_only_http_tool_call(
                 database_url=SecretStr(migrated_database_url),
                 local_tenant_id=TENANT_A_ID,
                 tool_execution_enabled=True,
+                upstream_egress_policy_enabled=True,
+                upstream_allowed_ports=[9001],
+                upstream_allow_local_demo=True,
             ),
             tool_http_client=upstream_client,
         )
@@ -192,6 +199,59 @@ async def test_modern_mcp_read_only_http_tool_call(
         AuditOutcome.ALLOWED,
         AuditOutcome.SUCCEEDED,
     ]
+
+
+@pytest.mark.asyncio
+async def test_mcp_call_hard_denies_metadata_endpoint_before_http_and_execution(
+    pg_session_factory: async_sessionmaker[AsyncSession],
+    migrated_database_url: str,
+) -> None:
+    async with pg_session_factory() as seed_session:
+        await seed_executable_tool(
+            seed_session,
+            upstream_endpoint="http://169.254.169.254/latest/meta-data",
+        )
+
+    def unexpected_request(_request: httpx.Request) -> httpx.Response:
+        raise AssertionError("metadata endpoint must not reach HTTP transport")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(unexpected_request)) as client:
+        app = create_app(
+            Settings(
+                environment="test",
+                catalog_backend="postgresql",
+                database_url=SecretStr(migrated_database_url),
+                local_tenant_id=TENANT_A_ID,
+                tool_execution_enabled=True,
+                upstream_egress_policy_enabled=True,
+                upstream_allowed_cidrs=["169.254.0.0/16"],
+                upstream_allowed_ports=[80],
+            ),
+            tool_http_client=client,
+        )
+        async with app.router.lifespan_context(app):
+            transport = httpx2.ASGITransport(app=app)
+            async with httpx2.AsyncClient(
+                transport=transport,
+                base_url="http://testserver",
+            ) as http_client:
+                mcp_transport = streamable_http_client(
+                    "http://testserver/mcp",
+                    http_client=http_client,
+                )
+                async with Client(mcp_transport) as mcp_client:
+                    result = await mcp_client.call_tool(
+                        "directory.get_employee",
+                        {"employee_id": "emp-001"},
+                    )
+            executions = await app.state.execution_reader.list_by_tenant(TENANT_A_ID)
+            audits = await app.state.audit_reader.list_by_tenant(TENANT_A_ID)
+
+    assert result.is_error is True
+    assert result.meta is not None
+    assert result.meta["com.nexusmcp/errorCode"] == "unsafe_upstream_endpoint"
+    assert executions == ()
+    assert audits == ()
 
 
 @pytest.mark.asyncio

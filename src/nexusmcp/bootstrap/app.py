@@ -21,6 +21,10 @@ from nexusmcp.bootstrap.persistence_factories import (
 )
 from nexusmcp.infrastructure.clock import SystemClock
 from nexusmcp.infrastructure.identifiers import UuidIdentifierGenerator
+from nexusmcp.infrastructure.networking import (
+    StaticUpstreamEndpointPolicy,
+    SystemHostResolver,
+)
 from nexusmcp.infrastructure.observability import (
     NexusTelemetry,
     TelemetrySettings,
@@ -70,6 +74,10 @@ from nexusmcp.modules.openapi_import.queries import GetOpenApiImport
 from nexusmcp.modules.openapi_import.review import ReviewImportedOperation
 from nexusmcp.modules.policy.adapters.static_read_only import StaticReadOnlyPolicyEvaluator
 from nexusmcp.modules.policy.ports import PolicyEvaluator
+from nexusmcp.modules.registry.egress_ports import (
+    AllowAllUpstreamEndpointPolicy,
+    UpstreamEndpointPolicy,
+)
 from nexusmcp.modules.registry.use_cases import (
     DisableUpstream,
     ListUpstreams,
@@ -101,6 +109,7 @@ def create_app(
     published_tool_search: PublishedToolSearch | None = None,
     embedding_provider: EmbeddingProvider | None = None,
     telemetry: NexusTelemetry | None = None,
+    upstream_endpoint_policy: UpstreamEndpointPolicy | None = None,
 ) -> FastAPI:
     """创建完整组装的应用，不让业务代码依赖全局对象。"""
 
@@ -120,6 +129,18 @@ def create_app(
             )
         )
         resolved_telemetry = owned_telemetry_runtime.telemetry
+    resolved_endpoint_policy = upstream_endpoint_policy
+    if resolved_endpoint_policy is None:
+        if resolved_settings.upstream_egress_policy_enabled:
+            resolved_endpoint_policy = StaticUpstreamEndpointPolicy(
+                resolver=SystemHostResolver(),
+                allowed_hosts=resolved_settings.upstream_allowed_hosts,
+                allowed_cidrs=resolved_settings.upstream_allowed_cidrs,
+                allowed_ports=resolved_settings.upstream_allowed_ports,
+                allow_local_demo=resolved_settings.upstream_allow_local_demo,
+            )
+        else:
+            resolved_endpoint_policy = AllowAllUpstreamEndpointPolicy()
     resolved_runtime = database_runtime
     resolved_reader = tool_reader
     if resolved_reader is None and resolved_settings.catalog_backend == "postgresql":
@@ -236,7 +257,10 @@ def create_app(
             policy_evaluator=resolved_policy_evaluator,
             execution_lifecycle=execution_lifecycle,
             executor=ExecuteWithRetry(
-                HttpxToolExecutor(resolved_http_client),
+                HttpxToolExecutor(
+                    resolved_http_client,
+                    endpoint_policy=resolved_endpoint_policy,
+                ),
                 execution_lifecycle,
                 AsyncioRetrySleeper(),
                 max_attempts=resolved_settings.tool_retry_max_attempts,
@@ -245,6 +269,7 @@ def create_app(
             credential_binding_resolver=credential_binding_resolver,
             credential_provider=credential_provider,
             request_approval=request_approval,
+            upstream_endpoint_policy=resolved_endpoint_policy,
             timeout_seconds=resolved_settings.tool_call_timeout_seconds,
         )
 
@@ -317,8 +342,12 @@ def create_app(
                 register_upstream=RegisterUpstream(
                     registry_uow_factory,
                     identifier_generator,
+                    resolved_endpoint_policy,
                 ),
-                update_upstream=UpdateUpstream(registry_uow_factory),
+                update_upstream=UpdateUpstream(
+                    registry_uow_factory,
+                    resolved_endpoint_policy,
+                ),
                 disable_upstream=DisableUpstream(registry_uow_factory),
                 list_upstreams=ListUpstreams(registry_uow_factory),
                 import_openapi=ImportOpenApi(
@@ -363,6 +392,7 @@ def create_app(
     app.state.embedding_provider = resolved_embedding_provider
     app.state.telemetry = resolved_telemetry
     app.state.telemetry_runtime = owned_telemetry_runtime
+    app.state.upstream_endpoint_policy = resolved_endpoint_policy
 
     # 先注册宿主路由，再注册 Catch-all MCP Mount，避免 /health 被截获。
     app.include_router(create_health_router(readiness_probe))

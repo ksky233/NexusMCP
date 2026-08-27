@@ -28,9 +28,16 @@ from nexusmcp.modules.execution.domain import (
     ExecutorFailure,
     ExecutorRequest,
 )
+from nexusmcp.shared.errors import UnsafeUpstreamEndpointError
 from tests.unit.modules.execution.test_call_tool import executable_tool
 
 protected_app = FastAPI()
+
+
+class RejectingEndpointPolicy:
+    async def validate(self, endpoint: str) -> None:
+        _ = endpoint
+        raise UnsafeUpstreamEndpointError("test endpoint was denied")
 
 
 @protected_app.get("/employees/{employee_id}")
@@ -238,3 +245,27 @@ async def test_post_write_remains_disabled_even_with_idempotency_key() -> None:
             )
 
     assert captured.value.code == "write_execution_not_enabled"
+
+
+@pytest.mark.asyncio
+async def test_executor_rechecks_egress_before_opening_network_connection() -> None:
+    def unexpected_request(_request: httpx.Request) -> httpx.Response:
+        raise AssertionError("unsafe endpoint must not reach HTTP transport")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(unexpected_request)) as client:
+        with pytest.raises(ExecutorFailure) as captured:
+            await HttpxToolExecutor(
+                client,
+                endpoint_policy=RejectingEndpointPolicy(),
+            ).execute(
+                ExecutorRequest(
+                    execution_id="execution-1",
+                    tool=executable_tool(),
+                    arguments={"employee_id": "emp-001"},
+                    timeout_seconds=1,
+                ),
+                credential=None,
+            )
+
+    assert captured.value.code == "unsafe_upstream_endpoint"
+    assert captured.value.category is ExecutionErrorCategory.AUTHORIZATION

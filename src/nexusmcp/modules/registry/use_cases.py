@@ -11,6 +11,10 @@ from nexusmcp.modules.registry.domain import (
     UpstreamServiceType,
     UpstreamStatus,
 )
+from nexusmcp.modules.registry.egress_ports import (
+    AllowAllUpstreamEndpointPolicy,
+    UpstreamEndpointPolicy,
+)
 from nexusmcp.modules.registry.ports import RegistryUnitOfWorkFactory
 from nexusmcp.shared.errors import (
     InvalidArgumentsError,
@@ -74,9 +78,11 @@ class RegisterUpstream:
         self,
         unit_of_work_factory: RegistryUnitOfWorkFactory,
         identifier_generator: IdentifierGenerator,
+        endpoint_policy: UpstreamEndpointPolicy | None = None,
     ) -> None:
         self._unit_of_work_factory = unit_of_work_factory
         self._identifier_generator = identifier_generator
+        self._endpoint_policy = endpoint_policy or AllowAllUpstreamEndpointPolicy()
 
     async def execute(self, command: RegisterUpstreamCommand) -> UpstreamService:
         _validate_namespace(command.namespace)
@@ -90,6 +96,7 @@ class RegisterUpstream:
             config=command.config,
             service_type=command.service_type,
         )
+        await self._endpoint_policy.validate(command.endpoint)
         tenant_id = command.context.tenant_id
         async with self._unit_of_work_factory() as unit_of_work:
             existing = await unit_of_work.upstreams.get_by_name(
@@ -123,11 +130,33 @@ class RegisterUpstream:
 
 
 class UpdateUpstream:
-    def __init__(self, unit_of_work_factory: RegistryUnitOfWorkFactory) -> None:
+    def __init__(
+        self,
+        unit_of_work_factory: RegistryUnitOfWorkFactory,
+        endpoint_policy: UpstreamEndpointPolicy | None = None,
+    ) -> None:
         self._unit_of_work_factory = unit_of_work_factory
+        self._endpoint_policy = endpoint_policy or AllowAllUpstreamEndpointPolicy()
 
     async def execute(self, command: UpdateUpstreamCommand) -> UpstreamService:
         tenant_id = command.context.tenant_id
+        async with self._unit_of_work_factory() as observer_unit_of_work:
+            observed = await observer_unit_of_work.upstreams.get_by_id(
+                tenant_id,
+                command.upstream_service_id,
+            )
+        if observed is None:
+            raise UpstreamNotFoundError(
+                f"upstream {command.upstream_service_id} was not found in tenant"
+            )
+        _validate_registration(
+            owner=command.owner,
+            endpoint=command.endpoint,
+            config=command.config,
+            service_type=observed.service_type,
+        )
+        # DNS/Policy 检查必须在写事务之外，避免数据库行锁跨越网络调用。
+        await self._endpoint_policy.validate(command.endpoint)
         async with self._unit_of_work_factory() as unit_of_work:
             upstream = await unit_of_work.upstreams.get_for_update(
                 tenant_id,
@@ -137,12 +166,6 @@ class UpdateUpstream:
                 raise UpstreamNotFoundError(
                     f"upstream {command.upstream_service_id} was not found in tenant"
                 )
-            _validate_registration(
-                owner=command.owner,
-                endpoint=command.endpoint,
-                config=command.config,
-                service_type=upstream.service_type,
-            )
             updated = upstream.update(
                 description=command.description,
                 owner=command.owner,

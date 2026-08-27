@@ -4,7 +4,8 @@
 
 NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，负责将企业 HTTP/OpenAPI 服务和已有 MCP Server 纳入统一 Tool Catalog，并在 MCP 调用链上执行身份、策略、凭据、审批、审计与可观测性。
 
-当前阶段：`S5-1｜OpenTelemetry Trace/Metric 基线完成`；下一步是 Security 与 Policy Regression。
+当前阶段：`S5-2｜Security 与 Policy Regression 完成`；下一步是 Protocol Compatibility 与 Failure
+Injection。
 
 ## 当前边界
 
@@ -51,6 +52,10 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，�
   `Top-1=95.45%`、`Hit@3=100%`、Leakage=0，同时确认 No-Match Confidence Threshold 尚未实现；
 - OpenTelemetry 已在正式 MCP Boundary 接入 W3C Trace Propagation、Count/Duration Metric、
   Console/OTLP HTTP Exporter 和敏感 Attribute 白名单；SDK Provider 由 Application Lifespan 管理；
+- Egress Policy 已支持静态 Host/CIDR/Port Allowlist、Metadata Hard Deny、全 A/AAAA 校验、Registry/
+  Secret/Executor 三道检查、Production Fail-Closed 和显式 Local Demo；
+- Policy/Security 已建立 10 条 Golden Case 与 15 条 Evidence Manifest，覆盖 Tenant、Secret、Approval
+  Replay、Idempotency 与 SSRF；
 - 真实 JWT/OIDC、生产 Secret Store、CredentialBinding 持久化、跨调用 Result Replay、通用写 Tool
   与 Reconciliation 尚未实现。
 
@@ -205,6 +210,7 @@ docker compose stop postgres
 - [S4-3 Query Embedding、Exact Vector Search 与 Hybrid RRF](./docs/实验记录/24_S4-3_QueryEmbedding与HybridRRF.md)
 - [S4-4 Retrieval Eval 与 S4 收口](./docs/实验记录/25_S4-4_RetrievalEval与S4收口.md)
 - [S5-0/1 OpenTelemetry 基线](./docs/实验记录/26_S5-0_1_OpenTelemetry基线.md)
+- [S5-2 Security 与 Policy Regression](./docs/实验记录/27_S5-2_Security与PolicyRegression.md)
 - [S5 工程证据矩阵](./docs/工程证据/01_S5证据矩阵.md)
 - [业务词汇、核心用例与限界上下文](./docs/架构/01_业务词汇核心用例与限界上下文.md)
 - [持久化模型与发布事务](./docs/架构/02_持久化模型与发布事务.md)
