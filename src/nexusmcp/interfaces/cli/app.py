@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import sys
 import uuid
+from pathlib import Path
 
 import httpx
 
@@ -12,6 +13,7 @@ from nexusmcp.bootstrap.persistence_factories import RuntimeToolSearchUnitOfWork
 from nexusmcp.infrastructure.clock import SystemClock
 from nexusmcp.infrastructure.identifiers import UuidIdentifierGenerator
 from nexusmcp.infrastructure.persistence.runtime import DatabaseRuntime
+from nexusmcp.interfaces.admin.openapi import export_admin_openapi
 from nexusmcp.modules.catalog.adapters.sqlalchemy_reader import SqlAlchemyPublishedToolReader
 from nexusmcp.modules.credentials.domain import SecretValue
 from nexusmcp.modules.tool_search.adapters.siliconflow import SiliconFlowEmbeddingProvider
@@ -36,7 +38,24 @@ def main() -> None:
     reindex.add_argument("--batch-size", type=int)
     reindex.add_argument("--force", action="store_true")
     reindex.add_argument("--dry-run", action="store_true")
+    export_contract = commands.add_parser(
+        "export-admin-openapi",
+        help="Export the deterministic Admin OpenAPI contract without starting services.",
+    )
+    export_contract.add_argument(
+        "--output",
+        type=Path,
+        default=Path("contracts/admin.openapi.json"),
+    )
     arguments = parser.parse_args()
+    if arguments.command == "export-admin-openapi":
+        try:
+            output_path = export_admin_openapi(arguments.output)
+        except (OSError, RuntimeError, ValueError) as error:
+            print(f"error: {error}", file=sys.stderr)
+            raise SystemExit(2) from None
+        print(f"Admin OpenAPI: {output_path}")
+        return
     if arguments.command != "reindex-tools":  # pragma: no cover - argparse 已限制
         parser.error("unsupported command")
     try:

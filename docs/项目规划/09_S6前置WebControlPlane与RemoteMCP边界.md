@@ -1,6 +1,6 @@
 # 09｜S6 前置 Web Control Plane 与 Remote MCP 边界
 
-> 状态：产品与工程规划已冻结，尚未开工
+> 状态：产品与工程规划已冻结；W0 已完成，W1 待开始
 > 日期：2026-08-27
 > 决策：Remote MCP Deferred；优先 Admin Query API 与 Web UI MVP
 > 工程基线：见 ADR-0018
@@ -217,12 +217,21 @@ Static Build
 
 ## 8. 工作包
 
-### W0｜边界修正
+### W0｜边界修正（已完成）
 
 - Remote MCP Admin Input Reject/Hide；
 - README/Architecture 叙事修正；
 - Admin API OpenAPI Contract Snapshot；
 - UI 路由与字段草图。
+
+完成记录：
+
+- 13 个现有 Admin Route 已设置稳定 `operationId`；
+- `contracts/admin.openapi.json` 可无网络确定性导出并受 Contract Test 保护；
+- Expected Error 与 Validation Error 统一为 `application/problem+json`；
+- 普通资源列表冻结为 `items + page(offset/limit/total)`；
+- Remote MCP 已从公开输入隐藏，并在绕过 Schema 时返回 `feature_not_enabled`；
+- 详细结果见 [W0 Admin API Contract 固化](../实验记录/30_W0_AdminAPIContract固化.md)。
 
 ### W1｜Admin Query API
 

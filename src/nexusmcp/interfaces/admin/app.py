@@ -5,14 +5,14 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import Depends, FastAPI, Query, Request, status
 from pydantic import BaseModel, Field
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.responses import Response
 
-from nexusmcp.interfaces.http.errors import register_http_exception_handlers
+from nexusmcp.interfaces.http.errors import problem_responses, register_http_exception_handlers
 from nexusmcp.modules.approval.domain import ApprovalRequest
 from nexusmcp.modules.approval.use_cases import (
     DecideApproval,
@@ -48,6 +48,7 @@ from nexusmcp.modules.registry.use_cases import (
     UpdateUpstream,
     UpdateUpstreamCommand,
 )
+from nexusmcp.shared.errors import FeatureNotEnabledError
 from nexusmcp.shared.log_context import bind_log_context
 from nexusmcp.shared.request_context import ActorContext
 
@@ -76,8 +77,11 @@ class RegisterUpstreamRequest(BaseModel):
     endpoint: str
     auth_scheme: str | None = "none"
     config: dict[str, Any] = Field(default_factory=dict)
-    service_type: UpstreamServiceType = UpstreamServiceType.HTTP
-    transport_type: str = "http"
+    service_type: str = Field(
+        default=UpstreamServiceType.HTTP.value,
+        json_schema_extra={"enum": [UpstreamServiceType.HTTP.value]},
+    )
+    transport_type: str = Field(default="http", json_schema_extra={"enum": ["http"]})
 
 
 class UpdateUpstreamRequest(BaseModel):
@@ -95,8 +99,8 @@ class UpstreamResponse(BaseModel):
     name: str
     description: str | None
     owner: str
-    service_type: UpstreamServiceType
-    transport_type: str
+    service_type: Literal["http"]
+    transport_type: Literal["http"]
     endpoint: str
     auth_scheme: str | None
     config: dict[str, Any]
@@ -104,6 +108,11 @@ class UpstreamResponse(BaseModel):
 
     @classmethod
     def from_domain(cls, upstream: UpstreamService) -> UpstreamResponse:
+        if (
+            upstream.service_type is not UpstreamServiceType.HTTP
+            or upstream.transport_type != "http"
+        ):
+            raise FeatureNotEnabledError("Remote MCP upstream response is not supported")
         return cls(
             id=upstream.id,
             tenant_id=upstream.tenant_id,
@@ -111,13 +120,26 @@ class UpstreamResponse(BaseModel):
             name=upstream.name,
             description=upstream.description,
             owner=upstream.owner,
-            service_type=upstream.service_type,
-            transport_type=upstream.transport_type,
+            service_type="http",
+            transport_type="http",
             endpoint=upstream.endpoint,
             auth_scheme=upstream.auth_scheme,
             config=dict(upstream.config),
             status=upstream.status,
         )
+
+
+class PageMetadata(BaseModel):
+    """普通资源列表统一使用 Offset Pagination；搜索 Top-K 不复用该语义。"""
+
+    offset: int
+    limit: int
+    total: int
+
+
+class UpstreamPageResponse(BaseModel):
+    items: list[UpstreamResponse]
+    page: PageMetadata
 
 
 class SubmitImportRequest(BaseModel):
@@ -255,13 +277,20 @@ def get_admin_context(request: Request) -> ActorContext:
 AdminContext = Annotated[ActorContext, Depends(get_admin_context)]
 
 
+class AdminFastAPI(FastAPI):
+    def openapi(self) -> dict[str, Any]:
+        schema = super().openapi()
+        _normalize_problem_response_media_types(schema)
+        return schema
+
+
 def create_admin_app(
     services: AdminServices,
     *,
     tenant_id: str,
     principal_id: str,
 ) -> FastAPI:
-    app = FastAPI(
+    app = AdminFastAPI(
         title="NexusMCP Admin API",
         version="0.1.0",
         docs_url="/docs",
@@ -295,11 +324,15 @@ def create_admin_app(
         "/upstreams",
         response_model=UpstreamResponse,
         status_code=status.HTTP_201_CREATED,
+        operation_id="registerUpstream",
+        responses=problem_responses(400, 409, 501),
     )
     async def register_upstream(
         request: RegisterUpstreamRequest,
         context: AdminContext,
     ) -> UpstreamResponse:
+        if request.service_type != "http" or request.transport_type != "http":
+            raise FeatureNotEnabledError("Remote MCP upstream registration is not supported")
         upstream = await services.register_upstream.execute(
             RegisterUpstreamCommand(
                 context=context,
@@ -310,18 +343,38 @@ def create_admin_app(
                 endpoint=request.endpoint,
                 auth_scheme=request.auth_scheme,
                 config=request.config,
-                service_type=request.service_type,
-                transport_type=request.transport_type,
+                service_type=UpstreamServiceType.HTTP,
+                transport_type="http",
             )
         )
         return UpstreamResponse.from_domain(upstream)
 
-    @app.get("/upstreams", response_model=list[UpstreamResponse])
-    async def list_upstreams(context: AdminContext) -> list[UpstreamResponse]:
+    @app.get(
+        "/upstreams",
+        response_model=UpstreamPageResponse,
+        operation_id="listUpstreams",
+        responses=problem_responses(400),
+    )
+    async def list_upstreams(
+        context: AdminContext,
+        offset: Annotated[int, Query(ge=0)] = 0,
+        limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    ) -> UpstreamPageResponse:
         upstreams = await services.list_upstreams.execute(context)
-        return [UpstreamResponse.from_domain(upstream) for upstream in upstreams]
+        return UpstreamPageResponse(
+            items=[
+                UpstreamResponse.from_domain(upstream)
+                for upstream in upstreams[offset : offset + limit]
+            ],
+            page=PageMetadata(offset=offset, limit=limit, total=len(upstreams)),
+        )
 
-    @app.put("/upstreams/{upstream_service_id}", response_model=UpstreamResponse)
+    @app.put(
+        "/upstreams/{upstream_service_id}",
+        response_model=UpstreamResponse,
+        operation_id="updateUpstream",
+        responses=problem_responses(400, 404),
+    )
     async def update_upstream(
         upstream_service_id: str,
         request: UpdateUpstreamRequest,
@@ -340,7 +393,12 @@ def create_admin_app(
         )
         return UpstreamResponse.from_domain(upstream)
 
-    @app.post("/upstreams/{upstream_service_id}/disable", response_model=UpstreamResponse)
+    @app.post(
+        "/upstreams/{upstream_service_id}/disable",
+        response_model=UpstreamResponse,
+        operation_id="disableUpstream",
+        responses=problem_responses(404, 409),
+    )
     async def disable_upstream(
         upstream_service_id: str,
         context: AdminContext,
@@ -357,6 +415,8 @@ def create_admin_app(
         "/openapi/imports",
         response_model=SubmitImportResponse,
         status_code=status.HTTP_202_ACCEPTED,
+        operation_id="submitOpenApiImport",
+        responses=problem_responses(400, 404, 422),
     )
     async def submit_import(
         request: SubmitImportRequest,
@@ -376,7 +436,12 @@ def create_admin_app(
             conflict_count=result.conflict_count,
         )
 
-    @app.get("/openapi/imports/{import_job_id}", response_model=ImportDetailResponse)
+    @app.get(
+        "/openapi/imports/{import_job_id}",
+        response_model=ImportDetailResponse,
+        operation_id="getOpenApiImport",
+        responses=problem_responses(404),
+    )
     async def get_import(
         import_job_id: str,
         context: AdminContext,
@@ -392,6 +457,8 @@ def create_admin_app(
     @app.post(
         "/openapi/operations/{operation_id}/review",
         response_model=ReviewOperationResponse,
+        operation_id="reviewImportedOperation",
+        responses=problem_responses(404, 409, 422),
     )
     async def review_operation(
         operation_id: str,
@@ -421,6 +488,8 @@ def create_admin_app(
     @app.post(
         "/tool-versions/{tool_version_id}/submit-review",
         response_model=StateResponse,
+        operation_id="submitToolVersionReview",
+        responses=problem_responses(404, 409),
     )
     async def submit_version_review(
         tool_version_id: str,
@@ -437,6 +506,8 @@ def create_admin_app(
     @app.post(
         "/tools/{tool_id}/versions/{tool_version_id}/publish",
         response_model=PublishToolResponse,
+        operation_id="publishToolVersion",
+        responses=problem_responses(404, 409, 422),
     )
     async def publish_tool(
         tool_id: str,
@@ -464,7 +535,12 @@ def create_admin_app(
             occurred_at=event.occurred_at,
         )
 
-    @app.get("/catalog/search", response_model=list[SearchToolResponse])
+    @app.get(
+        "/catalog/search",
+        response_model=list[SearchToolResponse],
+        operation_id="searchCatalog",
+        responses=problem_responses(422, 503),
+    )
     async def search_catalog(
         context: AdminContext,
         query_text: Annotated[str, Query(alias="q", min_length=1, max_length=200)],
@@ -492,7 +568,12 @@ def create_admin_app(
             for hit in hits
         ]
 
-    @app.get("/approvals/{approval_id}", response_model=ApprovalResponse)
+    @app.get(
+        "/approvals/{approval_id}",
+        response_model=ApprovalResponse,
+        operation_id="getApproval",
+        responses=problem_responses(404),
+    )
     async def get_approval(
         approval_id: str,
         context: AdminContext,
@@ -502,7 +583,12 @@ def create_admin_app(
         )
         return ApprovalResponse.from_domain(approval)
 
-    @app.post("/approvals/{approval_id}/approve", response_model=ApprovalResponse)
+    @app.post(
+        "/approvals/{approval_id}/approve",
+        response_model=ApprovalResponse,
+        operation_id="approveApproval",
+        responses=problem_responses(404, 409),
+    )
     async def approve_call(
         approval_id: str,
         context: AdminContext,
@@ -516,7 +602,12 @@ def create_admin_app(
         )
         return ApprovalResponse.from_domain(approval)
 
-    @app.post("/approvals/{approval_id}/reject", response_model=ApprovalResponse)
+    @app.post(
+        "/approvals/{approval_id}/reject",
+        response_model=ApprovalResponse,
+        operation_id="rejectApproval",
+        responses=problem_responses(404, 409),
+    )
     async def reject_call(
         approval_id: str,
         context: AdminContext,
@@ -531,6 +622,32 @@ def create_admin_app(
         return ApprovalResponse.from_domain(approval)
 
     return app
+
+
+def _normalize_problem_response_media_types(schema: dict[str, Any]) -> None:
+    """FastAPI 的 `model` 默认声明 JSON；Admin Error Contract 只暴露 Problem JSON。"""
+
+    paths = schema.get("paths")
+    if not isinstance(paths, dict):  # pragma: no cover - FastAPI OpenAPI 固定结构
+        return
+    for path_item in paths.values():
+        if not isinstance(path_item, dict):
+            continue
+        for operation in path_item.values():
+            if not isinstance(operation, dict):
+                continue
+            responses = operation.get("responses")
+            if not isinstance(responses, dict):
+                continue
+            for response in responses.values():
+                if not isinstance(response, dict):
+                    continue
+                content = response.get("content")
+                if not isinstance(content, dict) or "application/problem+json" not in content:
+                    continue
+                json_contract = content.pop("application/json", None)
+                if isinstance(json_contract, dict):
+                    content["application/problem+json"] = json_contract
 
 
 def _job_response(job: OpenApiImportJob) -> ImportJobResponse:

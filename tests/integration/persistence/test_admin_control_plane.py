@@ -59,6 +59,33 @@ async def test_admin_rest_drives_import_review_publish_search_and_mcp(
             docs = await client.get("/admin/docs")
             assert docs.status_code == 200
 
+            remote_mcp = await client.post(
+                "/admin/upstreams",
+                json={
+                    "namespace": "remote",
+                    "name": "unsupported-remote-mcp",
+                    "owner": "platform-team",
+                    "endpoint": "https://mcp.example.test/mcp",
+                    "service_type": "remote_mcp",
+                    "transport_type": "streamable_http",
+                },
+            )
+            assert remote_mcp.status_code == 501
+            assert remote_mcp.headers["content-type"].startswith("application/problem+json")
+            assert remote_mcp.json()["code"] == "feature_not_enabled"
+
+            invalid_upstream = await client.post(
+                "/admin/upstreams",
+                json={
+                    "namespace": "directory",
+                    "name": "missing-owner",
+                    "endpoint": "http://127.0.0.1:9001",
+                },
+            )
+            assert invalid_upstream.status_code == 422
+            assert invalid_upstream.json()["code"] == "request_validation_failed"
+            assert invalid_upstream.json()["errors"][0]["field"] == "owner"
+
             register = await client.post(
                 "/admin/upstreams",
                 headers={"X-NexusMCP-Tenant-ID": "forged-tenant"},
@@ -88,6 +115,8 @@ async def test_admin_rest_drives_import_review_publish_search_and_mcp(
             )
             assert duplicate.status_code == 409
             assert duplicate.json()["code"] == "upstream_conflict"
+            assert duplicate.json()["status"] == 409
+            assert duplicate.headers["content-type"].startswith("application/problem+json")
 
             update = await client.put(
                 f"/admin/upstreams/{upstream_id}",
@@ -103,7 +132,14 @@ async def test_admin_rest_drives_import_review_publish_search_and_mcp(
             assert update.json()["owner"] == "platform-team"
 
             upstreams = await client.get("/admin/upstreams")
-            assert [item["id"] for item in upstreams.json()] == [upstream_id]
+            assert [item["id"] for item in upstreams.json()["items"]] == [upstream_id]
+            assert upstreams.json()["page"] == {"offset": 0, "limit": 50, "total": 1}
+
+            empty_page = await client.get("/admin/upstreams", params={"offset": 1, "limit": 1})
+            assert empty_page.json() == {
+                "items": [],
+                "page": {"offset": 1, "limit": 1, "total": 1},
+            }
 
             submitted_import = await client.post(
                 "/admin/openapi/imports",

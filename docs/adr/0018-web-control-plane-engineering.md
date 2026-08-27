@@ -337,7 +337,7 @@ Register HTTP Upstream
 ## Consequences
 
 - 仓库增加 Node/pnpm Toolchain、Frontend CI 和生成代码 Diff；
-- W0 必须先补齐 Admin Query API、Operation ID、Problem Details 和 Contract Export；
+- W0 先补齐 Operation ID、Problem Details、Pagination 约定和 Contract Export；W1 再实现 Admin Query API；
 - Generated SDK 使前后端字段变化在 Compile/CI 阶段显式失败；
 - Feature Hook 保留 Query/Mutation 语义，代码比全自动 Hook 多，但边界更清楚；
 - Local Admin UI 可以立即展示当前治理链，但不能对外声称 Production Admin IAM；

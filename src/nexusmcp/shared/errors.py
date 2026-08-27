@@ -108,6 +108,11 @@ class InvalidArgumentsError(NexusMcpError):
     safe_message = "The request arguments are invalid."
 
 
+class FeatureNotEnabledError(NexusMcpError):
+    code = "feature_not_enabled"
+    safe_message = "The requested feature is not enabled."
+
+
 class AuthorizationError(NexusMcpError):
     code = "authorization_denied"
     safe_message = "The principal is not allowed to call this tool."

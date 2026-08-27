@@ -4,6 +4,7 @@ import json
 
 import pytest
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from mcp import types
 
 from nexusmcp.interfaces.http.errors import (
@@ -11,6 +12,7 @@ from nexusmcp.interfaces.http.errors import (
     http_status_for,
     nexusmcp_error_handler,
     register_http_exception_handlers,
+    request_validation_error_handler,
 )
 from nexusmcp.interfaces.mcp.errors import to_call_tool_error
 from nexusmcp.shared.errors import InvalidToolStateError, NexusMcpError, ToolNotFoundError
@@ -39,8 +41,11 @@ def test_http_error_mapping_uses_status_safe_message_and_request_id() -> None:
 
     assert http_status_for(error).value == 409
     assert body == {
+        "type": "urn:nexusmcp:error:invalid_tool_state",
+        "title": "Request rejected",
+        "status": 409,
+        "detail": error.safe_message,
         "code": "invalid_tool_state",
-        "message": error.safe_message,
         "request_id": "request-http",
     }
     assert "super-secret" not in str(body)
@@ -57,11 +62,41 @@ async def test_http_exception_handler_returns_safe_json_response() -> None:
     response_body = bytes(response.body)
     assert response.status_code == 409
     assert json.loads(response_body) == {
+        "type": "urn:nexusmcp:error:invalid_tool_state",
+        "title": "Request rejected",
+        "status": 409,
+        "detail": error.safe_message,
         "code": "invalid_tool_state",
-        "message": error.safe_message,
         "request_id": "request-handler",
     }
+    assert response.media_type == "application/problem+json"
     assert b"super-secret" not in response_body
+
+
+@pytest.mark.asyncio
+async def test_request_validation_is_mapped_to_problem_details_without_input_echo() -> None:
+    request = Request({"type": "http", "method": "POST", "path": "/admin/upstreams"})
+    error = RequestValidationError(
+        [
+            {
+                "type": "missing",
+                "loc": ("body", "owner"),
+                "msg": "Field required",
+                "input": {"password": "must-not-echo"},
+            }
+        ]
+    )
+
+    with bind_log_context(request_id="request-validation"):
+        response = await request_validation_error_handler(request, error)
+
+    body = json.loads(bytes(response.body))
+    assert response.status_code == 422
+    assert response.media_type == "application/problem+json"
+    assert body["code"] == "request_validation_failed"
+    assert body["request_id"] == "request-validation"
+    assert body["errors"] == [{"field": "owner", "code": "missing", "detail": "Field required"}]
+    assert "must-not-echo" not in str(body)
 
 
 def test_http_handler_can_be_registered_on_future_admin_sub_application() -> None:
@@ -70,3 +105,4 @@ def test_http_handler_can_be_registered_on_future_admin_sub_application() -> Non
     register_http_exception_handlers(admin_app)
 
     assert NexusMcpError in admin_app.exception_handlers
+    assert RequestValidationError in admin_app.exception_handlers

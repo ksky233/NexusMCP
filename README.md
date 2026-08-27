@@ -5,7 +5,7 @@
 NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry，当前负责将企业 HTTP/OpenAPI
 服务转化为受治理的 MCP Tool，并在接入、发现和调用链上执行身份、策略、凭据、审批、审计与可观测性。
 
-当前阶段：`S5｜工程证据已完成`；下一阶段进入 `S6｜作品集包装`。
+当前阶段：`W0｜Admin API Contract 固化已完成`；下一步进入 `W1｜Admin Query API`。
 
 ## 当前边界
 
@@ -62,6 +62,8 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry
   Unified Report 已记录所有证据、限制与残余风险；
 - Remote MCP Federation/Proxy 已按 ADR-0017 延后：当前不管理开发者个人 MCP，也不声称透明代理全部 MCP
   Capability；只有出现明确组织级 Remote MCP Upstream 场景后才重新评估；
+- Admin API 已冻结 13 个稳定 `operationId`、RFC 9457-compatible Problem Details、Offset Pagination
+  Envelope 与确定性 OpenAPI Snapshot；公开 Upstream Contract 只允许 HTTP；
 - S6 前置增强优先补齐 Admin Query API 与 Web Control Plane MVP，用可视化方式展示 Upstream、Import、
   Review、Publish、Catalog、Approval、Execution 与 Audit；
 - 真实 JWT/OIDC、生产 Secret Store、CredentialBinding 持久化、跨调用 Result Replay、通用写 Tool
@@ -85,6 +87,7 @@ uv run ruff check .
 uv run ruff format --check .
 uv run basedpyright
 uv build
+uv run nexusmcp export-admin-openapi --output contracts/admin.openapi.json
 uv run uvicorn nexusmcp.main:app --reload
 ```
 
@@ -221,6 +224,7 @@ docker compose stop postgres
 - [S5-2 Security 与 Policy Regression](./docs/实验记录/27_S5-2_Security与PolicyRegression.md)
 - [S5-3 Protocol Compatibility 与 Failure Injection](./docs/实验记录/28_S5-3_Protocol与FailureInjection.md)
 - [S5-4 Benchmark、Threat Model 与 S5 收口](./docs/实验记录/29_S5-4_BenchmarkThreatModel与S5收口.md)
+- [W0 Admin API Contract 固化](./docs/实验记录/30_W0_AdminAPIContract固化.md)
 - [S5 统一工程证据报告](./docs/工程证据/06_S5统一报告.md)
 - [S5 工程证据矩阵](./docs/工程证据/01_S5证据矩阵.md)
 - [业务词汇、核心用例与限界上下文](./docs/架构/01_业务词汇核心用例与限界上下文.md)

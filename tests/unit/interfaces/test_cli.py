@@ -1,6 +1,7 @@
 """Reindex CLI 参数到安全统计输出的 Adapter 测试。"""
 
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -33,3 +34,26 @@ def test_reindex_cli_prints_projection_statistics(
     assert "Published Tools: 8" in output
     assert "Embedded: 3" in output
     assert "Dimensions: 2048" in output
+
+
+def test_export_admin_openapi_cli_reports_resolved_output(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    output_path = tmp_path / "admin.openapi.json"
+
+    def fake_export(path: Path) -> Path:
+        assert path == output_path
+        return output_path.resolve()
+
+    monkeypatch.setattr(cli_app, "export_admin_openapi", fake_export)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["nexusmcp", "export-admin-openapi", "--output", str(output_path)],
+    )
+
+    cli_app.main()
+
+    assert f"Admin OpenAPI: {output_path.resolve()}" in capsys.readouterr().out
