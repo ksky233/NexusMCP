@@ -13,7 +13,7 @@ Agent / MCP Client
         ↓
     NexusMCP
         ↓
-MCP Server / OpenAPI / Enterprise Tool
+Enterprise HTTP / OpenAPI
 ```
 
 核心价值不是“再写一个 MCP Proxy”，而是把 Tool 纳入统一的发现、发布、访问控制、凭据注入、审计和可观测体系。
@@ -31,6 +31,7 @@ MCP Server / OpenAPI / Enterprise Tool
 | 7 | [06｜阶段路书与验收标准](./06_阶段路书与验收标准.md) | 按什么顺序实现、建议投入多少小时、何时停止扩展 |
 | 8 | [07｜质量、评测、可观测性与安全](./07_质量评测可观测性与安全.md) | 怎样证明项目可靠、安全、可解释，而不只是能运行 |
 | 9 | [08｜ADR 与待决策清单](./08_ADR与待决策清单.md) | 已确认决策、待实验决策以及如何记录取舍 |
+| 10 | [09｜S6 前置 Web Control Plane 与 Remote MCP 边界](./09_S6前置WebControlPlane与RemoteMCP边界.md) | Remote MCP 为什么延后、Web UI 做到哪里 |
 
 ## 3. 决策层级
 
@@ -62,6 +63,8 @@ MCP Server / OpenAPI / Enterprise Tool
   Retrieval；
 - Evaluation、OpenTelemetry、安全、幂等和错误分类属于主线；
 - 不建设大而全管理后台，不追求支持所有 MCP Extension。
+- Remote MCP Federation/Proxy 延后；当前只承诺 HTTP/OpenAPI Upstream，不治理开发者个人 MCP；
+- S6 前置增加简易 Web Control Plane MVP，但不建设 Production Admin IAM 或复杂管理平台。
 
 ## 5. 维护方式
 

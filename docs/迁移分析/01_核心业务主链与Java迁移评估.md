@@ -4,6 +4,7 @@
 > 日期：2026-08-24
 > 范围：项目定位、API → MCP 主链、协议方向、Java 旧实现评估、迁移边界
 > 不在本文冻结：最终目录、数据库表结构、Python SDK 精确版本与 ASGI 接入细节
+> 后续决策更新：ADR-0017 已延后 Remote MCP；本文相关章节只保留早期扩展分析，不代表当前能力或主线。
 
 ## 1. 文档结论
 
@@ -36,21 +37,23 @@ Java 实现与 NexusMCP 的核心方向一致，但它主要是数据库驱动�
 
 ### 2.1 一句话定位
 
-> NexusMCP 是企业 Tool 接入与治理平台：把内部 OpenAPI/HTTP API 和已有 MCP Server 纳入统一 Registry/Catalog，通过 MCP 对 Agent 暴露，并在调用链上统一执行身份、策略、凭据、审批和审计。
+> NexusMCP 是企业 Tool 接入与治理平台：当前把内部 OpenAPI/HTTP API 转化为受治理 MCP Tool，通过 MCP
+> 对 Agent 暴露，并在调用链上统一执行身份、策略、凭据、审批和审计。
 
-### 2.2 两类接入来源
+### 2.2 当前来源与 Deferred 扩展
 
 ```text
-企业 HTTP/OpenAPI ──→ HTTP Connector ───────┐
-                                              ├─→ Tool Catalog ─→ NexusMCP Gateway ─→ Agent
-已有 MCP Server  ──→ Remote MCP Connector ──┘
+企业 HTTP/OpenAPI ──→ HTTP Connector ─→ Tool Catalog ─→ NexusMCP Gateway ─→ Agent
+
+Remote MCP Connector
+→ ADR-0017 Deferred，仅在明确组织级 Upstream 场景后重新评估
 ```
 
 优先级：
 
 1. 第一条 MVP 主线是 `HTTP/OpenAPI → MCP Tool`；
-2. 已有 MCP Server 的注册、同步和代理复用相同 Catalog 与治理链路，后续接入；
-3. 两类来源使用不同 Connector/Executor，不复制两套 Tool Catalog。
+2. 不治理开发者个人 MCP，不实现透明 Relay；
+3. Future Remote MCP 如被真实场景触发，仍应复用 Catalog 与治理链路，但需独立 ADR/实验。
 
 ### 2.3 三层能力
 
@@ -129,8 +132,7 @@ Policy Decision
 Credential Binding Resolution
           ↓
 Executor Dispatch
-    ├── HTTP Connector → 企业 HTTP API
-    └── MCP Connector  → Remote MCP Server
+    └── HTTP Connector → 企业 HTTP API
           ↓
 Response Normalize / Redact
           ↓
@@ -288,7 +290,7 @@ Modern 与 Legacy 可以有不同 Transport Context 和响应映射，但必须�
 
 | 概念 | 拥有的状态与职责 |
 |---|---|
-| `UpstreamService` | 企业 HTTP 服务或 Remote MCP Server 的非敏感元数据、Endpoint、Owner、Health |
+| `UpstreamService` | 当前企业 HTTP 服务的非敏感元数据、Endpoint、Owner、Health；Remote MCP 是 Deferred 扩展 |
 | `OpenAPIImport` | Source、Digest、Import Status、错误和安全校验快照 |
 | `ImportedOperation` | Method、Path、参数位置、Normalized Schema、冲突与审核状态 |
 | `ToolDefinition` | MCP 名称、描述、输入/输出 Schema、Version、Status、Visibility、Side Effect |
@@ -313,8 +315,7 @@ Tool 叫什么？
 
 ```text
 这个 Tool 由谁执行？
-使用 HTTP 还是 Remote MCP？
-对应哪个 Method/Path/Remote Tool？
+当前使用哪个 HTTP Method/Path？
 参数如何映射？
 使用什么超时、响应和安全策略？
 ```
@@ -325,8 +326,7 @@ Tool 叫什么？
 ToolDefinition
     ↓
 ToolBinding
-    ├── HttpOperationBinding
-    └── RemoteMcpToolBinding
+    └── HttpOperationBinding
 ```
 
 ## 6. Java 旧实现的实际主链
@@ -633,8 +633,7 @@ Java 手写 MCP Schema，并围绕 `initialize`、`Mcp-Session-Id`、GET/POST/DE
 
 ```text
 Registry
-├── HTTP Upstream Service
-└── Remote MCP Server
+└── HTTP Upstream Service
 
 OpenAPI Import
 ├── Source / Import Job
@@ -648,8 +647,7 @@ Tool Catalog
 
 Connectors
 ├── ToolBinding
-├── HttpOperationBinding
-└── RemoteMcpToolBinding
+└── HttpOperationBinding
 
 Gateway Runtime
 ├── Tool Discovery
@@ -734,7 +732,7 @@ Inventory OpenAPI          ┘
 
 ## 13. 待下一轮讨论的问题
 
-1. `Registry` 是否统一拥有 HTTP Upstream 与 Remote MCP Server，还是拆成两个子域？
+1. Remote MCP 已由 ADR-0017 延后；只有出现明确组织级 Upstream 场景后才重新讨论 Registry/Connector。
 2. `ToolBinding` 属于 Catalog 聚合，还是形成独立 Connector 领域？
 3. OpenAPI Import、Draft Tool 和 Binding 的事务边界是什么？
 4. Tool Version 使用独立实体还是单表多版本？

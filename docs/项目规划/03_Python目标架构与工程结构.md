@@ -139,7 +139,7 @@ Infrastructure Adapter
 
 负责低频配置和生命周期：
 
-- MCP Server Register/Update/Disable；
+- HTTP Upstream Register/Update/Disable；
 - Tool Sync；
 - OpenAPI Import；
 - Draft/Review/Publish；

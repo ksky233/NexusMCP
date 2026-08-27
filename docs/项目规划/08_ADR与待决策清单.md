@@ -101,6 +101,17 @@
 
 决策记录：[ADR-0007](../adr/0007-side-effect-retry-and-unknown-outcome.md)。
 
+### D-014｜Remote MCP 延后，优先 Web Control Plane
+
+- 当前正式支持企业 HTTP/OpenAPI Upstream；
+- 不治理开发者个人 MCP，不以 MCP 调用量衡量 VibeCoding；
+- 不实现只支持部分 Capability 却声称透明的 MCP Relay；
+- Remote MCP 只有在出现明确组织级 Upstream 场景后重新评估；
+- S6 前置优先补齐 Admin Query API 与 Local Web Control Plane MVP；
+- 预留 `remote_mcp` Enum 不代表可用能力，公开 Admin API/UI 在实现前应拒绝或隐藏。
+
+决策记录：[ADR-0017](../adr/0017-defer-remote-mcp-and-focus-web-control-plane.md)。
+
 ## 2. 推荐但需在初始化时确认
 
 ### R-001｜Persistence 工程工具
@@ -182,6 +193,7 @@ Legacy Session 本身不构成新项目必须引入 Redis 的理由。
 | [0014](../adr/0014-pgvector-infrastructure-and-vector-storage.md) | Accepted | PostgreSQL 18 pgvector 与 Vector Storage |
 | [0015](../adr/0015-manual-opentelemetry-boundary.md) | Accepted | 手工 OpenTelemetry Boundary 与安全 Attribute 白名单 |
 | [0016](../adr/0016-upstream-egress-and-ssrf-boundary.md) | Accepted | Upstream Egress 与 SSRF 防护边界 |
+| [0017](../adr/0017-defer-remote-mcp-and-focus-web-control-plane.md) | Accepted | 延后 Remote MCP，优先 Web Control Plane |
 
 不是现在一次性写完。每个 ADR 在相关实现前后完成。
 

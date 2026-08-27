@@ -1,0 +1,97 @@
+{
+  "sdk": "mcp==2.0.0",
+  "modern_version": "2026-07-28",
+  "legacy_version": "2025-11-25",
+  "cases": [
+    {
+      "id": "modern-discover-list-call",
+      "era": "modern",
+      "expected": "same_catalog_and_business_result",
+      "evidence": "tests/contract/mcp/test_dual_era.py::test_one_server_serves_modern_and_legacy_clients"
+    },
+    {
+      "id": "legacy-initialize-list-call",
+      "era": "legacy",
+      "expected": "same_catalog_and_business_result",
+      "evidence": "tests/contract/mcp/test_dual_era.py::test_one_server_serves_modern_and_legacy_clients"
+    },
+    {
+      "id": "modern-no-session",
+      "era": "modern",
+      "expected": "tools_list_without_session_id",
+      "evidence": "tests/contract/mcp/test_asgi_context.py::test_fastapi_mount_exposes_mcp_and_request_context"
+    },
+    {
+      "id": "legacy-http-session",
+      "era": "legacy",
+      "expected": "tools_list_contains_session_id",
+      "evidence": "tests/contract/mcp/test_asgi_context.py::test_fastapi_mount_exposes_mcp_and_request_context"
+    },
+    {
+      "id": "dynamic-list-by-principal",
+      "era": "both",
+      "expected": "request_scoped_visibility",
+      "evidence": "tests/contract/mcp/test_dynamic_gateway.py::test_tools_list_is_dynamic_for_each_principal"
+    },
+    {
+      "id": "call-reauthorization",
+      "era": "both",
+      "expected": "guessed_tool_name_is_reauthorized",
+      "evidence": "tests/contract/mcp/test_dynamic_gateway.py::test_tool_call_dispatches_by_binding_and_visibility"
+    },
+    {
+      "id": "modern-invalid-json",
+      "era": "modern",
+      "expected": "http_400_jsonrpc_parse_error",
+      "evidence": "tests/contract/mcp/test_protocol_rejections.py::test_modern_http_rejects_parse_method_header_and_version_errors"
+    },
+    {
+      "id": "modern-unknown-method",
+      "era": "modern",
+      "expected": "http_404_jsonrpc_method_not_found",
+      "evidence": "tests/contract/mcp/test_protocol_rejections.py::test_modern_http_rejects_parse_method_header_and_version_errors"
+    },
+    {
+      "id": "modern-header-body-mismatch",
+      "era": "modern",
+      "expected": "http_400_header_mismatch",
+      "evidence": "tests/contract/mcp/test_protocol_rejections.py::test_modern_http_rejects_parse_method_header_and_version_errors"
+    },
+    {
+      "id": "modern-unsupported-version",
+      "era": "modern",
+      "expected": "http_400_unsupported_version_with_supported_data",
+      "evidence": "tests/contract/mcp/test_protocol_rejections.py::test_modern_http_rejects_parse_method_header_and_version_errors"
+    },
+    {
+      "id": "modern-approval-input-required",
+      "era": "modern",
+      "expected": "mrtr_input_required_and_resume",
+      "evidence": "tests/integration/persistence/test_mcp_approval.py::test_modern_mrtr_elicitation_approves_and_resumes_tool_call"
+    },
+    {
+      "id": "modern-trace-propagation",
+      "era": "modern",
+      "expected": "w3c_parent_trace_preserved",
+      "evidence": "tests/contract/mcp/test_telemetry_evidence.py::test_mcp_boundary_exports_trace_metrics_without_query_or_authorization"
+    },
+    {
+      "id": "legacy-observability",
+      "era": "legacy",
+      "expected": "legacy_span_attribute_and_counter",
+      "evidence": "tests/contract/mcp/test_telemetry_evidence.py::test_legacy_http_request_has_distinct_span_attribute_and_metric"
+    },
+    {
+      "id": "legacy-array-output-schema-adaptation",
+      "era": "legacy",
+      "expected": "optional_modern_array_output_schema_omitted",
+      "evidence": "tests/contract/mcp/test_formal_adapter.py::test_formal_legacy_adapter_omits_modern_array_output_schema"
+    },
+    {
+      "id": "search-first-dynamic-activation",
+      "era": "modern",
+      "expected": "call_tool_not_in_initial_list",
+      "evidence": "tests/integration/persistence/test_mcp_read_only_http_call.py::test_search_first_discovers_schema_then_calls_unlisted_business_tool"
+    }
+  ]
+}

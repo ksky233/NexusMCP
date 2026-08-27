@@ -2,10 +2,10 @@
 
 [![CI](https://github.com/ksky233/NexusMCP/actions/workflows/ci.yml/badge.svg)](https://github.com/ksky233/NexusMCP/actions/workflows/ci.yml)
 
-NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Registry，负责将企业 HTTP/OpenAPI 服务和已有 MCP Server 纳入统一 Tool Catalog，并在 MCP 调用链上执行身份、策略、凭据、审批、审计与可观测性。
+NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry，当前负责将企业 HTTP/OpenAPI
+服务转化为受治理的 MCP Tool，并在接入、发现和调用链上执行身份、策略、凭据、审批、审计与可观测性。
 
-当前阶段：`S5-2｜Security 与 Policy Regression 完成`；下一步是 Protocol Compatibility 与 Failure
-Injection。
+当前阶段：`S5｜工程证据已完成`；下一阶段进入 `S6｜作品集包装`。
 
 ## 当前边界
 
@@ -56,6 +56,14 @@ Injection。
   Secret/Executor 三道检查、Production Fail-Closed 和显式 Local Demo；
 - Policy/Security 已建立 10 条 Golden Case 与 15 条 Evidence Manifest，覆盖 Tenant、Secret、Approval
   Replay、Idempotency 与 SSRF；
+- Protocol 已建立 15 条 Modern/Legacy Matrix，覆盖 Raw JSON-RPC Error、Session、MRTR、Trace 与 Dynamic
+  Activation；Failure Injection 已汇总 14 条 DB/Audit/Retry/Approval/Embedding/Egress 状态证据；
+- 本机 Benchmark 已覆盖 Modern/Legacy List、Lexical/Hybrid Search 与 Read-Only Call；Threat Model 和 S5
+  Unified Report 已记录所有证据、限制与残余风险；
+- Remote MCP Federation/Proxy 已按 ADR-0017 延后：当前不管理开发者个人 MCP，也不声称透明代理全部 MCP
+  Capability；只有出现明确组织级 Remote MCP Upstream 场景后才重新评估；
+- S6 前置增强优先补齐 Admin Query API 与 Web Control Plane MVP，用可视化方式展示 Upstream、Import、
+  Review、Publish、Catalog、Approval、Execution 与 Audit；
 - 真实 JWT/OIDC、生产 Secret Store、CredentialBinding 持久化、跨调用 Result Replay、通用写 Tool
   与 Reconciliation 尚未实现。
 
@@ -211,6 +219,9 @@ docker compose stop postgres
 - [S4-4 Retrieval Eval 与 S4 收口](./docs/实验记录/25_S4-4_RetrievalEval与S4收口.md)
 - [S5-0/1 OpenTelemetry 基线](./docs/实验记录/26_S5-0_1_OpenTelemetry基线.md)
 - [S5-2 Security 与 Policy Regression](./docs/实验记录/27_S5-2_Security与PolicyRegression.md)
+- [S5-3 Protocol Compatibility 与 Failure Injection](./docs/实验记录/28_S5-3_Protocol与FailureInjection.md)
+- [S5-4 Benchmark、Threat Model 与 S5 收口](./docs/实验记录/29_S5-4_BenchmarkThreatModel与S5收口.md)
+- [S5 统一工程证据报告](./docs/工程证据/06_S5统一报告.md)
 - [S5 工程证据矩阵](./docs/工程证据/01_S5证据矩阵.md)
 - [业务词汇、核心用例与限界上下文](./docs/架构/01_业务词汇核心用例与限界上下文.md)
 - [持久化模型与发布事务](./docs/架构/02_持久化模型与发布事务.md)
@@ -230,3 +241,4 @@ docker compose stop postgres
 - [ADR-0014：PostgreSQL 18 pgvector 与 Vector Storage](./docs/adr/0014-pgvector-infrastructure-and-vector-storage.md)
 - [ADR-0015：手工 OpenTelemetry Boundary](./docs/adr/0015-manual-opentelemetry-boundary.md)
 - [ADR-0016：Upstream Egress 与 SSRF 防护边界](./docs/adr/0016-upstream-egress-and-ssrf-boundary.md)
+- [ADR-0017：延后 Remote MCP，优先 Web Control Plane](./docs/adr/0017-defer-remote-mcp-and-focus-web-control-plane.md)

@@ -120,3 +120,53 @@ async def test_formal_adapter_is_mounted_at_mcp_endpoint() -> None:
         "nexus.search_tools",
         "directory.get_employee",
     ]
+
+
+@pytest.mark.asyncio
+async def test_formal_legacy_adapter_omits_modern_array_output_schema() -> None:
+    repository = InMemoryToolCatalogRepository(
+        published_tools=[
+            PublishedTool(
+                tool_id="directory-list-employees",
+                tool_version_id="directory-list-employees-v1",
+                tenant_id="local",
+                canonical_name="directory.list_employees",
+                display_name="List employees",
+                description="List employees.",
+                input_schema={"type": "object", "properties": {}},
+                output_schema={
+                    "type": "array",
+                    "items": {"type": "object"},
+                },
+                version=1,
+                visibility=ToolVisibility.PUBLIC,
+                side_effect=ToolSideEffect.READ_ONLY,
+                schema_digest="2" * 64,
+            )
+        ]
+    )
+    app = create_app(Settings(environment="test"), repository)
+
+    async with app.router.lifespan_context(app):
+        transport = httpx2.ASGITransport(app=app)
+        async with httpx2.AsyncClient(
+            transport=transport,
+            base_url="http://testserver",
+        ) as http_client:
+            modern_transport = streamable_http_client(
+                "http://testserver/mcp",
+                http_client=http_client,
+            )
+            async with Client(modern_transport) as modern_client:
+                modern = await modern_client.list_tools(cache_mode="refresh")
+            legacy_transport = streamable_http_client(
+                "http://testserver/mcp",
+                http_client=http_client,
+            )
+            async with Client(legacy_transport, mode="legacy") as legacy_client:
+                legacy = await legacy_client.list_tools(cache_mode="refresh")
+
+    modern_tool = next(tool for tool in modern.tools if tool.name == "directory.list_employees")
+    legacy_tool = next(tool for tool in legacy.tools if tool.name == "directory.list_employees")
+    assert modern_tool.output_schema == {"type": "array", "items": {"type": "object"}}
+    assert legacy_tool.output_schema is None

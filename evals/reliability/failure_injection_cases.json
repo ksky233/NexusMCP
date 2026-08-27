@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "database-startup-failure",
+      "component": "database",
+      "expected": "application_startup_aborts_without_false_readiness",
+      "evidence": "tests/unit/bootstrap/test_app.py::test_database_start_failure_aborts_application_startup"
+    },
+    {
+      "id": "database-readiness-down",
+      "component": "database",
+      "expected": "liveness_up_readiness_down",
+      "evidence": "tests/unit/bootstrap/test_app.py::test_liveness_stays_up_while_database_readiness_is_down"
+    },
+    {
+      "id": "publish-commit-failure",
+      "component": "catalog_transaction",
+      "expected": "retire_publish_and_binding_all_rolled_back",
+      "evidence": "tests/integration/persistence/test_postgresql_publish_tool.py::test_postgresql_commit_failure_rolls_back_retire_and_publish_flushes"
+    },
+    {
+      "id": "audit-append-failure",
+      "component": "execution_transaction",
+      "expected": "approval_and_execution_plan_rolled_back",
+      "evidence": "tests/unit/modules/execution/test_execution_lifecycle.py::test_audit_failure_rolls_back_approval_consumption_and_execution_plan"
+    },
+    {
+      "id": "upstream-retryable-failures",
+      "component": "upstream",
+      "expected": "bounded_attempts_then_success",
+      "evidence": "tests/unit/modules/execution/test_retrying_executor.py::test_retryable_failures_create_attempts_then_succeed"
+    },
+    {
+      "id": "non-idempotent-timeout-after-send",
+      "component": "upstream",
+      "expected": "no_retry_unknown_outcome",
+      "evidence": "tests/unit/modules/execution/test_retrying_executor.py::test_non_idempotent_after_send_timeout_is_not_retried"
+    },
+    {
+      "id": "read-only-retry-exhaustion",
+      "component": "upstream",
+      "expected": "known_failed_terminal_after_three_attempts",
+      "evidence": "tests/unit/modules/execution/test_call_tool.py::test_read_only_retry_exhaustion_is_persisted_as_known_failure"
+    },
+    {
+      "id": "client-cancellation",
+      "component": "execution",
+      "expected": "cancelled_terminal_and_propagated_cancel",
+      "evidence": "tests/unit/modules/execution/test_call_tool.py::test_cancel_is_persisted_and_propagated"
+    },
+    {
+      "id": "approval-concurrent-consume",
+      "component": "approval",
+      "expected": "exactly_one_consumer_wins",
+      "evidence": "tests/unit/modules/approval/test_approval_use_cases.py::test_two_concurrent_consumers_have_exactly_one_winner"
+    },
+    {
+      "id": "idempotency-retry-and-conflict",
+      "component": "idempotency",
+      "expected": "retry_once_duplicate_and_changed_payload_rejected",
+      "evidence": "tests/integration/persistence/test_mcp_retry_idempotency.py::test_idempotent_put_retries_then_rejects_duplicate_and_conflicting_keys"
+    },
+    {
+      "id": "embedding-rate-limit",
+      "component": "embedding",
+      "expected": "stable_rate_limit_error_without_body",
+      "evidence": "tests/unit/modules/tool_search/test_siliconflow_adapter.py::test_adapter_normalizes_rate_limit_without_response_body"
+    },
+    {
+      "id": "embedding-invalid-vector",
+      "component": "embedding",
+      "expected": "wrong_dimension_and_non_finite_rejected",
+      "evidence": "tests/unit/modules/tool_search/test_siliconflow_adapter.py::test_adapter_rejects_wrong_dimensions_and_non_finite_values"
+    },
+    {
+      "id": "missing-vector-projection",
+      "component": "tool_search",
+      "expected": "hybrid_unavailable_without_lexical_disguise",
+      "evidence": "tests/integration/persistence/test_postgresql_exact_vector_search.py::test_exact_vector_search_reports_missing_projection_instead_of_fts_fallback"
+    },
+    {
+      "id": "dns-policy-change",
+      "component": "egress",
+      "expected": "registration_success_then_execution_recheck_denies",
+      "evidence": "tests/security/test_egress_policy.py::test_mixed_dns_answer_and_rebinding_change_fail_closed"
+    }
+  ]
+}

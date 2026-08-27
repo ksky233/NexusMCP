@@ -2,6 +2,7 @@
 
 import json
 import logging
+from collections.abc import Mapping
 from dataclasses import replace
 from time import perf_counter
 from typing import Any, Protocol
@@ -105,8 +106,9 @@ def create_mcp_server(
                             title=tool.display_name,
                             description=tool.description,
                             input_schema=dict(tool.input_schema),
-                            output_schema=(
-                                dict(tool.output_schema) if tool.output_schema else None
+                            output_schema=_protocol_output_schema(
+                                tool.output_schema,
+                                request_context,
                             ),
                             _meta={
                                 "com.nexusmcp/toolId": tool.tool_id,
@@ -310,7 +312,10 @@ def create_mcp_server(
                 )
                 return types.CallToolResult(
                     content=[types.TextContent(text=text)],
-                    structured_content=result.data,
+                    structured_content=_protocol_structured_content(
+                        result.data,
+                        request_context,
+                    ),
                     _meta={
                         "com.nexusmcp/executionId": result.execution_id,
                         "com.nexusmcp/upstreamStatus": result.upstream_status,
@@ -333,6 +338,28 @@ def create_mcp_server(
     # Low-Level Server 不会自动安装 requestState 防篡改边界，必须显式注册。
     server.middleware.append(RequestStateBoundary(security, default_audience="nexusmcp"))
     return server
+
+
+def _protocol_output_schema(
+    schema: Mapping[str, Any] | None,
+    context: RequestContext,
+) -> dict[str, Any] | None:
+    if schema is None:
+        return None
+    # Legacy 2025-11-25 只接受 object-root Output Schema；该字段可选，省略比伪造对象契约安全。
+    if context.protocol_era.value == "legacy" and schema.get("type") != "object":
+        return None
+    return dict(schema)
+
+
+def _protocol_structured_content(
+    data: Any,
+    context: RequestContext,
+) -> Any:
+    # Legacy 的 structuredContent 仅兼容 Object；Text Content 仍保留完整序列化业务结果。
+    if context.protocol_era.value == "legacy" and not isinstance(data, Mapping):
+        return None
+    return data
 
 
 async def _resolve_interactive_approval(

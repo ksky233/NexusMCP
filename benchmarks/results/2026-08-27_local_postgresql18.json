@@ -1,0 +1,80 @@
+{
+  "recorded_at": "2026-08-27",
+  "environment": {
+    "os": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.10",
+    "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+    "cpu_logical": 32,
+    "cpu_physical": 24,
+    "memory_total_bytes": 51218210816,
+    "process_rss_bytes_after_run": 143716352,
+    "postgresql": "PostgreSQL 18.6 (Debian 18.6-1.pgdg13+2)",
+    "tool_count": 8,
+    "iterations_per_scenario": 30,
+    "concurrency": 1,
+    "telemetry_enabled": false,
+    "audit_enabled": true,
+    "upstream_transport": "in_process_asgi",
+    "embedding_provider": "deterministic_in_memory"
+  },
+  "methodology": {
+    "warmup_per_scenario": 1,
+    "payload": "small demo JSON",
+    "client": "in_process MCP Streamable HTTP",
+    "cache": "tools/list refresh; no application result cache",
+    "database": "project Docker PostgreSQL on 127.0.0.1:55432",
+    "interpretation": "reproducible local baseline, not a production capacity claim"
+  },
+  "scenarios": [
+    {
+      "scenario": "modern_tools_list",
+      "iterations": 30,
+      "errors": 0,
+      "error_rate": 0.0,
+      "latency_p50_ms": 8.7449,
+      "latency_p95_ms": 14.05237,
+      "latency_p99_ms": 15.774542,
+      "throughput_ops_per_second": 104.374909
+    },
+    {
+      "scenario": "lexical_tool_search",
+      "iterations": 30,
+      "errors": 0,
+      "error_rate": 0.0,
+      "latency_p50_ms": 17.576,
+      "latency_p95_ms": 69.202705,
+      "latency_p99_ms": 81.796345,
+      "throughput_ops_per_second": 40.162766
+    },
+    {
+      "scenario": "hybrid_tool_search",
+      "iterations": 30,
+      "errors": 0,
+      "error_rate": 0.0,
+      "latency_p50_ms": 19.7014,
+      "latency_p95_ms": 53.037595,
+      "latency_p99_ms": 67.49669,
+      "throughput_ops_per_second": 38.008766
+    },
+    {
+      "scenario": "read_only_tool_call",
+      "iterations": 30,
+      "errors": 0,
+      "error_rate": 0.0,
+      "latency_p50_ms": 70.44545,
+      "latency_p95_ms": 133.348085,
+      "latency_p99_ms": 146.605932,
+      "throughput_ops_per_second": 12.981722
+    },
+    {
+      "scenario": "legacy_tools_list",
+      "iterations": 30,
+      "errors": 0,
+      "error_rate": 0.0,
+      "latency_p50_ms": 8.9094,
+      "latency_p95_ms": 21.480595,
+      "latency_p99_ms": 29.975161,
+      "throughput_ops_per_second": 83.054386
+    }
+  ]
+}

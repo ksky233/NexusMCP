@@ -34,7 +34,7 @@ Arguments，不由 Tool Catalog Search 查询。
 | ToolBinding/Upstream | 无 | 有 |
 | Credential Injection | 无 | 按 Binding |
 | Authentication/Tenant/Policy | 有 | 有 |
-| Execution Connector | 内部 Search Use Case | HTTP/MCP Connector |
+| Execution Connector | 内部 Search Use Case | 当前为 HTTP Connector |
 | Trace/Audit/Rate Limit | 有 | 有 |
 
 Meta Tool 不写入 Catalog 伪装成普通 Tool，避免形成“搜索 Catalog 的 Tool 本身又依赖 Catalog 才能被

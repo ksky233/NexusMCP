@@ -18,7 +18,7 @@ MCP tools/call
 → Resolve Credential Binding
 → Resolve Secret Reference
 → Create ToolExecution
-→ Execute HTTP / Remote MCP
+→ Execute HTTP（Remote MCP Connector 已按 ADR-0017 延后）
 → Normalize Result/Error
 → Finish ToolExecution
 → Append AuditEvent
