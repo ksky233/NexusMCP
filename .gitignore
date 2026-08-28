@@ -19,6 +19,12 @@ build/
 dist/
 *.egg-info/
 
+# Frontend dependencies and reports
+node_modules/
+coverage/
+playwright-report/
+test-results/
+
 # Runtime output
 *.log
 logs/

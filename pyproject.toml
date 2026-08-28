@@ -55,7 +55,7 @@ target-version = "py312"
 select = ["E", "F", "I", "UP", "B", "ASYNC"]
 
 [tool.basedpyright]
-include = ["src", "tests", "examples", "benchmarks"]
+include = ["run.py", "src", "tests", "examples", "benchmarks"]
 exclude = [".venv", "build", "dist"]
 pythonVersion = "3.12"
 typeCheckingMode = "standard"

@@ -5,7 +5,7 @@
 NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry，当前负责将企业 HTTP/OpenAPI
 服务转化为受治理的 MCP Tool，并在接入、发现和调用链上执行身份、策略、凭据、审批、审计与可观测性。
 
-当前阶段：`W1｜Admin Query API 已完成`；下一步进入 `W2｜React Shell`。
+当前阶段：`W2｜React Shell 已完成`；下一步进入 `W3｜核心业务页面`。
 
 ## 当前边界
 
@@ -66,6 +66,8 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry
   Envelope 与确定性 OpenAPI Snapshot；公开 Upstream Contract 只允许 HTTP；
 - Admin Query API 已扩展至 27 个稳定 Operation，覆盖 Dashboard、Upstream/Import/Review、Tool/Version/
   Binding、Approval、Execution/Attempt、Audit 和 Search Projection，并具备数据库分页、过滤与租户隔离；
+- `web/` React Control Plane 已建立；Generated Hey API SDK、Zod Response Validation、TanStack Query、
+  Problem Details Client、Vite Same-Origin Proxy 与真实 Dashboard Slice 已跑通；
 - S6 前置增强优先补齐 Admin Query API 与 Web Control Plane MVP，用可视化方式展示 Upstream、Import、
   Review、Publish、Catalog、Approval、Execution 与 Audit；
 - 真实 JWT/OIDC、生产 Secret Store、CredentialBinding 持久化、跨调用 Result Replay、通用写 Tool
@@ -82,6 +84,27 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry
 
 ## 本地环境
 
+推荐使用根目录启动脚本管理 PostgreSQL、Migration 与 FastAPI：
+
+```powershell
+uv run python run.py --reload
+```
+
+可选参数：
+
+```text
+--keep-infra       退出后保留由脚本启动的 PostgreSQL
+--no-docker        不管理 Docker，复用已经运行的 PostgreSQL
+--skip-migrations  跳过 alembic upgrade head
+--host / --port    覆盖 Uvicorn 监听地址
+```
+
+脚本自动读取项目根目录 `.env`；未声明 Catalog、Database URL、Tenant 或 Control Plane 时，会采用与本仓库
+Docker Compose 一致的本地默认值。Shell 环境变量与 `.env` 中的显式配置始终优先。前端仍在另一个终端执行
+`cd web && pnpm dev`。
+
+手动命令：
+
 ```powershell
 uv sync --frozen
 uv run python -m pytest
@@ -91,6 +114,20 @@ uv run basedpyright
 uv build
 uv run nexusmcp export-admin-openapi --output contracts/admin.openapi.json
 uv run uvicorn nexusmcp.main:app --reload
+```
+
+Frontend：
+
+```powershell
+cd web
+pnpm install --frozen-lockfile
+pnpm api:generate
+pnpm format:check
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
+pnpm dev
 ```
 
 Read-Only `directory.get_employee` 调用需要另一个终端启动 Fake Upstream：
@@ -228,6 +265,7 @@ docker compose stop postgres
 - [S5-4 Benchmark、Threat Model 与 S5 收口](./docs/实验记录/29_S5-4_BenchmarkThreatModel与S5收口.md)
 - [W0 Admin API Contract 固化](./docs/实验记录/30_W0_AdminAPIContract固化.md)
 - [W1 Admin Query API](./docs/实验记录/31_W1_AdminQueryAPI.md)
+- [W2 React Shell](./docs/实验记录/32_W2_ReactShell.md)
 - [S5 统一工程证据报告](./docs/工程证据/06_S5统一报告.md)
 - [S5 工程证据矩阵](./docs/工程证据/01_S5证据矩阵.md)
 - [业务词汇、核心用例与限界上下文](./docs/架构/01_业务词汇核心用例与限界上下文.md)

@@ -15,4 +15,8 @@
 - 小型局部 Python 改动：运行相关测试及受影响路径的 Ruff；类型、签名或 Import 变化时运行 basedpyright。
 - 依赖、打包、协议、共享契约或跨模块改动：运行相关完整门禁。
 - 里程碑/发版：运行 Frozen Sync、全部测试、Ruff Lint/Format、basedpyright；涉及打包时再运行 Build。
+- `web/` 改动使用 pnpm；局部改动运行相关 Vitest、Type Check 和 Oxlint，前端里程碑运行 Frozen Install、
+  Codegen、Oxfmt、Type Check、Oxlint、全部 Vitest 和 Build。
+- `web/src/generated/api` 由 `contracts/admin.openapi.json` 生成并提交，禁止手工修改；生成目录参与 Type
+  Check，由生成器拥有 Lint/Format 风格。
 - 只报告实际执行的检查；跳过预期检查时说明原因。

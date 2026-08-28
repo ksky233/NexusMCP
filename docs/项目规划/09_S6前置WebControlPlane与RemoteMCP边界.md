@@ -1,6 +1,6 @@
 # 09｜S6 前置 Web Control Plane 与 Remote MCP 边界
 
-> 状态：产品与工程规划已冻结；W0/W1 已完成，W2 待开始
+> 状态：产品与工程规划已冻结；W0～W2 已完成，W3 待开始
 > 日期：2026-08-27
 > 决策：Remote MCP Deferred；优先 Admin Query API 与 Web UI MVP
 > 工程基线：见 ADR-0018
@@ -252,7 +252,7 @@ Static Build
 - Operational Query 只返回摘要、Digest、Request/Trace ID，不返回完整 Arguments、Result、Credential；
 - 详细结果见 [W1 Admin Query API](../实验记录/31_W1_AdminQueryAPI.md)。
 
-### W2｜React Shell
+### W2｜React Shell（已完成）
 
 - Layout/Navigation；
 - API Client；
@@ -260,6 +260,16 @@ Static Build
 - Loading/Empty/Error；
 - Local Admin Banner；
 - Request ID。
+
+完成记录：
+
+- 唯一 `web/` React + TypeScript + Vite SPA 已创建；
+- Router、Responsive Shell、Local Admin Banner 与 W3/W4 Placeholder Route 已建立；
+- Hey API 从提交的 Admin OpenAPI 生成 DTO、Fetch SDK 与 Zod Response Validator；
+- Problem Details、Network、Timeout、Abort、Protocol Error 与 Request ID Client Boundary 已建立；
+- TanStack Query 接通真实 Dashboard，Vite `/admin`、`/health` Proxy 已完成 PostgreSQL Runtime Smoke；
+- CI 增加 Frontend Frozen Install、Codegen Drift、Format、Type Check、Lint、Test 与 Build；
+- 详细结果见 [W2 React Shell](../实验记录/32_W2_ReactShell.md)。
 
 ### W3｜核心业务页面
 

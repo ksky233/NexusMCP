@@ -78,3 +78,53 @@ jobs:
 
       - name: Build package
         run: uv build --clear
+
+  frontend:
+    name: Frontend quality and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          version: 10.15.1
+          run_install: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 22.18.0
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify generated Admin API client
+        run: |
+          pnpm api:generate
+          git diff --exit-code -- src/generated/api
+
+      - name: Frontend format
+        run: pnpm format:check
+
+      - name: Frontend type check
+        run: pnpm typecheck
+
+      - name: Frontend lint
+        run: pnpm lint
+
+      - name: Frontend test
+        run: pnpm test
+
+      - name: Frontend build
+        run: pnpm build
