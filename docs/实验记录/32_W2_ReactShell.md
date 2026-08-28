@@ -2,6 +2,7 @@
 
 > 日期：2026-08-28  
 > 状态：完成
+> 后续视觉基线：W2.5 已使用“黑白-细硬”Semantic Token 替换本阶段初始 Shell 视觉，功能边界保持不变。
 
 ## 1. 目标
 
@@ -155,4 +156,3 @@ Upstreams
 → Approval
 → Execution / Attempt / Audit
 ```
-

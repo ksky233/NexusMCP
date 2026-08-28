@@ -10,7 +10,7 @@ export function NotFoundPage() {
           Use the governed navigation instead of constructing internal URLs manually.
         </p>
         <Link
-          className="mt-6 inline-flex h-10 items-center rounded-lg bg-accent px-4 text-sm font-semibold text-white hover:bg-accent-strong"
+          className="mt-7 inline-flex h-10 items-center rounded-[3px] border border-ink bg-ink px-4 text-sm font-normal text-mist transition-colors hover:border-slate hover:bg-slate focus-visible:ring-2 focus-visible:ring-slate/45 focus-visible:ring-offset-2 focus-visible:outline-none"
           to="/"
         >
           Return to dashboard

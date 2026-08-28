@@ -8,9 +8,11 @@ import {
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
+import type { ComponentType, SVGProps } from "react";
 
 import { EmptyState, ErrorState, LoadingState } from "@/components/common/query-state";
 import { Button } from "@/components/ui/button";
+import { StatusPill } from "@/components/ui/status-pill";
 import { useDashboardQuery } from "@/features/dashboard/hooks/use-dashboard-query";
 
 const numberFormatter = new Intl.NumberFormat("en-US");
@@ -38,11 +40,11 @@ export function DashboardPage() {
 
   return (
     <section aria-labelledby="dashboard-title" className="page-enter">
-      <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
+      <div className="flex flex-col justify-between gap-6 xl:flex-row xl:items-end">
         <div>
-          <p className="eyebrow">Governance overview</p>
+          <p className="eyebrow">2026 · Control Plane</p>
           <h1 className="page-title" id="dashboard-title">
-            Enterprise tools, one control surface.
+            Governance overview
           </h1>
           <p className="page-description">
             Live PostgreSQL projections for registry, catalog, approvals, execution and search.
@@ -50,113 +52,90 @@ export function DashboardPage() {
         </div>
         <div className="flex items-center gap-3">
           {dashboard.isFetching ? (
-            <span className="inline-flex items-center gap-2 text-xs font-medium text-ink-muted">
+            <span className="inline-flex items-center gap-2 text-xs font-normal text-slate/55">
               <RefreshCw aria-hidden="true" className="size-3.5 animate-spin" /> Refreshing
             </span>
           ) : null}
           <Button variant="secondary" size="small" onClick={() => void dashboard.refetch()}>
-            <RefreshCw aria-hidden="true" className="size-3.5" />
-            Refresh
+            <RefreshCw aria-hidden="true" className="size-3.5 stroke-[1.5]" />
+            Refresh data
           </Button>
         </div>
       </div>
 
+      <div className="hairline-divider my-10" />
+
       {!hasGovernedState ? (
-        <div className="mt-8">
-          <EmptyState
-            title="No governed resources yet"
-            description="Register an HTTP/OpenAPI upstream to begin the import, review and publish lifecycle."
-          />
-        </div>
+        <EmptyState
+          title="No governed resources yet"
+          description="Register an HTTP/OpenAPI upstream to begin the import, review and publish lifecycle."
+        />
       ) : (
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <MetricCard icon={Network} label="Active upstreams" value={data.active_upstreams} />
+          <MetricCard icon={Boxes} label="Published tools" value={data.published_tools} />
+          <MetricCard icon={Clock3} label="Pending reviews" value={data.pending_reviews} />
+          <MetricCard icon={ShieldCheck} label="Pending approvals" value={data.pending_approvals} />
           <MetricCard
-            icon={Network}
-            label="Active upstreams"
-            value={data.active_upstreams}
-            tone="blue"
-          />
-          <MetricCard
-            icon={Boxes}
-            label="Published tools"
-            value={data.published_tools}
-            tone="indigo"
-          />
-          <MetricCard
-            icon={Clock3}
-            label="Pending reviews"
-            value={data.pending_reviews}
-            tone="amber"
-          />
-          <MetricCard
-            icon={ShieldCheck}
-            label="Pending approvals"
-            value={data.pending_approvals}
-            tone="violet"
-          />
-          <MetricCard
+            alert={data.failed_executions > 0}
             icon={AlertOctagon}
             label="Failed executions"
             value={data.failed_executions}
-            tone="red"
           />
           <MetricCard
+            alert={data.unknown_executions > 0}
             icon={ArrowUpRight}
             label="Unknown outcomes"
             value={data.unknown_executions}
-            tone="slate"
           />
         </div>
       )}
 
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.45fr_1fr]">
-        <article className="panel p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+        <article className="panel p-6 sm:p-7">
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
             <div>
-              <p className="eyebrow">Search projection</p>
-              <h2 className="mt-1 text-xl font-semibold tracking-tight text-ink">
+              <p className="component-label">Search projection</p>
+              <h2 className="mt-3 text-xl font-light tracking-[-0.015em] text-ink">
                 Embedding coverage
               </h2>
             </div>
-            <span className="rounded-full bg-success-soft px-3 py-1 text-xs font-semibold text-success">
-              {data.search_projection.coverage_percent.toFixed(2)}%
-            </span>
+            <StatusPill tone={data.search_projection.pending_tools > 0 ? "active" : "completed"}>
+              {data.search_projection.coverage_percent.toFixed(2)}% indexed
+            </StatusPill>
           </div>
-          <div className="mt-7 h-2 overflow-hidden rounded-full bg-surface-strong">
+          <div className="mt-7 h-1.5 overflow-hidden rounded-full bg-mist shadow-[inset_0_1px_2px_rgba(34,40,49,0.04)]">
             <div
               aria-label={`${data.search_projection.coverage_percent}% indexed`}
-              className="h-full rounded-full bg-gradient-to-r from-accent to-cyan-400"
+              className="h-full rounded-full bg-slate transition-[width] duration-500"
               style={{ width: `${Math.min(data.search_projection.coverage_percent, 100)}%` }}
             />
           </div>
-          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <div className="mt-7 grid gap-4 sm:grid-cols-3">
             <ProjectionStat label="Published" value={data.search_projection.published_tools} />
             <ProjectionStat label="Indexed" value={data.search_projection.indexed_tools} />
             <ProjectionStat label="Pending" value={data.search_projection.pending_tools} />
           </div>
-          <p className="mt-6 break-all font-mono text-xs leading-5 text-ink-subtle">
+          <p className="mt-7 break-all border-t border-slate/12 pt-4 font-mono text-xs leading-5 text-slate/55">
             {data.search_projection.embedding_model}@{data.search_projection.embedding_dimensions}
           </p>
         </article>
 
-        <article className="panel flex flex-col justify-between p-6">
+        <article className="panel flex flex-col justify-between p-6 sm:p-7">
           <div>
-            <span className="grid size-10 place-items-center rounded-xl bg-success-soft text-success">
-              <CheckCircle2 aria-hidden="true" className="size-5" />
-            </span>
-            <h2 className="mt-5 text-lg font-semibold text-ink">Contract-connected</h2>
-            <p className="mt-2 text-sm leading-6 text-ink-muted">
+            <CheckCircle2 aria-hidden="true" className="size-6 stroke-[1.35] text-slate" />
+            <p className="component-label mt-6">Transport boundary</p>
+            <h2 className="mt-3 text-lg font-light text-ink">Contract-connected</h2>
+            <p className="mt-3 text-sm leading-7 text-slate/68">
               Dashboard data is fetched through the generated Hey API SDK, validated by generated
               Zod schemas and cached by TanStack Query.
             </p>
           </div>
-          <div className="mt-7 border-t border-line pt-4">
-            <p className="text-xs font-medium text-ink-subtle">
-              Request ID
-              <span className="mt-1 block break-all font-mono text-ink-muted">
-                {snapshot.requestId ?? "Unavailable"}
-              </span>
-            </p>
+          <div className="mt-7 border-t border-slate/15 pt-4">
+            <p className="component-label">Request ID</p>
+            <span className="mt-2 block break-all font-mono text-xs text-slate/65">
+              {snapshot.requestId ?? "Unavailable"}
+            </span>
           </div>
         </article>
       </div>
@@ -164,26 +143,35 @@ export function DashboardPage() {
   );
 }
 
+type MetricIcon = ComponentType<SVGProps<SVGSVGElement>>;
+
 function MetricCard({
   icon: Icon,
   label,
   value,
-  tone,
+  alert = false,
 }: {
-  icon: typeof Network;
+  icon: MetricIcon;
   label: string;
   value: number;
-  tone: "blue" | "indigo" | "amber" | "violet" | "red" | "slate";
+  alert?: boolean;
 }) {
   return (
-    <article className="panel group p-5 transition-transform hover:-translate-y-0.5">
-      <div className={`metric-icon metric-icon-${tone}`}>
-        <Icon aria-hidden="true" className="size-4" />
+    <article className="panel panel-interactive p-6">
+      <div className="flex items-start justify-between gap-4">
+        <p className="component-label">{label}</p>
+        <Icon
+          aria-hidden="true"
+          className={alert ? "size-4 stroke-[1.5] text-wine" : "size-4 stroke-[1.5] text-slate/48"}
+        />
       </div>
-      <p className="mt-5 text-3xl font-semibold tracking-tight text-ink">
+      <p
+        className={
+          alert ? "mt-7 text-3xl font-light text-wine" : "mt-7 text-3xl font-light text-ink"
+        }
+      >
         {numberFormatter.format(value)}
       </p>
-      <p className="mt-1 text-sm font-medium text-ink-muted">{label}</p>
     </article>
   );
 }
@@ -191,8 +179,8 @@ function MetricCard({
 function ProjectionStat({ label, value }: { label: string; value: number }) {
   return (
     <div>
-      <p className="text-2xl font-semibold text-ink">{numberFormatter.format(value)}</p>
-      <p className="mt-1 text-xs font-medium uppercase tracking-[0.12em] text-ink-subtle">
+      <p className="text-2xl font-light text-ink">{numberFormatter.format(value)}</p>
+      <p className="mt-2 text-[10px] font-normal uppercase tracking-[0.14em] text-slate/50">
         {label}
       </p>
     </div>

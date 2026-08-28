@@ -21,9 +21,9 @@ function renderDashboard() {
 test("renders the generated-contract dashboard and request id", async () => {
   const queryClient = renderDashboard();
 
-  expect(await screen.findByText("Enterprise tools, one control surface.")).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Governance overview" })).toBeInTheDocument();
   expect(screen.getAllByText("8")).toHaveLength(2);
-  expect(screen.getByText("87.50%")).toBeInTheDocument();
+  expect(screen.getByText("87.50% indexed")).toBeInTheDocument();
   expect(screen.getByText("request-dashboard-test")).toBeInTheDocument();
   queryClient.clear();
 });

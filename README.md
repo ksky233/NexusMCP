@@ -5,7 +5,7 @@
 NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry，当前负责将企业 HTTP/OpenAPI
 服务转化为受治理的 MCP Tool，并在接入、发现和调用链上执行身份、策略、凭据、审批、审计与可观测性。
 
-当前阶段：`W2｜React Shell 已完成`；下一步进入 `W3｜核心业务页面`。
+当前阶段：`W2.5｜Control Plane UI 基线已完成`；下一步进入 `W3｜核心业务页面`。
 
 ## 当前边界
 
@@ -68,6 +68,8 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry
   Binding、Approval、Execution/Attempt、Audit 和 Search Projection，并具备数据库分页、过滤与租户隔离；
 - `web/` React Control Plane 已建立；Generated Hey API SDK、Zod Response Validation、TanStack Query、
   Problem Details Client、Vite Same-Origin Proxy 与真实 Dashboard Slice 已跑通；
+- Control Plane 已冻结黑白灰细硬视觉基线、White Sidebar、Mobile Navigation 以及 W3 所需 Button、Status、
+  Form、Table、Pagination、Dialog 和 Query State；
 - S6 前置增强优先补齐 Admin Query API 与 Web Control Plane MVP，用可视化方式展示 Upstream、Import、
   Review、Publish、Catalog、Approval、Execution 与 Audit；
 - 真实 JWT/OIDC、生产 Secret Store、CredentialBinding 持久化、跨调用 Result Replay、通用写 Tool
@@ -266,6 +268,7 @@ docker compose stop postgres
 - [W0 Admin API Contract 固化](./docs/实验记录/30_W0_AdminAPIContract固化.md)
 - [W1 Admin Query API](./docs/实验记录/31_W1_AdminQueryAPI.md)
 - [W2 React Shell](./docs/实验记录/32_W2_ReactShell.md)
+- [W2.5 Control Plane UI 基线](./docs/实验记录/33_W2.5_ControlPlaneUI基线.md)
 - [S5 统一工程证据报告](./docs/工程证据/06_S5统一报告.md)
 - [S5 工程证据矩阵](./docs/工程证据/01_S5证据矩阵.md)
 - [业务词汇、核心用例与限界上下文](./docs/架构/01_业务词汇核心用例与限界上下文.md)

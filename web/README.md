@@ -73,3 +73,16 @@ Expected backend errors must be `application/problem+json`. The client classifie
 - successful response schema drift through generated Zod validators.
 
 UI branches on stable `status/code`, displays safe `detail`, and preserves `request_id` for log correlation.
+
+## Visual Baseline
+
+The Control Plane uses a restrained black/white thin-border system:
+
+- Ink/Slate/Mist/Paper/Canvas structural palette;
+- Teal only for in-progress states;
+- Wine only for error and destructive actions;
+- 3px/6px radius and hairline shadows;
+- White desktop sidebar and Base UI mobile navigation;
+- no decorative gradients, colorful metric tiles or marketing-style cards.
+
+The tracked design rules are in `docs/前端/01_ControlPlane视觉基线.md`.

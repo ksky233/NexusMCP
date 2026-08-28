@@ -1,6 +1,6 @@
 # 09｜S6 前置 Web Control Plane 与 Remote MCP 边界
 
-> 状态：产品与工程规划已冻结；W0～W2 已完成，W3 待开始
+> 状态：产品与工程规划已冻结；W0～W2.5 已完成，W3 待开始
 > 日期：2026-08-27
 > 决策：Remote MCP Deferred；优先 Admin Query API 与 Web UI MVP
 > 工程基线：见 ADR-0018
@@ -271,6 +271,22 @@ Static Build
 - CI 增加 Frontend Frozen Install、Codegen Drift、Format、Type Check、Lint、Test 与 Build；
 - 详细结果见 [W2 React Shell](../实验记录/32_W2_ReactShell.md)。
 
+### W2.5｜Control Plane UI 基线（已完成）
+
+- 将“黑白-细硬”参考模板提炼为 NexusMCP Semantic Token；
+- 替换 White Sidebar、Header、Mobile Navigation 与 Dashboard 视觉；
+- 冻结 Button、Status、Form、Table、Pagination、Dialog 和 Query State；
+- 保持 Base UI Accessibility，不复制模板原生 DOM Script；
+- 视觉规范见 [Control Plane 视觉基线](../前端/01_ControlPlane视觉基线.md)。
+
+完成记录：
+
+- 黑白灰 Semantic Token、3px/6px Radius、Hairline Border/Shadow 已冻结；
+- White Sidebar、Sticky Header、Base UI Mobile Navigation 与 Dashboard 已替换；
+- Button、Status、Form、Table、Pagination、Dialog 和 Query State 已建立；
+- Dashboard Lazy Route 完成 Chunk 拆分，Desktop/Narrow Screenshot 与组件交互测试通过；
+- 详细结果见 [W2.5 Control Plane UI 基线](../实验记录/33_W2.5_ControlPlaneUI基线.md)。
+
 ### W3｜核心业务页面
 
 - Dashboard；
@@ -326,11 +342,12 @@ Static Build
 | W0 边界与 Contract | 4～8 小时 |
 | W1 Admin Query API | 12～20 小时 |
 | W2 React Shell | 6～10 小时 |
+| W2.5 UI 基线 | 4～8 小时 |
 | W3 核心页面 | 18～28 小时 |
 | W4 Search Lab/Test | 8～14 小时 |
 | W5 S6 包装 | 20～30 小时 |
 
-Web 增强本身约 48～80 小时；S6 完整包装另计。若求职时间受限，优先 Dashboard、Import/Review、Catalog、
+Web 增强本身约 52～88 小时；S6 完整包装另计。若求职时间受限，优先 Dashboard、Import/Review、Catalog、
 Execution/Audit 四条可视化主链。
 
 ## 11. 停止条件

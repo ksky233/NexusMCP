@@ -5,17 +5,20 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
 const buttonVariants = cva(
-  "inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent/50 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex min-h-10 cursor-pointer select-none items-center justify-center gap-2 rounded-[3px] border px-4 text-sm font-normal tracking-[0.02em] transition-[background-color,border-color,color,transform,box-shadow,opacity] duration-200 outline-none hover:-translate-y-px active:translate-y-0 focus-visible:ring-2 focus-visible:ring-slate/45 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:translate-y-0 disabled:border-line disabled:bg-mist/80 disabled:text-slate/40 disabled:shadow-none",
   {
     variants: {
       variant: {
-        primary: "bg-accent px-4 py-2 text-white hover:bg-accent-strong",
-        secondary: "border border-line bg-surface px-4 py-2 text-ink hover:bg-surface-strong",
-        ghost: "px-3 py-2 text-ink-muted hover:bg-surface-strong hover:text-ink",
+        primary: "border-ink bg-ink text-mist shadow-hairline hover:border-slate hover:bg-slate",
+        secondary:
+          "border-slate/30 bg-paper text-slate hover:border-slate/50 hover:bg-mist/50 hover:text-ink",
+        ghost: "border-transparent bg-transparent text-slate hover:bg-mist hover:text-ink",
+        danger: "border-wine/35 bg-wine/6 text-wine hover:border-wine/50 hover:bg-wine/10",
       },
       size: {
         default: "h-10",
-        small: "h-8 text-xs",
+        small: "min-h-8 px-3 text-xs",
+        icon: "size-10 px-0",
       },
     },
     defaultVariants: {

@@ -2,7 +2,6 @@ import { createBrowserRouter } from "react-router-dom";
 
 import { PlaceholderPage } from "@/components/common/placeholder-page";
 import { NotFoundPage } from "@/components/common/not-found-page";
-import { DashboardPage } from "@/features/dashboard/pages/dashboard-page";
 import { AppShell } from "@/layouts/app-shell";
 
 export const router = createBrowserRouter([
@@ -10,7 +9,14 @@ export const router = createBrowserRouter([
     path: "/",
     Component: AppShell,
     children: [
-      { index: true, Component: DashboardPage },
+      {
+        index: true,
+        HydrateFallback: DashboardRouteFallback,
+        lazy: async () => {
+          const { DashboardPage } = await import("@/features/dashboard/pages/dashboard-page");
+          return { Component: DashboardPage };
+        },
+      },
       {
         path: "upstreams",
         element: (
@@ -75,3 +81,11 @@ export const router = createBrowserRouter([
     ],
   },
 ]);
+
+function DashboardRouteFallback() {
+  return (
+    <div className="state-panel" role="status">
+      Loading dashboard module…
+    </div>
+  );
+}
