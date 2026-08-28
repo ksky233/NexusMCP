@@ -51,6 +51,7 @@ from nexusmcp.shared.errors import (
     ToolBindingNotFoundError,
     ToolExecutionNotFoundError,
     ToolNotFoundError,
+    ToolVersionNotFoundError,
     UpstreamNotFoundError,
 )
 from nexusmcp.shared.request_context import ActorContext
@@ -207,6 +208,38 @@ def create_admin_query_router(queries: ControlPlaneQueryPort) -> APIRouter:
             limit=limit,
         )
         return _page_response(ToolVersionPageResponse, ToolVersionDetailResponse, page)
+
+    @router.get(
+        "/tool-versions/{tool_version_id}",
+        response_model=ToolVersionDetailResponse,
+        operation_id="getToolVersion",
+        responses=problem_responses(404),
+    )
+    async def get_tool_version(
+        tool_version_id: str,
+        context: AdminContext,
+    ) -> ToolVersionDetailResponse:
+        version = await queries.get_tool_version(context.tenant_id, tool_version_id)
+        if version is None:
+            raise ToolVersionNotFoundError("tool version did not exist in tenant")
+        return ToolVersionDetailResponse.model_validate(version)
+
+    @router.get(
+        "/tool-versions/{tool_version_id}/binding",
+        response_model=ToolBindingDetailResponse,
+        operation_id="getToolVersionBinding",
+        responses=problem_responses(404, 501),
+    )
+    async def get_tool_version_binding(
+        tool_version_id: str,
+        context: AdminContext,
+    ) -> ToolBindingDetailResponse:
+        binding = await queries.get_tool_version_binding(context.tenant_id, tool_version_id)
+        if binding is None:
+            raise ToolBindingNotFoundError("tool version binding did not exist in tenant")
+        if binding.binding_type != "http":
+            raise FeatureNotEnabledError("Remote MCP tool binding response is not supported")
+        return ToolBindingDetailResponse.model_validate(binding)
 
     @router.get(
         "/tool-bindings/{tool_binding_id}",

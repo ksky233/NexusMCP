@@ -227,8 +227,13 @@ async def test_admin_queries_cover_dashboard_catalog_execution_audit_and_tenant_
                 assert (await client.get(f"/admin/tools/{TOOL_ID}")).status_code == 200
                 versions = await client.get(f"/admin/tools/{TOOL_ID}/versions")
                 assert [item["id"] for item in versions.json()["items"]] == [VERSION_ID]
+                version = await client.get(f"/admin/tool-versions/{VERSION_ID}")
+                assert version.json()["tool_id"] == TOOL_ID
+                assert version.json()["schema_digest"] == "1" * 64
                 binding = await client.get(f"/admin/tool-bindings/{BINDING_ID}")
                 assert binding.json()["binding_config"]["method"] == "GET"
+                version_binding = await client.get(f"/admin/tool-versions/{VERSION_ID}/binding")
+                assert version_binding.json()["id"] == BINDING_ID
 
                 approvals = await client.get(
                     "/admin/approvals",

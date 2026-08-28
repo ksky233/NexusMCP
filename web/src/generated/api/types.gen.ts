@@ -2114,6 +2114,78 @@ export type GetToolBindingResponses = {
 
 export type GetToolBindingResponse = GetToolBindingResponses[keyof GetToolBindingResponses];
 
+export type GetToolVersionData = {
+    body?: never;
+    path: {
+        /**
+         * Tool Version Id
+         */
+        tool_version_id: string;
+    };
+    query?: never;
+    url: '/tool-versions/{tool_version_id}';
+};
+
+export type GetToolVersionErrors = {
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+    /**
+     * Unprocessable Entity
+     */
+    422: ProblemDetails;
+};
+
+export type GetToolVersionError = GetToolVersionErrors[keyof GetToolVersionErrors];
+
+export type GetToolVersionResponses = {
+    /**
+     * Successful Response
+     */
+    200: ToolVersionDetailResponse;
+};
+
+export type GetToolVersionResponse = GetToolVersionResponses[keyof GetToolVersionResponses];
+
+export type GetToolVersionBindingData = {
+    body?: never;
+    path: {
+        /**
+         * Tool Version Id
+         */
+        tool_version_id: string;
+    };
+    query?: never;
+    url: '/tool-versions/{tool_version_id}/binding';
+};
+
+export type GetToolVersionBindingErrors = {
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+    /**
+     * Unprocessable Entity
+     */
+    422: ProblemDetails;
+    /**
+     * Not Implemented
+     */
+    501: ProblemDetails;
+};
+
+export type GetToolVersionBindingError = GetToolVersionBindingErrors[keyof GetToolVersionBindingErrors];
+
+export type GetToolVersionBindingResponses = {
+    /**
+     * Successful Response
+     */
+    200: ToolBindingDetailResponse;
+};
+
+export type GetToolVersionBindingResponse = GetToolVersionBindingResponses[keyof GetToolVersionBindingResponses];
+
 export type SubmitToolVersionReviewData = {
     body?: never;
     path: {

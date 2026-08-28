@@ -86,3 +86,13 @@ The Control Plane uses a restrained black/white thin-border system:
 - no decorative gradients, colorful metric tiles or marketing-style cards.
 
 The tracked design rules are in `docs/前端/01_ControlPlane视觉基线.md`.
+
+## Implemented Control Plane
+
+- Upstream register, list, detail, edit and disable;
+- OpenAPI import, operation review, submit review and digest-safe publish;
+- Tool catalog, version history, schemas and HTTP binding;
+- Approval list and confirmed decision;
+- Execution, attempt and audit filters/timelines.
+
+Search Lab and full-stack Playwright evidence remain in W4.

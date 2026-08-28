@@ -8,6 +8,7 @@ export const router = createBrowserRouter([
   {
     path: "/",
     Component: AppShell,
+    HydrateFallback: DashboardRouteFallback,
     children: [
       {
         index: true,
@@ -19,53 +20,68 @@ export const router = createBrowserRouter([
       },
       {
         path: "upstreams",
-        element: (
-          <PlaceholderPage
-            eyebrow="Registry"
-            title="Upstreams"
-            description="HTTP/OpenAPI upstream registration and lifecycle arrive in W3."
-          />
-        ),
+        lazy: async () => {
+          const { UpstreamsPage } = await import("@/features/upstreams/pages/upstreams-page");
+          return { Component: UpstreamsPage };
+        },
+      },
+      {
+        path: "upstreams/:upstreamId",
+        lazy: async () => {
+          const { UpstreamDetailPage } =
+            await import("@/features/upstreams/pages/upstream-detail-page");
+          return { Component: UpstreamDetailPage };
+        },
       },
       {
         path: "imports",
-        element: (
-          <PlaceholderPage
-            eyebrow="OpenAPI"
-            title="Imports & Review"
-            description="Import jobs, conflicts, review and publish workflows arrive in W3."
-          />
-        ),
+        lazy: async () => {
+          const { ImportsPage } = await import("@/features/imports/pages/imports-page");
+          return { Component: ImportsPage };
+        },
+      },
+      {
+        path: "imports/:importId",
+        lazy: async () => {
+          const { ImportDetailPage } = await import("@/features/imports/pages/import-detail-page");
+          return { Component: ImportDetailPage };
+        },
       },
       {
         path: "catalog",
-        element: (
-          <PlaceholderPage
-            eyebrow="Catalog"
-            title="Tool Catalog"
-            description="Tool identity, version history and binding inspection arrive in W3."
-          />
-        ),
+        lazy: async () => {
+          const { CatalogPage } = await import("@/features/catalog/pages/catalog-page");
+          return { Component: CatalogPage };
+        },
+      },
+      {
+        path: "catalog/:toolId",
+        lazy: async () => {
+          const { ToolDetailPage } = await import("@/features/catalog/pages/tool-detail-page");
+          return { Component: ToolDetailPage };
+        },
       },
       {
         path: "approvals",
-        element: (
-          <PlaceholderPage
-            eyebrow="Governance"
-            title="Approvals"
-            description="Pending decisions and protected confirmation interactions arrive in W3."
-          />
-        ),
+        lazy: async () => {
+          const { ApprovalsPage } = await import("@/features/approvals/pages/approvals-page");
+          return { Component: ApprovalsPage };
+        },
       },
       {
         path: "executions",
-        element: (
-          <PlaceholderPage
-            eyebrow="Operations"
-            title="Executions & Audit"
-            description="Execution attempts, trace filters and audit timelines arrive in W3."
-          />
-        ),
+        lazy: async () => {
+          const { ExecutionsPage } = await import("@/features/executions/pages/executions-page");
+          return { Component: ExecutionsPage };
+        },
+      },
+      {
+        path: "executions/:executionId",
+        lazy: async () => {
+          const { ExecutionDetailPage } =
+            await import("@/features/executions/pages/execution-detail-page");
+          return { Component: ExecutionDetailPage };
+        },
       },
       {
         path: "search-lab",

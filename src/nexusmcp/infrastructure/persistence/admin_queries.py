@@ -355,6 +355,42 @@ class SqlAlchemyControlPlaneQueries:
             )
         return _binding_detail(model) if model is not None else None
 
+    async def get_tool_version(
+        self,
+        tenant_id: str,
+        tool_version_id: str,
+    ) -> ToolVersionDetail | None:
+        tenant_uuid = _required_uuid(tenant_id)
+        version_uuid = _optional_uuid(tool_version_id)
+        if version_uuid is None:
+            return None
+        async with self._session() as session:
+            model = await session.scalar(
+                select(ToolVersionModel).where(
+                    ToolVersionModel.tenant_id == tenant_uuid,
+                    ToolVersionModel.id == version_uuid,
+                )
+            )
+        return _version_detail(model) if model is not None else None
+
+    async def get_tool_version_binding(
+        self,
+        tenant_id: str,
+        tool_version_id: str,
+    ) -> ToolBindingDetail | None:
+        tenant_uuid = _required_uuid(tenant_id)
+        version_uuid = _optional_uuid(tool_version_id)
+        if version_uuid is None:
+            return None
+        async with self._session() as session:
+            model = await session.scalar(
+                select(ToolBindingModel).where(
+                    ToolBindingModel.tenant_id == tenant_uuid,
+                    ToolBindingModel.tool_version_id == version_uuid,
+                )
+            )
+        return _binding_detail(model) if model is not None else None
+
     async def list_approvals(
         self,
         tenant_id: str,

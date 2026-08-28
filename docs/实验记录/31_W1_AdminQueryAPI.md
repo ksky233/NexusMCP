@@ -111,8 +111,10 @@ Dashboard 返回：
 - 同一测试验证第二 Tenant 的 Upstream 无法由当前 Tenant 读取；
 - 全量门禁结果见本次提交记录。
 
+> W3 Addendum：为保证 Review/Publish 与 Catalog/Binding 页面刷新后可恢复，新增 `getToolVersion` 和
+> `getToolVersionBinding`，当前 Admin Contract 为 29 个稳定 Operation。
+
 ## 8. 下一步
 
 进入 `W2｜React Shell`：创建唯一的 `web/` 应用，锁定 pnpm/Node/Hey API 版本，从当前 Contract 生成 Fetch
 SDK，并建立 Router、TanStack Query、Problem Details Client、Local Development Admin Banner 与基础页面状态。
-

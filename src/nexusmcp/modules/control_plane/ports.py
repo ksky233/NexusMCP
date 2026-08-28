@@ -80,10 +80,22 @@ class ControlPlaneQueryPort(Protocol):
         limit: int,
     ) -> Page[ToolVersionDetail]: ...
 
+    async def get_tool_version(
+        self,
+        tenant_id: str,
+        tool_version_id: str,
+    ) -> ToolVersionDetail | None: ...
+
     async def get_tool_binding(
         self,
         tenant_id: str,
         binding_id: str,
+    ) -> ToolBindingDetail | None: ...
+
+    async def get_tool_version_binding(
+        self,
+        tenant_id: str,
+        tool_version_id: str,
     ) -> ToolBindingDetail | None: ...
 
     async def list_approvals(

@@ -743,6 +743,16 @@ export const zGetToolBindingResponse = zToolBindingDetailResponse;
 /**
  * Successful Response
  */
+export const zGetToolVersionResponse = zToolVersionDetailResponse;
+
+/**
+ * Successful Response
+ */
+export const zGetToolVersionBindingResponse = zToolBindingDetailResponse;
+
+/**
+ * Successful Response
+ */
 export const zSubmitToolVersionReviewResponse = zStateResponse;
 
 /**

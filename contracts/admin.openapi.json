@@ -3633,6 +3633,114 @@
         "summary": "Get Tool Binding"
       }
     },
+    "/tool-versions/{tool_version_id}": {
+      "get": {
+        "operationId": "getToolVersion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tool_version_id",
+            "required": true,
+            "schema": {
+              "title": "Tool Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolVersionDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Get Tool Version"
+      }
+    },
+    "/tool-versions/{tool_version_id}/binding": {
+      "get": {
+        "operationId": "getToolVersionBinding",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tool_version_id",
+            "required": true,
+            "schema": {
+              "title": "Tool Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolBindingDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "501": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Implemented"
+          }
+        },
+        "summary": "Get Tool Version Binding"
+      }
+    },
     "/tool-versions/{tool_version_id}/submit-review": {
       "post": {
         "operationId": "submitToolVersionReview",

@@ -22,6 +22,8 @@ EXPECTED_OPERATION_IDS = {
     "getSearchProjectionStatus",
     "getTool",
     "getToolBinding",
+    "getToolVersion",
+    "getToolVersionBinding",
     "getUpstream",
     "listUpstreams",
     "listApprovals",

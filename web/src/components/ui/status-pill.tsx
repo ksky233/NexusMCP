@@ -26,6 +26,7 @@ const statusVariants = cva(
 );
 
 type StatusPillProps = HTMLAttributes<HTMLSpanElement> & VariantProps<typeof statusVariants>;
+export type StatusTone = NonNullable<VariantProps<typeof statusVariants>["tone"]>;
 
 export function StatusPill({ className, tone, ...props }: StatusPillProps) {
   return <span className={cn(statusVariants({ tone }), className)} {...props} />;

@@ -1,6 +1,6 @@
 # 09｜S6 前置 Web Control Plane 与 Remote MCP 边界
 
-> 状态：产品与工程规划已冻结；W0～W2.5 已完成，W3 待开始
+> 状态：产品与工程规划已冻结；W0～W3 已完成，W4 待开始
 > 日期：2026-08-27
 > 决策：Remote MCP Deferred；优先 Admin Query API 与 Web UI MVP
 > 工程基线：见 ADR-0018
@@ -287,7 +287,7 @@ Static Build
 - Dashboard Lazy Route 完成 Chunk 拆分，Desktop/Narrow Screenshot 与组件交互测试通过；
 - 详细结果见 [W2.5 Control Plane UI 基线](../实验记录/33_W2.5_ControlPlaneUI基线.md)。
 
-### W3｜核心业务页面
+### W3｜核心业务页面（已完成）
 
 - Dashboard；
 - Upstreams；
@@ -295,6 +295,16 @@ Static Build
 - Catalog；
 - Approval；
 - Execution/Audit。
+
+完成记录：
+
+- Upstream Register/List/Detail/Edit/Disable；
+- OpenAPI Import/List/Detail、Operation Review、Submit Review、Digest-safe Publish；
+- Catalog Filter、Tool Detail、Version History、Schema 与 Binding；
+- Approval Filter 与 Confirm Approve/Reject；
+- Execution/Attempt/Audit Filter 与 Timeline；
+- 为刷新恢复新增 `getToolVersion` 与 `getToolVersionBinding`，Admin Contract 扩展为 29 Operation；
+- 详细结果见 [W3 核心业务页面](../实验记录/34_W3_核心业务页面.md)。
 
 ### W4｜Search Lab 与 Evidence
 
