@@ -16,8 +16,22 @@ EXPECTED_OPERATION_IDS = {
     "approveApproval",
     "disableUpstream",
     "getApproval",
+    "getDashboard",
+    "getExecution",
     "getOpenApiImport",
+    "getSearchProjectionStatus",
+    "getTool",
+    "getToolBinding",
+    "getUpstream",
     "listUpstreams",
+    "listApprovals",
+    "listAuditEvents",
+    "listExecutionAttempts",
+    "listExecutions",
+    "listOpenApiImports",
+    "listReviewOperations",
+    "listTools",
+    "listToolVersions",
     "publishToolVersion",
     "registerUpstream",
     "rejectApproval",
@@ -64,6 +78,33 @@ def test_admin_openapi_declares_problem_json_for_expected_and_validation_errors(
             assert validation_response["content"]["application/problem+json"]["schema"] == {
                 "$ref": "#/components/schemas/ProblemDetails"
             }
+
+
+def test_admin_query_contract_uses_page_envelopes_and_redacted_operational_fields() -> None:
+    document = build_admin_openapi_document()
+    schemas = document["components"]["schemas"]
+
+    for schema_name in (
+        "UpstreamPageResponse",
+        "ImportJobPageResponse",
+        "ReviewOperationPageResponse",
+        "ToolPageResponse",
+        "ToolVersionPageResponse",
+        "ApprovalPageResponse",
+        "ExecutionPageResponse",
+        "ExecutionAttemptPageResponse",
+        "AuditEventPageResponse",
+    ):
+        assert schemas[schema_name]["required"] == ["items", "page"]
+
+    assert schemas["UpstreamDetailResponse"]["properties"]["service_type"]["const"] == "http"
+    assert schemas["ToolBindingDetailResponse"]["properties"]["binding_type"]["const"] == ("http")
+    approval_fields = set(schemas["ApprovalSummaryResponse"]["properties"])
+    execution_fields = set(schemas["ExecutionSummaryResponse"]["properties"])
+    audit_fields = set(schemas["AuditEventResponse"]["properties"])
+    assert "idempotency_key" not in approval_fields | execution_fields
+    assert "has_idempotency_key" in approval_fields & execution_fields
+    assert {"arguments", "result", "credential", "token"}.isdisjoint(audit_fields)
 
 
 def test_admin_openapi_export_is_deterministic_and_matches_committed_snapshot(

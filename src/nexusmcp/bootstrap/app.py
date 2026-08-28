@@ -30,6 +30,7 @@ from nexusmcp.infrastructure.observability import (
     TelemetrySettings,
     create_telemetry_runtime,
 )
+from nexusmcp.infrastructure.persistence.admin_queries import SqlAlchemyControlPlaneQueries
 from nexusmcp.infrastructure.persistence.runtime import DatabaseRuntime, DatabaseRuntimePort
 from nexusmcp.interfaces.admin import AdminServices, create_admin_app
 from nexusmcp.interfaces.health.router import create_health_router
@@ -80,7 +81,6 @@ from nexusmcp.modules.registry.egress_ports import (
 )
 from nexusmcp.modules.registry.use_cases import (
     DisableUpstream,
-    ListUpstreams,
     RegisterUpstream,
     UpdateUpstream,
 )
@@ -349,7 +349,11 @@ def create_app(
                     resolved_endpoint_policy,
                 ),
                 disable_upstream=DisableUpstream(registry_uow_factory),
-                list_upstreams=ListUpstreams(registry_uow_factory),
+                queries=SqlAlchemyControlPlaneQueries(
+                    resolved_runtime,
+                    embedding_model=resolved_settings.embedding_model,
+                    embedding_dimensions=resolved_settings.embedding_dimensions,
+                ),
                 import_openapi=ImportOpenApi(
                     import_uow_factory,
                     LocalOpenApiDocumentReader(resolved_settings.openapi_fixture_root),

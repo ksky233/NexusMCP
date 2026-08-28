@@ -1,6 +1,6 @@
 # 09｜S6 前置 Web Control Plane 与 Remote MCP 边界
 
-> 状态：产品与工程规划已冻结；W0 已完成，W1 待开始
+> 状态：产品与工程规划已冻结；W0/W1 已完成，W2 待开始
 > 日期：2026-08-27
 > 决策：Remote MCP Deferred；优先 Admin Query API 与 Web UI MVP
 > 工程基线：见 ADR-0018
@@ -233,7 +233,7 @@ Static Build
 - Remote MCP 已从公开输入隐藏，并在绕过 Schema 时返回 `feature_not_enabled`；
 - 详细结果见 [W0 Admin API Contract 固化](../实验记录/30_W0_AdminAPIContract固化.md)。
 
-### W1｜Admin Query API
+### W1｜Admin Query API（已完成）
 
 - Dashboard；
 - List/Detail/Pagination；
@@ -241,6 +241,16 @@ Static Build
 - Tool Version/Binding；
 - Search Projection Status；
 - Contract/Integration Test。
+
+完成记录：
+
+- 新增跨上下文 `ControlPlaneQueryPort` 与 PostgreSQL Read Model Adapter；
+- Admin OpenAPI 从 13 个扩展为 27 个稳定 Operation；
+- Dashboard、Upstream/Import/Review、Tool/Version/Binding、Approval、Execution/Attempt、Audit 与
+  Search Projection Query 已接通；
+- 所有普通列表统一数据库分页、精确过滤和 Tenant Predicate；
+- Operational Query 只返回摘要、Digest、Request/Trace ID，不返回完整 Arguments、Result、Credential；
+- 详细结果见 [W1 Admin Query API](../实验记录/31_W1_AdminQueryAPI.md)。
 
 ### W2｜React Shell
 

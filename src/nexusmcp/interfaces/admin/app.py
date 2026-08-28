@@ -12,6 +12,8 @@ from pydantic import BaseModel, Field
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.responses import Response
 
+from nexusmcp.interfaces.admin.query_models import PageMetadata
+from nexusmcp.interfaces.admin.query_routes import create_admin_query_router
 from nexusmcp.interfaces.http.errors import problem_responses, register_http_exception_handlers
 from nexusmcp.modules.approval.domain import ApprovalRequest
 from nexusmcp.modules.approval.use_cases import (
@@ -27,6 +29,8 @@ from nexusmcp.modules.catalog.review import (
     SubmitToolVersionForReviewCommand,
 )
 from nexusmcp.modules.catalog.search import SearchPublishedTools, SearchPublishedToolsQuery
+from nexusmcp.modules.control_plane.ports import ControlPlaneQueryPort
+from nexusmcp.modules.control_plane.read_models import UpstreamDetail
 from nexusmcp.modules.openapi_import.domain import ImportedOperation, OpenApiImportJob
 from nexusmcp.modules.openapi_import.import_openapi import ImportOpenApi, ImportOpenApiCommand
 from nexusmcp.modules.openapi_import.queries import GetOpenApiImport, GetOpenApiImportQuery
@@ -42,7 +46,6 @@ from nexusmcp.modules.registry.domain import (
 from nexusmcp.modules.registry.use_cases import (
     DisableUpstream,
     DisableUpstreamCommand,
-    ListUpstreams,
     RegisterUpstream,
     RegisterUpstreamCommand,
     UpdateUpstream,
@@ -58,7 +61,7 @@ class AdminServices:
     register_upstream: RegisterUpstream
     update_upstream: UpdateUpstream
     disable_upstream: DisableUpstream
-    list_upstreams: ListUpstreams
+    queries: ControlPlaneQueryPort
     import_openapi: ImportOpenApi
     get_openapi_import: GetOpenApiImport
     review_operation: ReviewImportedOperation
@@ -128,13 +131,24 @@ class UpstreamResponse(BaseModel):
             status=upstream.status,
         )
 
-
-class PageMetadata(BaseModel):
-    """普通资源列表统一使用 Offset Pagination；搜索 Top-K 不复用该语义。"""
-
-    offset: int
-    limit: int
-    total: int
+    @classmethod
+    def from_read_model(cls, upstream: UpstreamDetail) -> UpstreamResponse:
+        if upstream.service_type != "http" or upstream.transport_type != "http":
+            raise FeatureNotEnabledError("Remote MCP upstream response is not supported")
+        return cls(
+            id=upstream.id,
+            tenant_id=upstream.tenant_id,
+            namespace=upstream.namespace,
+            name=upstream.name,
+            description=upstream.description,
+            owner=upstream.owner,
+            service_type="http",
+            transport_type="http",
+            endpoint=upstream.endpoint,
+            auth_scheme=upstream.auth_scheme,
+            config=dict(upstream.config),
+            status=UpstreamStatus(upstream.status),
+        )
 
 
 class UpstreamPageResponse(BaseModel):
@@ -359,14 +373,23 @@ def create_admin_app(
         context: AdminContext,
         offset: Annotated[int, Query(ge=0)] = 0,
         limit: Annotated[int, Query(ge=1, le=100)] = 50,
+        namespace: Annotated[str | None, Query(min_length=1, max_length=64)] = None,
+        upstream_status: Annotated[UpstreamStatus | None, Query(alias="status")] = None,
     ) -> UpstreamPageResponse:
-        upstreams = await services.list_upstreams.execute(context)
+        upstreams = await services.queries.list_upstreams(
+            context.tenant_id,
+            offset=offset,
+            limit=limit,
+            namespace=namespace,
+            status=upstream_status.value if upstream_status else None,
+        )
         return UpstreamPageResponse(
-            items=[
-                UpstreamResponse.from_domain(upstream)
-                for upstream in upstreams[offset : offset + limit]
-            ],
-            page=PageMetadata(offset=offset, limit=limit, total=len(upstreams)),
+            items=[UpstreamResponse.from_read_model(upstream) for upstream in upstreams.items],
+            page=PageMetadata(
+                offset=upstreams.offset,
+                limit=upstreams.limit,
+                total=upstreams.total,
+            ),
         )
 
     @app.put(
@@ -621,6 +644,7 @@ def create_admin_app(
         )
         return ApprovalResponse.from_domain(approval)
 
+    app.include_router(create_admin_query_router(services.queries))
     return app
 
 
