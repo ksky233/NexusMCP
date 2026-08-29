@@ -5,6 +5,7 @@ import {
   Braces,
   CheckCheck,
   Diamond,
+  FileCheck2,
   Gauge,
   Menu,
   Network,
@@ -19,19 +20,20 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
 const navigation = [
-  { to: "/", label: "Dashboard", icon: Gauge, end: true },
-  { to: "/upstreams", label: "Upstreams", icon: Network, end: false },
-  { to: "/imports", label: "Imports & Review", icon: Braces, end: false },
-  { to: "/catalog", label: "Tool Catalog", icon: Boxes, end: false },
-  { to: "/approvals", label: "Approvals", icon: CheckCheck, end: false },
-  { to: "/executions", label: "Executions & Audit", icon: Activity, end: false },
-  { to: "/search-lab", label: "Search Lab", icon: Search, end: false },
+  { to: "/", label: "系统概览", icon: Gauge, end: true },
+  { to: "/upstreams", label: "上游服务", icon: Network, end: false },
+  { to: "/imports", label: "导入与审核", icon: Braces, end: false },
+  { to: "/catalog", label: "工具目录", icon: Boxes, end: false },
+  { to: "/approvals", label: "审批管理", icon: CheckCheck, end: false },
+  { to: "/executions", label: "执行与审计", icon: Activity, end: false },
+  { to: "/search-lab", label: "检索实验", icon: Search, end: false },
+  { to: "/evidence", label: "工程证据", icon: FileCheck2, end: false },
 ] as const;
 
 function currentSection(pathname: string): string {
   return (
     navigation.find(({ to, end }) => (end ? pathname === to : pathname.startsWith(to)))?.label ??
-    "Not found"
+    "页面不存在"
   );
 }
 
@@ -45,7 +47,7 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen bg-canvas text-ink md:grid md:grid-cols-[256px_minmax(0,1fr)]">
-      <aside className="sticky top-0 hidden h-screen border-r border-slate/18 bg-paper md:flex md:flex-col">
+      <aside className="sticky top-0 hidden h-screen border-r border-slate/20 bg-paper md:flex md:flex-col">
         <SidebarContent />
       </aside>
 
@@ -53,9 +55,9 @@ export function AppShell() {
         <Dialog.Portal>
           <Dialog.Backdrop className="fixed inset-0 z-40 bg-ink/30 transition-opacity data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 md:hidden" />
           <Dialog.Popup className="fixed inset-y-0 left-0 z-50 flex w-[min(86vw,280px)] flex-col border-r border-slate/25 bg-paper shadow-overlay transition-transform duration-200 data-[ending-style]:-translate-x-full data-[starting-style]:-translate-x-full md:hidden">
-            <Dialog.Title className="sr-only">Control plane navigation</Dialog.Title>
+            <Dialog.Title className="sr-only">控制台导航</Dialog.Title>
             <Dialog.Close
-              aria-label="Close navigation"
+              aria-label="关闭导航"
               className="absolute top-5 right-4 grid size-9 cursor-pointer place-items-center rounded-[3px] border border-slate/20 bg-paper text-slate outline-none hover:bg-mist focus-visible:ring-2 focus-visible:ring-slate/45"
             >
               <X aria-hidden="true" className="size-4" />
@@ -66,11 +68,11 @@ export function AppShell() {
       </Dialog.Root>
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-30 border-b border-slate/15 bg-paper/95 backdrop-blur">
+        <header className="sticky top-0 z-30 border-b border-slate/20 bg-paper/95 backdrop-blur">
           <div className="flex min-h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-3">
               <Button
-                aria-label="Open navigation"
+                aria-label="打开导航"
                 className="md:hidden"
                 onClick={() => setMobileNavigationOpen(true)}
                 size="icon"
@@ -84,10 +86,8 @@ export function AppShell() {
             </div>
             <div className="flex items-center gap-2 text-right text-[11px] font-normal tracking-[0.04em] text-slate/60">
               <ShieldAlert aria-hidden="true" className="size-3.5 shrink-0" />
-              <span className="hidden sm:inline">
-                Local Development Admin · Not Production Authentication
-              </span>
-              <span className="sm:hidden">Local Admin</span>
+              <span className="hidden sm:inline">本地开发管理员 · 非生产级身份认证</span>
+              <span className="sm:hidden">本地管理员</span>
             </div>
           </div>
         </header>
@@ -114,9 +114,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <p className="mt-10 px-3 text-[10px] font-normal uppercase tracking-[0.18em] text-slate/40">
-        Governance
+        治理控制台
       </p>
-      <nav aria-label="Control plane" className="mt-3 space-y-1">
+      <nav aria-label="控制台导航" className="mt-3 space-y-1">
         {navigation.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             className={({ isActive }) =>
@@ -136,12 +136,12 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         ))}
       </nav>
 
-      <div className="mt-auto border-t border-slate/15 pt-5">
+      <div className="mt-auto border-t border-slate/20 pt-5">
         <p className="text-[10px] font-normal uppercase tracking-[0.16em] text-slate/40">
-          Runtime boundary
+          运行边界
         </p>
         <p className="mt-2 text-xs leading-5 text-slate/58">
-          Fixed local tenant and principal. Backend remains the only policy authority.
+          固定本地租户与 Principal，后端始终是策略判定的唯一权威。
         </p>
       </div>
     </div>

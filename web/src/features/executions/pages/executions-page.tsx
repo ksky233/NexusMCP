@@ -62,16 +62,16 @@ export function ExecutionsPage() {
   return (
     <section className="page-enter">
       <PageHeader
-        eyebrow="Operations"
-        title="Executions & Audit"
-        description="Trace governed tool calls, retry attempts and append-only decisions without exposing payloads."
+        eyebrow="运行治理"
+        title="执行与审计"
+        description="追踪受治理的工具调用、重试 Attempt 与只追加决策，同时避免暴露调用载荷。"
         actions={
           <Button onClick={() => void activeQuery.refetch()} size="small" variant="secondary">
-            <RefreshCw className="size-3.5" /> Refresh
+            <RefreshCw className="size-3.5" /> 刷新
           </Button>
         }
       />
-      <div className="mb-5 flex gap-6 border-b border-slate/15">
+      <div className="mb-5 flex gap-6 border-b border-slate/20">
         <button
           className={
             view === "executions"
@@ -81,7 +81,7 @@ export function ExecutionsPage() {
           onClick={() => changeView("executions")}
           type="button"
         >
-          Executions
+          执行记录
         </button>
         <button
           className={
@@ -92,10 +92,10 @@ export function ExecutionsPage() {
           onClick={() => changeView("audit")}
           type="button"
         >
-          Audit events
+          审计事件
         </button>
       </div>
-      <div className="mb-5 grid gap-4 border border-slate/18 bg-paper p-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mb-5 grid gap-4 border border-slate/30 bg-paper p-4 sm:grid-cols-2 xl:grid-cols-3">
         <div>
           <FieldLabel htmlFor="execution-principal">Principal</FieldLabel>
           <Input
@@ -106,7 +106,7 @@ export function ExecutionsPage() {
             onKeyDown={(event) =>
               event.key === "Enter" && update("principal_id", event.currentTarget.value.trim())
             }
-            placeholder="All principals"
+            placeholder="全部 Principal"
           />
         </div>
         <div>
@@ -119,47 +119,49 @@ export function ExecutionsPage() {
             onKeyDown={(event) =>
               event.key === "Enter" && update("trace_id", event.currentTarget.value.trim())
             }
-            placeholder="All traces"
+            placeholder="全部 Trace"
           />
         </div>
         {view === "executions" ? (
           <div>
-            <FieldLabel htmlFor="execution-status">Status</FieldLabel>
+            <FieldLabel htmlFor="execution-status">状态</FieldLabel>
             <Select
               id="execution-status"
               onChange={(event) => update("status", event.currentTarget.value)}
               value={executionStatus ?? ""}
             >
-              <option value="">All statuses</option>
-              <option value="planned">Planned</option>
-              <option value="running">Running</option>
-              <option value="succeeded">Succeeded</option>
-              <option value="failed">Failed</option>
-              <option value="unknown">Unknown</option>
-              <option value="cancelled">Cancelled</option>
+              <option value="">全部状态</option>
+              <option value="planned">已计划</option>
+              <option value="running">执行中</option>
+              <option value="succeeded">成功</option>
+              <option value="failed">失败</option>
+              <option value="unknown">未知</option>
+              <option value="cancelled">已取消</option>
             </Select>
           </div>
         ) : (
           <div>
-            <FieldLabel htmlFor="audit-outcome">Outcome</FieldLabel>
+            <FieldLabel htmlFor="audit-outcome">结果</FieldLabel>
             <Select
               id="audit-outcome"
               onChange={(event) => update("outcome", event.currentTarget.value)}
               value={outcome ?? ""}
             >
-              <option value="">All outcomes</option>
-              <option value="allowed">Allowed</option>
-              <option value="denied">Denied</option>
-              <option value="approval_required">Approval required</option>
-              <option value="succeeded">Succeeded</option>
-              <option value="failed">Failed</option>
-              <option value="unknown">Unknown</option>
-              <option value="cancelled">Cancelled</option>
+              <option value="">全部结果</option>
+              <option value="allowed">已允许</option>
+              <option value="denied">已拒绝</option>
+              <option value="approval_required">需要审批</option>
+              <option value="succeeded">成功</option>
+              <option value="failed">失败</option>
+              <option value="unknown">未知</option>
+              <option value="cancelled">已取消</option>
             </Select>
           </div>
         )}
       </div>
-      {activeQuery.isPending ? <LoadingState label={`Loading ${view}…`} /> : null}
+      {activeQuery.isPending ? (
+        <LoadingState label={view === "audit" ? "正在加载审计事件…" : "正在加载执行记录…"} />
+      ) : null}
       {activeQuery.isError ? (
         <ErrorState error={activeQuery.error} onRetry={() => void activeQuery.refetch()} />
       ) : null}
@@ -185,12 +187,7 @@ function ExecutionTable({
   setParams: (params: URLSearchParams) => void;
 }) {
   if (!data.items.length)
-    return (
-      <EmptyState
-        title="No executions found"
-        description="No governed calls match the current filters."
-      />
-    );
+    return <EmptyState title="未找到执行记录" description="当前筛选条件下没有匹配的受治理调用。" />;
   return (
     <>
       <TableFrame>
@@ -198,9 +195,9 @@ function ExecutionTable({
           <TableHead>
             <tr>
               <TableHeaderCell>Tool / Principal</TableHeaderCell>
-              <TableHeaderCell>Started</TableHeaderCell>
-              <TableHeaderCell>Attempts</TableHeaderCell>
-              <TableHeaderCell>Status</TableHeaderCell>
+              <TableHeaderCell>开始时间</TableHeaderCell>
+              <TableHeaderCell>Attempt</TableHeaderCell>
+              <TableHeaderCell>状态</TableHeaderCell>
             </tr>
           </TableHead>
           <TableBody>
@@ -242,7 +239,7 @@ function ExecutionTable({
       </TableFrame>
       <PageFooter
         count={data.page.total}
-        label="executions"
+        label="条执行记录"
         page={page}
         params={params}
         setParams={setParams}
@@ -263,22 +260,17 @@ function AuditTable({
   setParams: (params: URLSearchParams) => void;
 }) {
   if (!data.items.length)
-    return (
-      <EmptyState
-        title="No audit events found"
-        description="No append-only events match the current filters."
-      />
-    );
+    return <EmptyState title="未找到审计事件" description="当前筛选条件下没有匹配的只追加事件。" />;
   return (
     <>
       <TableFrame>
         <Table>
           <TableHead>
             <tr>
-              <TableHeaderCell>Action / Actor</TableHeaderCell>
-              <TableHeaderCell>Resource</TableHeaderCell>
+              <TableHeaderCell>操作 / Actor</TableHeaderCell>
+              <TableHeaderCell>资源</TableHeaderCell>
               <TableHeaderCell>Trace</TableHeaderCell>
-              <TableHeaderCell>Outcome</TableHeaderCell>
+              <TableHeaderCell>结果</TableHeaderCell>
             </tr>
           </TableHead>
           <TableBody>
@@ -315,7 +307,7 @@ function AuditTable({
       </TableFrame>
       <PageFooter
         count={data.page.total}
-        label="events"
+        label="条审计事件"
         page={page}
         params={params}
         setParams={setParams}
@@ -340,7 +332,7 @@ function PageFooter({
   return (
     <div className="mt-5 flex items-center justify-between gap-4">
       <span className="text-xs text-slate/50">
-        {count} {label}
+        共 {count} {label}
       </span>
       <Pagination
         page={page}

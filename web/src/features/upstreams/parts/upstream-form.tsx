@@ -12,28 +12,28 @@ const upstreamSchema = z.object({
   namespace: z
     .string()
     .trim()
-    .min(1, "Namespace is required")
+    .min(1, "请输入 Namespace")
     .max(64)
-    .regex(/^[a-z][a-z0-9_-]*$/, "Use lowercase letters, digits, underscore or hyphen"),
-  name: z.string().trim().min(1, "Name is required").max(128),
+    .regex(/^[a-z][a-z0-9_-]*$/, "只能使用小写字母、数字、下划线或连字符"),
+  name: z.string().trim().min(1, "请输入名称").max(128),
   description: z.string().trim().max(2_000),
-  owner: z.string().trim().min(1, "Owner is required").max(128),
+  owner: z.string().trim().min(1, "请输入负责人").max(128),
   endpoint: z
     .string()
     .trim()
-    .url("Enter a valid HTTP URL")
+    .url("请输入有效的 HTTP URL")
     .refine((value) => value.startsWith("http://") || value.startsWith("https://"), {
-      message: "Endpoint must use HTTP or HTTPS",
+      message: "Endpoint 必须使用 HTTP 或 HTTPS",
     }),
   auth_scheme: z.enum(["none", "bearer", "api_key"]),
   config_json: z.string().superRefine((value, context) => {
     try {
       const parsed: unknown = JSON.parse(value);
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-        context.addIssue({ code: "custom", message: "Config must be a JSON object" });
+        context.addIssue({ code: "custom", message: "Config 必须是 JSON Object" });
       }
     } catch {
-      context.addIssue({ code: "custom", message: "Config must be valid JSON" });
+      context.addIssue({ code: "custom", message: "Config 不是有效 JSON" });
     }
   }),
 });
@@ -106,7 +106,7 @@ export function UpstreamForm({
                 {...register("namespace")}
               />
             </Field>
-            <Field name="name" error={errors.name?.message} label="Name">
+            <Field name="name" error={errors.name?.message} label="名称">
               <Input
                 id="name"
                 autoComplete="off"
@@ -116,7 +116,7 @@ export function UpstreamForm({
             </Field>
           </>
         ) : null}
-        <Field name="owner" error={errors.owner?.message} label="Owner">
+        <Field name="owner" error={errors.owner?.message} label="负责人">
           <Input
             id="owner"
             autoComplete="organization"
@@ -124,13 +124,13 @@ export function UpstreamForm({
             {...register("owner")}
           />
         </Field>
-        <Field name="auth_scheme" error={errors.auth_scheme?.message} label="Auth scheme">
+        <Field name="auth_scheme" error={errors.auth_scheme?.message} label="认证方案">
           <Select
             id="auth_scheme"
             aria-invalid={Boolean(errors.auth_scheme)}
             {...register("auth_scheme")}
           >
-            <option value="none">None</option>
+            <option value="none">无</option>
             <option value="bearer">Bearer Secret Reference</option>
             <option value="api_key">API Key Secret Reference</option>
           </Select>
@@ -152,7 +152,7 @@ export function UpstreamForm({
           className="sm:col-span-2"
           name="description"
           error={errors.description?.message}
-          label="Description"
+          label="描述"
         >
           <Textarea
             id="description"
@@ -164,7 +164,7 @@ export function UpstreamForm({
           className="sm:col-span-2"
           name="config_json"
           error={errors.config_json?.message}
-          label="Non-sensitive config JSON"
+          label="非敏感 Config JSON"
         >
           <Textarea
             aria-invalid={Boolean(errors.config_json)}
@@ -180,12 +180,12 @@ export function UpstreamForm({
           <InlineError error={error} />
         </div>
       ) : null}
-      <div className="mt-7 flex justify-end gap-3 border-t border-slate/15 pt-5">
+      <div className="mt-7 flex justify-end gap-3 border-t border-slate/20 pt-5">
         <Button disabled={pending} onClick={onCancel} type="button" variant="secondary">
-          Cancel
+          取消
         </Button>
         <Button disabled={pending} type="submit">
-          {pending ? "Saving…" : mode === "register" ? "Register upstream" : "Save changes"}
+          {pending ? "正在保存…" : mode === "register" ? "注册上游服务" : "保存修改"}
         </Button>
       </div>
     </form>

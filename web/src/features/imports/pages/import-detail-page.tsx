@@ -23,7 +23,7 @@ export function ImportDetailPage() {
   const importId = useParams().importId ?? "";
   const detail = useImport(importId);
 
-  if (detail.isPending) return <LoadingState label="Loading import detail…" />;
+  if (detail.isPending) return <LoadingState label="正在加载导入详情…" />;
   if (detail.isError)
     return <ErrorState error={detail.error} onRetry={() => void detail.refetch()} />;
 
@@ -34,22 +34,22 @@ export function ImportDetailPage() {
         className="mb-7 inline-flex items-center gap-2 text-xs text-slate/60 hover:text-ink"
         to="/imports"
       >
-        <ArrowLeft aria-hidden="true" className="size-3.5" /> Back to imports
+        <ArrowLeft aria-hidden="true" className="size-3.5" /> 返回导入记录
       </Link>
       <PageHeader
         actions={<StatusPill tone={statusTone(job.status)}>{humanize(job.status)}</StatusPill>}
-        description={`${job.source_ref} · OpenAPI ${job.openapi_version ?? "unknown"}`}
-        eyebrow="OpenAPI Import"
-        title={`Import ${job.id.slice(0, 8)}`}
+        description={`${job.source_ref} · OpenAPI ${job.openapi_version ?? "未知版本"}`}
+        eyebrow="OpenAPI 导入"
+        title={`导入任务 ${job.id.slice(0, 8)}`}
       />
 
       <article className="panel mb-5 p-6 sm:p-7">
-        <p className="component-label">Import evidence</p>
+        <p className="component-label">导入证据</p>
         <dl className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-          <Definition label="Created" value={formatDateTime(job.created_at)} />
-          <Definition label="Completed" value={formatDateTime(job.completed_at)} />
-          <Definition label="Source digest" mono value={job.source_digest} />
-          <Definition label="Upstream ID" mono value={job.upstream_service_id} />
+          <Definition label="创建时间" value={formatDateTime(job.created_at)} />
+          <Definition label="完成时间" value={formatDateTime(job.completed_at)} />
+          <Definition label="来源 Digest" mono value={job.source_digest} />
+          <Definition label="上游服务 ID" mono value={job.upstream_service_id} />
         </dl>
         {job.error_summary ? (
           <p className="mt-5 border border-wine/35 bg-wine/6 p-4 text-sm text-wine">
@@ -105,12 +105,12 @@ function OperationWorkflow({
             {operation.method} {operation.path}
           </p>
           {operation.generated_tool_name ? (
-            <p className="mt-3 text-sm text-slate/65">Tool: {operation.generated_tool_name}</p>
+            <p className="mt-3 text-sm text-slate/65">Tool：{operation.generated_tool_name}</p>
           ) : null}
         </div>
         {canReview ? (
           <Button onClick={() => setReviewing((value) => !value)} size="small">
-            <Check aria-hidden="true" className="size-3.5" /> Review operation
+            <Check aria-hidden="true" className="size-3.5" /> 审核 Operation
           </Button>
         ) : null}
       </div>
@@ -126,7 +126,7 @@ function OperationWorkflow({
           }}
         >
           <div>
-            <FieldLabel htmlFor={`owner-${operation.id}`}>Owner</FieldLabel>
+            <FieldLabel htmlFor={`owner-${operation.id}`}>负责人</FieldLabel>
             <Input
               id={`owner-${operation.id}`}
               onChange={(event) => setOwner(event.currentTarget.value)}
@@ -135,19 +135,19 @@ function OperationWorkflow({
             />
           </div>
           <div>
-            <FieldLabel htmlFor={`visibility-${operation.id}`}>Visibility</FieldLabel>
+            <FieldLabel htmlFor={`visibility-${operation.id}`}>可见范围</FieldLabel>
             <Select
               id={`visibility-${operation.id}`}
               onChange={(event) => setVisibility(event.currentTarget.value as ToolVisibility)}
               value={visibility}
             >
-              <option value="public">Public</option>
-              <option value="authenticated">Authenticated</option>
-              <option value="restricted">Restricted</option>
+              <option value="public">公开</option>
+              <option value="authenticated">需认证</option>
+              <option value="restricted">受限</option>
             </Select>
           </div>
           <div className="sm:col-span-2">
-            <FieldLabel htmlFor={`notes-${operation.id}`}>Review notes</FieldLabel>
+            <FieldLabel htmlFor={`notes-${operation.id}`}>审核备注</FieldLabel>
             <Textarea
               id={`notes-${operation.id}`}
               onChange={(event) => setNotes(event.currentTarget.value)}
@@ -161,10 +161,10 @@ function OperationWorkflow({
           ) : null}
           <div className="flex justify-end gap-3 sm:col-span-2">
             <Button onClick={() => setReviewing(false)} type="button" variant="secondary">
-              Cancel
+              取消
             </Button>
             <Button disabled={accept.isPending} type="submit">
-              {accept.isPending ? "Reviewing…" : "Accept and create draft"}
+              {accept.isPending ? "正在审核…" : "接受并创建草稿"}
             </Button>
           </div>
         </form>
@@ -173,7 +173,7 @@ function OperationWorkflow({
       {operation.draft_tool_version_id && operation.draft_tool_binding_id ? (
         <div className="mt-6 border-t border-slate/15 pt-6">
           {version.isPending || binding.isPending ? (
-            <LoadingState label="Loading draft contract…" />
+            <LoadingState label="正在加载草稿 Contract…" />
           ) : null}
           {version.error ? <InlineError error={version.error} /> : null}
           {binding.error ? <InlineError error={binding.error} /> : null}
@@ -181,12 +181,12 @@ function OperationWorkflow({
             <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
               <dl className="grid min-w-0 gap-4 sm:grid-cols-2">
                 <Definition
-                  label="Version"
+                  label="版本"
                   value={`v${version.data.version} · ${humanize(version.data.status)}`}
                 />
-                <Definition label="Side effect" value={humanize(version.data.side_effect)} />
-                <Definition label="Schema digest" mono value={version.data.schema_digest} />
-                <Definition label="Binding digest" mono value={binding.data.binding_digest} />
+                <Definition label="副作用" value={humanize(version.data.side_effect)} />
+                <Definition label="Schema Digest" mono value={version.data.schema_digest} />
+                <Definition label="Binding Digest" mono value={binding.data.binding_digest} />
               </dl>
               <div className="flex shrink-0 gap-3">
                 {version.data.status === "draft" ? (
@@ -196,16 +196,16 @@ function OperationWorkflow({
                     size="small"
                   >
                     <Send aria-hidden="true" className="size-3.5" />
-                    {submit.isPending ? "Submitting…" : "Submit review"}
+                    {submit.isPending ? "正在提交…" : "提交审核"}
                   </Button>
                 ) : null}
                 {version.data.status === "review" ? (
                   <Button onClick={() => setPublishOpen(true)} size="small">
-                    Publish version
+                    发布版本
                   </Button>
                 ) : null}
                 {version.data.status === "published" ? (
-                  <StatusPill tone="completed">Published</StatusPill>
+                  <StatusPill tone="completed">已发布</StatusPill>
                 ) : null}
               </div>
             </div>
@@ -225,8 +225,8 @@ function OperationWorkflow({
 
       {version.data && binding.data ? (
         <ConfirmDialog
-          confirmLabel={publish.isPending ? "Publishing…" : "Publish tool version"}
-          description="The reviewed schema and binding digests will be checked atomically before this version becomes visible to MCP clients."
+          confirmLabel={publish.isPending ? "正在发布…" : "发布 Tool 版本"}
+          description="发布前会原子校验已审核的 Schema 与 Binding Digest；成功后该版本才会对 MCP Client 可见。"
           onConfirm={() => {
             void publish
               .mutateAsync({
@@ -237,7 +237,7 @@ function OperationWorkflow({
           }}
           onOpenChange={setPublishOpen}
           open={publishOpen}
-          title={`Publish ${operation.generated_tool_name ?? "tool"}?`}
+          title={`确认发布 ${operation.generated_tool_name ?? "Tool"}？`}
         />
       ) : null}
     </article>

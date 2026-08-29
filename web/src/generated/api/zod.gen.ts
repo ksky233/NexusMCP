@@ -92,6 +92,14 @@ export const zAuditOutcome = z.enum([
 ]);
 
 /**
+ * CreateToolSearchReindexJobRequest
+ */
+export const zCreateToolSearchReindexJobRequest = z.object({
+    batch_size: z.int().gte(1).lte(64).optional().default(16),
+    force: z.boolean().optional().default(false)
+});
+
+/**
  * ExecutionAttemptResponse
  */
 export const zExecutionAttemptResponse = z.object({
@@ -468,6 +476,77 @@ export const zToolDetailResponse = z.object({
 });
 
 /**
+ * ToolRetrievalMode
+ */
+export const zToolRetrievalMode = z.enum(['lexical', 'hybrid']);
+
+/**
+ * ToolSearchIndexItemResponse
+ */
+export const zToolSearchIndexItemResponse = z.object({
+    canonical_name: z.string(),
+    indexed_at: z.iso.datetime().nullable(),
+    state: z.enum([
+        'missing',
+        'stale',
+        'current'
+    ]),
+    tool_id: z.string(),
+    tool_version_id: z.string()
+});
+
+/**
+ * ToolSearchIndexStatusResponse
+ */
+export const zToolSearchIndexStatusResponse = z.object({
+    current_count: z.int(),
+    embedding_available: z.boolean(),
+    embedding_dimensions: z.int(),
+    embedding_model: z.string(),
+    items: z.array(zToolSearchIndexItemResponse),
+    missing_count: z.int(),
+    page: zPageMetadata,
+    published_count: z.int(),
+    stale_count: z.int()
+});
+
+/**
+ * ToolSearchReindexJobResponse
+ */
+export const zToolSearchReindexJobResponse = z.object({
+    batch_count: z.int(),
+    batch_size: z.int(),
+    created_at: z.iso.datetime(),
+    current_count: z.int(),
+    embedded_count: z.int(),
+    embedding_dimensions: z.int(),
+    embedding_model: z.string(),
+    error_code: z.string().nullable(),
+    finished_at: z.iso.datetime().nullable(),
+    force: z.boolean(),
+    id: z.string(),
+    pending_count: z.int(),
+    published_count: z.int(),
+    requested_by: z.string(),
+    started_at: z.iso.datetime().nullable(),
+    status: z.enum([
+        'pending',
+        'running',
+        'succeeded',
+        'failed'
+    ]),
+    tenant_id: z.string()
+});
+
+/**
+ * ToolSearchReindexJobPageResponse
+ */
+export const zToolSearchReindexJobPageResponse = z.object({
+    items: z.array(zToolSearchReindexJobResponse),
+    page: zPageMetadata
+});
+
+/**
  * ToolSideEffect
  */
 export const zToolSideEffect = z.enum([
@@ -568,6 +647,41 @@ export const zReviewOperationRequest = z.object({
     owner: z.string(),
     review_notes: z.string().nullish(),
     visibility: zToolVisibility.optional().default('public')
+});
+
+/**
+ * SearchLabHitResponse
+ */
+export const zSearchLabHitResponse = z.object({
+    canonical_name: z.string(),
+    description: z.string(),
+    display_name: z.string(),
+    input_schema: z.record(z.string(), z.unknown()),
+    lexical_rank: z.int().nullable(),
+    lexical_score: z.number().nullable(),
+    output_schema: z.record(z.string(), z.unknown()).nullable(),
+    owner: z.string().nullable(),
+    position: z.int(),
+    rank: z.number(),
+    rrf_score: z.number().nullable(),
+    score_kind: z.enum(['fts', 'rrf']),
+    side_effect: zToolSideEffect,
+    tags: z.array(z.string()),
+    tool_id: z.string(),
+    tool_version_id: z.string(),
+    vector_cosine_similarity: z.number().nullable(),
+    vector_rank: z.int().nullable(),
+    version: z.int(),
+    visibility: zToolVisibility
+});
+
+/**
+ * SearchLabResponse
+ */
+export const zSearchLabResponse = z.object({
+    hits: z.array(zSearchLabHitResponse),
+    index_version: z.string().nullable(),
+    retrieval_mode: zToolRetrievalMode
 });
 
 /**
@@ -738,7 +852,32 @@ export const zGetSearchProjectionStatusResponse = zSearchProjectionResponse;
 /**
  * Successful Response
  */
+export const zSearchToolsResponse = zSearchLabResponse;
+
+/**
+ * Successful Response
+ */
 export const zGetToolBindingResponse = zToolBindingDetailResponse;
+
+/**
+ * Successful Response
+ */
+export const zGetToolSearchIndexStatusResponse = zToolSearchIndexStatusResponse;
+
+/**
+ * Successful Response
+ */
+export const zListToolSearchReindexJobsResponse = zToolSearchReindexJobPageResponse;
+
+/**
+ * Successful Response
+ */
+export const zCreateToolSearchReindexJobResponse = zToolSearchReindexJobResponse;
+
+/**
+ * Successful Response
+ */
+export const zGetToolSearchReindexJobResponse = zToolSearchReindexJobResponse;
 
 /**
  * Successful Response

@@ -61,16 +61,16 @@ export function UpstreamsPage() {
         actions={
           <>
             <Button onClick={() => void upstreams.refetch()} size="small" variant="secondary">
-              <RefreshCw aria-hidden="true" className="size-3.5 stroke-[1.5]" /> Refresh
+              <RefreshCw aria-hidden="true" className="size-3.5 stroke-[1.5]" /> 刷新
             </Button>
             <Button onClick={() => setRegistering((current) => !current)} size="small">
-              <Plus aria-hidden="true" className="size-3.5 stroke-[1.5]" /> Register upstream
+              <Plus aria-hidden="true" className="size-3.5 stroke-[1.5]" /> 注册上游服务
             </Button>
           </>
         }
-        description="Register and govern HTTP/OpenAPI systems before they can produce MCP tools."
-        eyebrow="Registry"
-        title="Upstreams"
+        description="注册并治理 HTTP/OpenAPI 系统，审核通过后才能生成 MCP Tool。"
+        eyebrow="Registry · 上游服务"
+        title="上游服务"
       />
 
       {registering ? (
@@ -85,7 +85,7 @@ export function UpstreamsPage() {
         </div>
       ) : null}
 
-      <div className="mb-5 grid gap-4 border border-slate/18 bg-paper p-4 sm:grid-cols-2 lg:max-w-2xl">
+      <div className="mb-5 grid gap-4 border border-slate/30 bg-paper p-4 sm:grid-cols-2 lg:max-w-2xl">
         <div>
           <FieldLabel htmlFor="upstream-namespace-filter">Namespace</FieldLabel>
           <Input
@@ -98,32 +98,32 @@ export function UpstreamsPage() {
                 updateFilter("namespace", event.currentTarget.value.trim());
               }
             }}
-            placeholder="All namespaces"
+            placeholder="全部 Namespace"
           />
         </div>
         <div>
-          <FieldLabel htmlFor="upstream-status-filter">Status</FieldLabel>
+          <FieldLabel htmlFor="upstream-status-filter">状态</FieldLabel>
           <Select
             id="upstream-status-filter"
             onChange={(event) => updateFilter("status", event.currentTarget.value)}
             value={status ?? ""}
           >
-            <option value="">All statuses</option>
-            <option value="draft">Draft</option>
-            <option value="active">Active</option>
-            <option value="disabled">Disabled</option>
+            <option value="">全部状态</option>
+            <option value="draft">草稿</option>
+            <option value="active">已启用</option>
+            <option value="disabled">已停用</option>
           </Select>
         </div>
       </div>
 
-      {upstreams.isPending ? <LoadingState label="Loading upstream registry…" /> : null}
+      {upstreams.isPending ? <LoadingState label="正在加载上游服务…" /> : null}
       {upstreams.isError ? (
         <ErrorState error={upstreams.error} onRetry={() => void upstreams.refetch()} />
       ) : null}
       {upstreams.data?.items.length === 0 ? (
         <EmptyState
-          description="Register an HTTP/OpenAPI upstream or clear the current filters."
-          title="No upstreams found"
+          description="请注册一个 HTTP/OpenAPI 上游服务，或清除当前筛选条件。"
+          title="未找到上游服务"
         />
       ) : null}
       {upstreams.data && upstreams.data.items.length > 0 ? (
@@ -132,10 +132,10 @@ export function UpstreamsPage() {
             <Table>
               <TableHead>
                 <tr>
-                  <TableHeaderCell>Upstream</TableHeaderCell>
-                  <TableHeaderCell>Owner</TableHeaderCell>
+                  <TableHeaderCell>上游服务</TableHeaderCell>
+                  <TableHeaderCell>负责人</TableHeaderCell>
                   <TableHeaderCell>Endpoint</TableHeaderCell>
-                  <TableHeaderCell>Status</TableHeaderCell>
+                  <TableHeaderCell>状态</TableHeaderCell>
                 </tr>
               </TableHead>
               <TableBody>
@@ -167,7 +167,7 @@ export function UpstreamsPage() {
             </Table>
           </TableFrame>
           <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
-            <span className="text-xs text-slate/50">{upstreams.data.page.total} upstreams</span>
+            <span className="text-xs text-slate/50">共 {upstreams.data.page.total} 个上游服务</span>
             <Pagination
               onPageChange={(nextPage) => {
                 const next = new URLSearchParams(searchParams);

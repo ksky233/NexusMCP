@@ -2,8 +2,8 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ApproveApprovalData, ApproveApprovalErrors, ApproveApprovalResponses, DisableUpstreamData, DisableUpstreamErrors, DisableUpstreamResponses, GetApprovalData, GetApprovalErrors, GetApprovalResponses, GetDashboardData, GetDashboardErrors, GetDashboardResponses, GetExecutionData, GetExecutionErrors, GetExecutionResponses, GetOpenApiImportData, GetOpenApiImportErrors, GetOpenApiImportResponses, GetSearchProjectionStatusData, GetSearchProjectionStatusErrors, GetSearchProjectionStatusResponses, GetToolBindingData, GetToolBindingErrors, GetToolBindingResponses, GetToolData, GetToolErrors, GetToolResponses, GetToolVersionBindingData, GetToolVersionBindingErrors, GetToolVersionBindingResponses, GetToolVersionData, GetToolVersionErrors, GetToolVersionResponses, GetUpstreamData, GetUpstreamErrors, GetUpstreamResponses, ListApprovalsData, ListApprovalsErrors, ListApprovalsResponses, ListAuditEventsData, ListAuditEventsErrors, ListAuditEventsResponses, ListExecutionAttemptsData, ListExecutionAttemptsErrors, ListExecutionAttemptsResponses, ListExecutionsData, ListExecutionsErrors, ListExecutionsResponses, ListOpenApiImportsData, ListOpenApiImportsErrors, ListOpenApiImportsResponses, ListReviewOperationsData, ListReviewOperationsErrors, ListReviewOperationsResponses, ListToolsData, ListToolsErrors, ListToolsResponses, ListToolVersionsData, ListToolVersionsErrors, ListToolVersionsResponses, ListUpstreamsData, ListUpstreamsErrors, ListUpstreamsResponses, PublishToolVersionData, PublishToolVersionErrors, PublishToolVersionResponses, RegisterUpstreamData, RegisterUpstreamErrors, RegisterUpstreamResponses, RejectApprovalData, RejectApprovalErrors, RejectApprovalResponses, ReviewImportedOperationData, ReviewImportedOperationErrors, ReviewImportedOperationResponses, SearchCatalogData, SearchCatalogErrors, SearchCatalogResponses, SubmitOpenApiImportData, SubmitOpenApiImportErrors, SubmitOpenApiImportResponses, SubmitToolVersionReviewData, SubmitToolVersionReviewErrors, SubmitToolVersionReviewResponses, UpdateUpstreamData, UpdateUpstreamErrors, UpdateUpstreamResponses } from './types.gen';
-import { zApproveApprovalResponse, zDisableUpstreamResponse, zGetApprovalResponse, zGetDashboardResponse, zGetExecutionResponse, zGetOpenApiImportResponse, zGetSearchProjectionStatusResponse, zGetToolBindingResponse, zGetToolResponse, zGetToolVersionBindingResponse, zGetToolVersionResponse, zGetUpstreamResponse, zListApprovalsResponse, zListAuditEventsResponse, zListExecutionAttemptsResponse, zListExecutionsResponse, zListOpenApiImportsResponse, zListReviewOperationsResponse, zListToolsResponse, zListToolVersionsResponse, zListUpstreamsResponse, zPublishToolVersionResponse, zRegisterUpstreamResponse, zRejectApprovalResponse, zReviewImportedOperationResponse, zSearchCatalogResponse, zSubmitOpenApiImportResponse, zSubmitToolVersionReviewResponse, zUpdateUpstreamResponse } from './zod.gen';
+import type { ApproveApprovalData, ApproveApprovalErrors, ApproveApprovalResponses, CreateToolSearchReindexJobData, CreateToolSearchReindexJobErrors, CreateToolSearchReindexJobResponses, DisableUpstreamData, DisableUpstreamErrors, DisableUpstreamResponses, GetApprovalData, GetApprovalErrors, GetApprovalResponses, GetDashboardData, GetDashboardErrors, GetDashboardResponses, GetExecutionData, GetExecutionErrors, GetExecutionResponses, GetOpenApiImportData, GetOpenApiImportErrors, GetOpenApiImportResponses, GetSearchProjectionStatusData, GetSearchProjectionStatusErrors, GetSearchProjectionStatusResponses, GetToolBindingData, GetToolBindingErrors, GetToolBindingResponses, GetToolData, GetToolErrors, GetToolResponses, GetToolSearchIndexStatusData, GetToolSearchIndexStatusErrors, GetToolSearchIndexStatusResponses, GetToolSearchReindexJobData, GetToolSearchReindexJobErrors, GetToolSearchReindexJobResponses, GetToolVersionBindingData, GetToolVersionBindingErrors, GetToolVersionBindingResponses, GetToolVersionData, GetToolVersionErrors, GetToolVersionResponses, GetUpstreamData, GetUpstreamErrors, GetUpstreamResponses, ListApprovalsData, ListApprovalsErrors, ListApprovalsResponses, ListAuditEventsData, ListAuditEventsErrors, ListAuditEventsResponses, ListExecutionAttemptsData, ListExecutionAttemptsErrors, ListExecutionAttemptsResponses, ListExecutionsData, ListExecutionsErrors, ListExecutionsResponses, ListOpenApiImportsData, ListOpenApiImportsErrors, ListOpenApiImportsResponses, ListReviewOperationsData, ListReviewOperationsErrors, ListReviewOperationsResponses, ListToolsData, ListToolSearchReindexJobsData, ListToolSearchReindexJobsErrors, ListToolSearchReindexJobsResponses, ListToolsErrors, ListToolsResponses, ListToolVersionsData, ListToolVersionsErrors, ListToolVersionsResponses, ListUpstreamsData, ListUpstreamsErrors, ListUpstreamsResponses, PublishToolVersionData, PublishToolVersionErrors, PublishToolVersionResponses, RegisterUpstreamData, RegisterUpstreamErrors, RegisterUpstreamResponses, RejectApprovalData, RejectApprovalErrors, RejectApprovalResponses, ReviewImportedOperationData, ReviewImportedOperationErrors, ReviewImportedOperationResponses, SearchCatalogData, SearchCatalogErrors, SearchCatalogResponses, SearchToolsData, SearchToolsErrors, SearchToolsResponses, SubmitOpenApiImportData, SubmitOpenApiImportErrors, SubmitOpenApiImportResponses, SubmitToolVersionReviewData, SubmitToolVersionReviewErrors, SubmitToolVersionReviewResponses, UpdateUpstreamData, UpdateUpstreamErrors, UpdateUpstreamResponses } from './types.gen';
+import { zApproveApprovalResponse, zCreateToolSearchReindexJobResponse, zDisableUpstreamResponse, zGetApprovalResponse, zGetDashboardResponse, zGetExecutionResponse, zGetOpenApiImportResponse, zGetSearchProjectionStatusResponse, zGetToolBindingResponse, zGetToolResponse, zGetToolSearchIndexStatusResponse, zGetToolSearchReindexJobResponse, zGetToolVersionBindingResponse, zGetToolVersionResponse, zGetUpstreamResponse, zListApprovalsResponse, zListAuditEventsResponse, zListExecutionAttemptsResponse, zListExecutionsResponse, zListOpenApiImportsResponse, zListReviewOperationsResponse, zListToolSearchReindexJobsResponse, zListToolsResponse, zListToolVersionsResponse, zListUpstreamsResponse, zPublishToolVersionResponse, zRegisterUpstreamResponse, zRejectApprovalResponse, zReviewImportedOperationResponse, zSearchCatalogResponse, zSearchToolsResponse, zSubmitOpenApiImportResponse, zSubmitToolVersionReviewResponse, zUpdateUpstreamResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -172,11 +172,60 @@ export const getSearchProjectionStatus = <ThrowOnError extends boolean = false>(
 });
 
 /**
+ * Search Tool Candidates
+ */
+export const searchTools = <ThrowOnError extends boolean = false>(options: Options<SearchToolsData, ThrowOnError>): RequestResult<SearchToolsResponses, SearchToolsErrors, ThrowOnError> => (options.client ?? client).get<SearchToolsResponses, SearchToolsErrors, ThrowOnError>({
+    responseValidator: async (data) => await zSearchToolsResponse.parseAsync(data),
+    url: '/search/tools',
+    ...options
+});
+
+/**
  * Get Tool Binding
  */
 export const getToolBinding = <ThrowOnError extends boolean = false>(options: Options<GetToolBindingData, ThrowOnError>): RequestResult<GetToolBindingResponses, GetToolBindingErrors, ThrowOnError> => (options.client ?? client).get<GetToolBindingResponses, GetToolBindingErrors, ThrowOnError>({
     responseValidator: async (data) => await zGetToolBindingResponse.parseAsync(data),
     url: '/tool-bindings/{tool_binding_id}',
+    ...options
+});
+
+/**
+ * Get Tool Search Index Status
+ */
+export const getToolSearchIndexStatus = <ThrowOnError extends boolean = false>(options?: Options<GetToolSearchIndexStatusData, ThrowOnError>): RequestResult<GetToolSearchIndexStatusResponses, GetToolSearchIndexStatusErrors, ThrowOnError> => (options?.client ?? client).get<GetToolSearchIndexStatusResponses, GetToolSearchIndexStatusErrors, ThrowOnError>({
+    responseValidator: async (data) => await zGetToolSearchIndexStatusResponse.parseAsync(data),
+    url: '/tool-search/index-status',
+    ...options
+});
+
+/**
+ * List Tool Search Reindex Jobs
+ */
+export const listToolSearchReindexJobs = <ThrowOnError extends boolean = false>(options?: Options<ListToolSearchReindexJobsData, ThrowOnError>): RequestResult<ListToolSearchReindexJobsResponses, ListToolSearchReindexJobsErrors, ThrowOnError> => (options?.client ?? client).get<ListToolSearchReindexJobsResponses, ListToolSearchReindexJobsErrors, ThrowOnError>({
+    responseValidator: async (data) => await zListToolSearchReindexJobsResponse.parseAsync(data),
+    url: '/tool-search/reindex-jobs',
+    ...options
+});
+
+/**
+ * Create Tool Search Reindex Job
+ */
+export const createToolSearchReindexJob = <ThrowOnError extends boolean = false>(options: Options<CreateToolSearchReindexJobData, ThrowOnError>): RequestResult<CreateToolSearchReindexJobResponses, CreateToolSearchReindexJobErrors, ThrowOnError> => (options.client ?? client).post<CreateToolSearchReindexJobResponses, CreateToolSearchReindexJobErrors, ThrowOnError>({
+    responseValidator: async (data) => await zCreateToolSearchReindexJobResponse.parseAsync(data),
+    url: '/tool-search/reindex-jobs',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get Tool Search Reindex Job
+ */
+export const getToolSearchReindexJob = <ThrowOnError extends boolean = false>(options: Options<GetToolSearchReindexJobData, ThrowOnError>): RequestResult<GetToolSearchReindexJobResponses, GetToolSearchReindexJobErrors, ThrowOnError> => (options.client ?? client).get<GetToolSearchReindexJobResponses, GetToolSearchReindexJobErrors, ThrowOnError>({
+    responseValidator: async (data) => await zGetToolSearchReindexJobResponse.parseAsync(data),
+    url: '/tool-search/reindex-jobs/{job_id}',
     ...options
 });
 

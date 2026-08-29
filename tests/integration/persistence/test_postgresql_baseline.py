@@ -29,6 +29,7 @@ EXPECTED_TABLES = {
     "audit_event",
     "execution_attempt",
     "tool_search_embedding",
+    "tool_search_reindex_job",
 }
 
 

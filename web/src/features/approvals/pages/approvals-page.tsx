@@ -50,16 +50,16 @@ export function ApprovalsPage() {
   return (
     <section className="page-enter">
       <PageHeader
-        eyebrow="Governance"
-        title="Approvals"
-        description="Review asynchronous tool-call decisions without exposing sensitive arguments."
+        eyebrow="治理"
+        title="审批管理"
+        description="审核异步工具调用决策，同时避免暴露敏感参数。"
         actions={
           <Button onClick={() => void approvals.refetch()} size="small" variant="secondary">
-            <RefreshCw className="size-3.5" /> Refresh
+            <RefreshCw className="size-3.5" /> 刷新
           </Button>
         }
       />
-      <div className="mb-5 grid max-w-2xl gap-4 border border-slate/18 bg-paper p-4 sm:grid-cols-2">
+      <div className="mb-5 grid max-w-2xl gap-4 border border-slate/30 bg-paper p-4 sm:grid-cols-2">
         <div>
           <FieldLabel htmlFor="approval-principal">Principal</FieldLabel>
           <Input
@@ -70,22 +70,22 @@ export function ApprovalsPage() {
             onKeyDown={(event) =>
               event.key === "Enter" && update("principal_id", event.currentTarget.value.trim())
             }
-            placeholder="All principals"
+            placeholder="全部 Principal"
           />
         </div>
         <div>
-          <FieldLabel htmlFor="approval-status">Status</FieldLabel>
+          <FieldLabel htmlFor="approval-status">状态</FieldLabel>
           <Select
             id="approval-status"
             onChange={(event) => update("status", event.currentTarget.value)}
             value={status ?? ""}
           >
-            <option value="">All statuses</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-            <option value="expired">Expired</option>
-            <option value="consumed">Consumed</option>
+            <option value="">全部状态</option>
+            <option value="pending">待审批</option>
+            <option value="approved">已批准</option>
+            <option value="rejected">已拒绝</option>
+            <option value="expired">已过期</option>
+            <option value="consumed">已消费</option>
           </Select>
         </div>
       </div>
@@ -94,15 +94,12 @@ export function ApprovalsPage() {
           <InlineError error={decide.error} />
         </div>
       ) : null}
-      {approvals.isPending ? <LoadingState label="Loading approvals…" /> : null}
+      {approvals.isPending ? <LoadingState label="正在加载审批请求…" /> : null}
       {approvals.isError ? (
         <ErrorState error={approvals.error} onRetry={() => void approvals.refetch()} />
       ) : null}
       {approvals.data?.items.length === 0 ? (
-        <EmptyState
-          title="No approvals found"
-          description="No approval requests match the current filters."
-        />
+        <EmptyState title="未找到审批请求" description="当前筛选条件下没有匹配的审批请求。" />
       ) : null}
       {approvals.data && approvals.data.items.length > 0 ? (
         <>
@@ -111,9 +108,9 @@ export function ApprovalsPage() {
               <TableHead>
                 <tr>
                   <TableHeaderCell>Tool / Principal</TableHeaderCell>
-                  <TableHeaderCell>Requested</TableHeaderCell>
-                  <TableHeaderCell>Evidence</TableHeaderCell>
-                  <TableHeaderCell>Status / Action</TableHeaderCell>
+                  <TableHeaderCell>申请时间</TableHeaderCell>
+                  <TableHeaderCell>决策证据</TableHeaderCell>
+                  <TableHeaderCell>状态 / 操作</TableHeaderCell>
                 </tr>
               </TableHead>
               <TableBody>
@@ -128,7 +125,7 @@ export function ApprovalsPage() {
                     <TableCell>
                       {formatDateTime(approval.requested_at)}
                       <span className="mt-1 block text-xs text-slate/50">
-                        Expires {formatDateTime(approval.expires_at)}
+                        过期于 {formatDateTime(approval.expires_at)}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -146,7 +143,7 @@ export function ApprovalsPage() {
                       {approval.status === "pending" ? (
                         <div className="mt-3 flex gap-2">
                           <Button
-                            aria-label={`Approve ${approval.canonical_name}`}
+                            aria-label={`批准 ${approval.canonical_name}`}
                             onClick={() =>
                               setDecision({
                                 approvalId: approval.id,
@@ -156,10 +153,10 @@ export function ApprovalsPage() {
                             }
                             size="small"
                           >
-                            <Check className="size-3.5" /> Approve
+                            <Check className="size-3.5" /> 批准
                           </Button>
                           <Button
-                            aria-label={`Reject ${approval.canonical_name}`}
+                            aria-label={`拒绝 ${approval.canonical_name}`}
                             onClick={() =>
                               setDecision({
                                 approvalId: approval.id,
@@ -170,7 +167,7 @@ export function ApprovalsPage() {
                             size="small"
                             variant="danger"
                           >
-                            <X className="size-3.5" /> Reject
+                            <X className="size-3.5" /> 拒绝
                           </Button>
                         </div>
                       ) : null}
@@ -181,7 +178,7 @@ export function ApprovalsPage() {
             </Table>
           </TableFrame>
           <div className="mt-5 flex items-center justify-between gap-4">
-            <span className="text-xs text-slate/50">{approvals.data.page.total} approvals</span>
+            <span className="text-xs text-slate/50">共 {approvals.data.page.total} 条审批请求</span>
             <Pagination
               page={page}
               totalPages={Math.ceil(approvals.data.page.total / PAGE_SIZE)}
@@ -198,20 +195,16 @@ export function ApprovalsPage() {
       <ConfirmDialog
         danger={decision?.approved === false}
         confirmLabel={
-          decide.isPending
-            ? "Saving decision…"
-            : decision?.approved
-              ? "Approve request"
-              : "Reject request"
+          decide.isPending ? "正在保存决策…" : decision?.approved ? "批准请求" : "拒绝请求"
         }
-        description="This decision is authoritative and will be recorded in the audit trail. The approval remains bound to the original principal, tool version and arguments digest."
+        description="该决策将立即生效并写入审计轨迹。审批结果仍与原始 Principal、Tool 版本及参数摘要绑定。"
         onConfirm={() => {
           if (!decision) return;
           void decide.mutateAsync(decision).then(() => setDecision(null));
         }}
         onOpenChange={(open) => !open && setDecision(null)}
         open={Boolean(decision)}
-        title={`${decision?.approved ? "Approve" : "Reject"} ${decision?.toolName ?? "request"}?`}
+        title={`${decision?.approved ? "批准" : "拒绝"} ${decision?.toolName ?? "该请求"}？`}
       />
     </section>
   );

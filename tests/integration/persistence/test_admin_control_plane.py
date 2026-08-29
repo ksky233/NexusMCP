@@ -188,6 +188,22 @@ async def test_admin_rest_drives_import_review_publish_search_and_mcp(
             assert search.status_code == 200
             assert [item["canonical_name"] for item in search.json()] == ["directory.get_employee"]
 
+            search_lab = await client.get(
+                "/admin/search/tools",
+                params={"q": "employee", "retrieval_mode": "lexical"},
+            )
+            assert search_lab.status_code == 200
+            assert search_lab.json()["retrieval_mode"] == "lexical"
+            assert search_lab.json()["hits"][0]["canonical_name"] == "directory.get_employee"
+            assert search_lab.json()["hits"][0]["input_schema"]["type"] == "object"
+
+            hybrid_unavailable = await client.get(
+                "/admin/search/tools",
+                params={"q": "find a coworker", "retrieval_mode": "hybrid"},
+            )
+            assert hybrid_unavailable.status_code == 503
+            assert hybrid_unavailable.json()["code"] == "tool_search_mode_unavailable"
+
             mcp_transport = streamable_http_client(
                 "http://testserver/mcp",
                 http_client=client,
@@ -202,3 +218,40 @@ async def test_admin_rest_drives_import_review_publish_search_and_mcp(
             disabled = await client.post(f"/admin/upstreams/{upstream_id}/disable")
             assert disabled.status_code == 200
             assert disabled.json()["status"] == "disabled"
+
+
+@pytest.mark.asyncio
+async def test_development_control_plane_bootstraps_its_local_tenant(
+    pg_session_factory: async_sessionmaker[AsyncSession],
+    migrated_database_url: str,
+) -> None:
+    app = create_app(
+        Settings(
+            environment="development",
+            catalog_backend="postgresql",
+            database_url=SecretStr(migrated_database_url),
+            local_tenant_id=TENANT_A_ID,
+            control_plane_enabled=True,
+        )
+    )
+
+    async with app.router.lifespan_context(app):
+        async with httpx2.AsyncClient(
+            transport=httpx2.ASGITransport(app=app),
+            base_url="http://testserver",
+        ) as client:
+            response = await client.post(
+                "/admin/upstreams",
+                json={
+                    "namespace": "local_directory",
+                    "name": "employee-directory-local",
+                    "owner": "people-platform",
+                    "endpoint": "http://127.0.0.1:9001",
+                },
+            )
+
+    assert response.status_code == 201
+    async with pg_session_factory() as session:
+        tenant = await session.get(TenantModel, uuid.UUID(TENANT_A_ID))
+    assert tenant is not None
+    assert tenant.name == "Local Development Tenant"

@@ -16,9 +16,9 @@ export function Pagination({
   const windowStart = Math.min(Math.max(page - 2, 1), normalizedTotal - windowSize + 1);
   const visiblePages = Array.from({ length: windowSize }, (_, index) => windowStart + index);
   return (
-    <nav aria-label="Pagination" className="flex items-center gap-1">
+    <nav aria-label="分页" className="flex items-center gap-1">
       <Button
-        aria-label="Previous page"
+        aria-label="上一页"
         disabled={page <= 1}
         onClick={() => onPageChange(page - 1)}
         size="small"
@@ -39,7 +39,7 @@ export function Pagination({
         </Button>
       ))}
       <Button
-        aria-label="Next page"
+        aria-label="下一页"
         disabled={page >= normalizedTotal}
         onClick={() => onPageChange(page + 1)}
         size="small"

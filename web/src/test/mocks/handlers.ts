@@ -1,4 +1,8 @@
-import type { DashboardResponse } from "@/generated/api/types.gen";
+import type {
+  DashboardResponse,
+  ToolSearchIndexStatusResponse,
+  ToolSearchReindexJobPageResponse,
+} from "@/generated/api/types.gen";
 import { http, HttpResponse } from "msw";
 
 export const dashboardFixture: DashboardResponse = {
@@ -24,5 +28,24 @@ export const handlers = [
     HttpResponse.json(dashboardFixture, {
       headers: { "X-Request-ID": "request-dashboard-test" },
     }),
+  ),
+  http.get("/admin/tool-search/index-status", () =>
+    HttpResponse.json({
+      published_count: 0,
+      current_count: 0,
+      missing_count: 0,
+      stale_count: 0,
+      embedding_model: "Qwen/Qwen3-Embedding-8B",
+      embedding_dimensions: 2048,
+      embedding_available: true,
+      items: [],
+      page: { offset: 0, limit: 100, total: 0 },
+    } satisfies ToolSearchIndexStatusResponse),
+  ),
+  http.get("/admin/tool-search/reindex-jobs", () =>
+    HttpResponse.json({
+      items: [],
+      page: { offset: 0, limit: 5, total: 0 },
+    } satisfies ToolSearchReindexJobPageResponse),
   ),
 ];

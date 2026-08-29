@@ -5,7 +5,7 @@
 NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry，当前负责将企业 HTTP/OpenAPI
 服务转化为受治理的 MCP Tool，并在接入、发现和调用链上执行身份、策略、凭据、审批、审计与可观测性。
 
-当前阶段：`W3｜核心业务页面已完成`；下一步进入 `W4｜Search Lab 与 Evidence`。
+当前阶段：`W4.6｜Tool Search Index Management 已完成`；下一步进入 `W5｜S6 包装`。
 
 ## 当前边界
 
@@ -17,7 +17,7 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry
 - Catalog 已拆分 Tool、ToolVersion、PublishedTool，并建立 Repository/UoW Contract；
 - GitHub Actions 会在 Push/PR 上使用云端 Ubuntu Runner 执行完整质量门禁；
 - PostgreSQL、Tool/ToolVersion/ToolBinding 和 Publish 事务已经完成设计冻结；
-- PostgreSQL 18.6 + pgvector 0.8.6、SQLAlchemy Async、Alembic Baseline 和 12 张 ORM 表已经建立；
+- PostgreSQL 18.6 + pgvector 0.8.6、SQLAlchemy Async、Alembic Baseline 和 13 张 ORM 表已经建立；
 - Catalog/Binding 已具有 SQLAlchemy Async Repository、显式 ORM Mapping 和每 Command 独立 UoW；
 - 已建立协议无关安全错误、MCP/HTTP 映射接缝、结构化日志和 async Log Context；
 - Publish 已实现 Tool/Version/Binding/Upstream 锁定、Digest 校验、原子状态切换与 Domain Event；
@@ -64,7 +64,7 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry
   Capability；只有出现明确组织级 Remote MCP Upstream 场景后才重新评估；
 - Admin API 已冻结 13 个稳定 `operationId`、RFC 9457-compatible Problem Details、Offset Pagination
   Envelope 与确定性 OpenAPI Snapshot；公开 Upstream Contract 只允许 HTTP；
-- Admin Query API 已扩展至 29 个稳定 Operation，覆盖 Dashboard、Upstream/Import/Review、Tool/Version/
+- Admin Query API 已扩展至 34 个稳定 Operation，覆盖 Dashboard、Upstream/Import/Review、Tool/Version/
   Binding、Approval、Execution/Attempt、Audit 和 Search Projection，并具备数据库分页、过滤与租户隔离；
 - `web/` React Control Plane 已建立；Generated Hey API SDK、Zod Response Validation、TanStack Query、
   Problem Details Client、Vite Same-Origin Proxy 与真实 Dashboard Slice 已跑通；
@@ -72,6 +72,14 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry
   Form、Table、Pagination、Dialog 和 Query State；
 - Web Control Plane 已实现 Upstream、Import/Review/Publish、Catalog/Version/Binding、Approval 与
   Execution/Attempt/Audit 核心业务页面；
+- Search Lab 已接通真实 Lexical/Hybrid 治理检索；Evidence 页面展示 Eval/Benchmark/Security/Protocol；
+- Multi-stage Build、Unprivileged Nginx 与 Browser→MCP→Execution/Audit Playwright E2E 已在本地通过；
+- Web UI 用户可见文案已中文化；API、状态码、日志与技术标识仍保持英文；黑白细硬视觉已按 v2
+  强化边框、标签字重与后台信息密度；
+- Catalog 已接通 Tool Search Index Management：持久化 Reindex Job、Missing/Stale 幂等更新、单 Active
+  Job 去重、重启中断恢复和任务状态查询；Search Lab 展示 RRF/Vector/Cosine/Lexical 分项诊断；
+- Development Control Plane 会幂等初始化 Local Tenant，Upstream Repository 不再把 Foreign Key Error
+  错误映射为 `upstream_conflict`；
 - S6 前置增强优先补齐 Admin Query API 与 Web Control Plane MVP，用可视化方式展示 Upstream、Import、
   Review、Publish、Catalog、Approval、Execution 与 Audit；
 - 真实 JWT/OIDC、生产 Secret Store、CredentialBinding 持久化、跨调用 Result Replay、通用写 Tool
@@ -272,6 +280,7 @@ docker compose stop postgres
 - [W2 React Shell](./docs/实验记录/32_W2_ReactShell.md)
 - [W2.5 Control Plane UI 基线](./docs/实验记录/33_W2.5_ControlPlaneUI基线.md)
 - [W3 核心业务页面](./docs/实验记录/34_W3_核心业务页面.md)
+- [W4 Search Lab、Evidence 与 Full-stack E2E](./docs/实验记录/35_W4_SearchLabEvidence与FullstackE2E.md)
 - [S5 统一工程证据报告](./docs/工程证据/06_S5统一报告.md)
 - [S5 工程证据矩阵](./docs/工程证据/01_S5证据矩阵.md)
 - [业务词汇、核心用例与限界上下文](./docs/架构/01_业务词汇核心用例与限界上下文.md)
@@ -279,6 +288,7 @@ docker compose stop postgres
 - [tools/call 治理执行模型](./docs/架构/03_tools_call治理执行模型.md)
 - [内建 Meta Tool 与 Hybrid Tool Search](./docs/架构/04_内建MetaTool与HybridToolSearch.md)
 - [Tool 混合检索与 RRF 算法选择](./docs/学习笔记/07_Tool混合检索与RRF算法选择.md)
+- [Multi-stage Build、Nginx 与 Full-stack E2E](./docs/学习笔记/08_Multi-stageBuild_Nginx与Full-stackE2E.md)
 - [ADR-0001：Python 项目布局](./docs/adr/0001-python-project-layout.md)
 - [ADR-0002：MCP 协议与 SDK Adapter](./docs/adr/0002-mcp-protocol-and-sdk-adapter.md)
 - [ADR-0004：PostgreSQL 主存储](./docs/adr/0004-postgresql-primary-store.md)

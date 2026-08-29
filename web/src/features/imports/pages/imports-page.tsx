@@ -57,30 +57,30 @@ export function ImportsPage() {
         actions={
           <>
             <Button onClick={() => void imports.refetch()} size="small" variant="secondary">
-              <RefreshCw aria-hidden="true" className="size-3.5" /> Refresh
+              <RefreshCw aria-hidden="true" className="size-3.5" /> 刷新
             </Button>
             <Button onClick={() => setCreating((value) => !value)} size="small">
-              <Plus aria-hidden="true" className="size-3.5" /> New import
+              <Plus aria-hidden="true" className="size-3.5" /> 新建导入
             </Button>
           </>
         }
-        description="Validate OpenAPI documents, inspect generated operations and move reviewed tools toward publication."
-        eyebrow="OpenAPI"
-        title="Imports & Review"
+        description="校验 OpenAPI 文档、检查生成的 Operation，并将审核通过的 Tool 推进至发布。"
+        eyebrow="OpenAPI · 接入流程"
+        title="导入与审核"
       />
 
       {creating ? (
         <form className="panel mb-6 p-6 sm:p-7" onSubmit={(event) => void submitImport(event)}>
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
-              <FieldLabel htmlFor="import-upstream">Active upstream</FieldLabel>
+              <FieldLabel htmlFor="import-upstream">已启用上游服务</FieldLabel>
               <Select
                 id="import-upstream"
                 onChange={(event) => setUpstreamId(event.currentTarget.value)}
                 required
                 value={upstreamId}
               >
-                <option value="">Select an upstream</option>
+                <option value="">请选择上游服务</option>
                 {upstreams.data?.items.map((upstream) => (
                   <option key={upstream.id} value={upstream.id}>
                     {upstream.namespace}.{upstream.name}
@@ -89,7 +89,7 @@ export function ImportsPage() {
               </Select>
             </div>
             <div>
-              <FieldLabel htmlFor="import-source">Fixture source</FieldLabel>
+              <FieldLabel htmlFor="import-source">Fixture 来源</FieldLabel>
               <Input
                 id="import-source"
                 onChange={(event) => setSourceRef(event.currentTarget.value)}
@@ -98,11 +98,11 @@ export function ImportsPage() {
               />
             </div>
             <div className="sm:col-span-2">
-              <FieldLabel htmlFor="import-allowlist">Operation allowlist</FieldLabel>
+              <FieldLabel htmlFor="import-allowlist">Operation Allowlist</FieldLabel>
               <Input
                 id="import-allowlist"
                 onChange={(event) => setAllowlist(event.currentTarget.value)}
-                placeholder="getEmployee, listEmployees (optional)"
+                placeholder="getEmployee, listEmployees（可选）"
                 value={allowlist}
               />
             </div>
@@ -112,19 +112,19 @@ export function ImportsPage() {
               <InlineError error={start.error} />
             </div>
           ) : null}
-          <div className="mt-7 flex justify-end gap-3 border-t border-slate/15 pt-5">
+          <div className="mt-7 flex justify-end gap-3 border-t border-slate/20 pt-5">
             <Button onClick={() => setCreating(false)} type="button" variant="secondary">
-              Cancel
+              取消
             </Button>
             <Button disabled={start.isPending || !upstreamId || !sourceRef.trim()} type="submit">
-              {start.isPending ? "Importing…" : "Submit import"}
+              {start.isPending ? "正在导入…" : "提交导入"}
             </Button>
           </div>
         </form>
       ) : null}
 
       <div className="mb-5 max-w-xs">
-        <FieldLabel htmlFor="import-status">Status</FieldLabel>
+        <FieldLabel htmlFor="import-status">状态</FieldLabel>
         <Select
           id="import-status"
           onChange={(event) => {
@@ -136,23 +136,23 @@ export function ImportsPage() {
           }}
           value={status ?? ""}
         >
-          <option value="">All statuses</option>
-          <option value="pending">Pending</option>
-          <option value="validating">Validating</option>
-          <option value="parsing">Parsing</option>
-          <option value="completed">Completed</option>
-          <option value="failed">Failed</option>
+          <option value="">全部状态</option>
+          <option value="pending">待处理</option>
+          <option value="validating">校验中</option>
+          <option value="parsing">解析中</option>
+          <option value="completed">已完成</option>
+          <option value="failed">失败</option>
         </Select>
       </div>
 
-      {imports.isPending ? <LoadingState label="Loading OpenAPI imports…" /> : null}
+      {imports.isPending ? <LoadingState label="正在加载 OpenAPI 导入记录…" /> : null}
       {imports.isError ? (
         <ErrorState error={imports.error} onRetry={() => void imports.refetch()} />
       ) : null}
       {imports.data?.items.length === 0 ? (
         <EmptyState
-          description="Submit an OpenAPI fixture or clear the current status filter."
-          title="No imports found"
+          description="请提交一个 OpenAPI Fixture，或清除当前状态筛选。"
+          title="未找到导入记录"
         />
       ) : null}
       {imports.data && imports.data.items.length > 0 ? (
@@ -161,10 +161,10 @@ export function ImportsPage() {
             <Table>
               <TableHead>
                 <tr>
-                  <TableHeaderCell>Source</TableHeaderCell>
-                  <TableHeaderCell>Upstream</TableHeaderCell>
-                  <TableHeaderCell>Created</TableHeaderCell>
-                  <TableHeaderCell>Status</TableHeaderCell>
+                  <TableHeaderCell>来源</TableHeaderCell>
+                  <TableHeaderCell>上游服务</TableHeaderCell>
+                  <TableHeaderCell>创建时间</TableHeaderCell>
+                  <TableHeaderCell>状态</TableHeaderCell>
                 </tr>
               </TableHead>
               <TableBody>
@@ -192,7 +192,7 @@ export function ImportsPage() {
             </Table>
           </TableFrame>
           <div className="mt-5 flex items-center justify-between gap-4">
-            <span className="text-xs text-slate/50">{imports.data.page.total} imports</span>
+            <span className="text-xs text-slate/50">共 {imports.data.page.total} 条导入记录</span>
             <Pagination
               onPageChange={(nextPage) => {
                 const next = new URLSearchParams(searchParams);

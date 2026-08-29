@@ -34,7 +34,7 @@ export function normalizeApiError(error: unknown, response?: Response): ApiClien
     return new ApiClientError({
       kind: "protocol",
       code: "invalid_response_schema",
-      message: "The server returned data that did not match the Admin API contract.",
+      message: "服务端响应不符合 Admin API Contract。",
       requestId: response?.headers.get("X-Request-ID") ?? undefined,
       cause: error,
     });
@@ -43,7 +43,7 @@ export function normalizeApiError(error: unknown, response?: Response): ApiClien
     return new ApiClientError({
       kind: "timeout",
       code: "request_timeout",
-      message: "The Admin API did not respond before the request timed out.",
+      message: "Admin API 未在超时时间内响应。",
       cause: error,
     });
   }
@@ -51,7 +51,7 @@ export function normalizeApiError(error: unknown, response?: Response): ApiClien
     return new ApiClientError({
       kind: "abort",
       code: "request_aborted",
-      message: "The Admin API request was cancelled.",
+      message: "Admin API 请求已取消。",
       cause: error,
     });
   }
@@ -62,7 +62,7 @@ export function normalizeApiError(error: unknown, response?: Response): ApiClien
       return new ApiClientError({
         kind: "protocol",
         code: "invalid_error_content_type",
-        message: "The server returned an unsupported error response.",
+        message: "服务端返回了不受支持的错误响应格式。",
         status: response.status,
         requestId,
         cause: error,
@@ -82,7 +82,7 @@ export function normalizeApiError(error: unknown, response?: Response): ApiClien
     return new ApiClientError({
       kind: "protocol",
       code: "invalid_problem_details",
-      message: "The server returned malformed Problem Details.",
+      message: "服务端返回的 Problem Details 格式无效。",
       status: response.status,
       requestId,
       cause: error,
@@ -92,14 +92,14 @@ export function normalizeApiError(error: unknown, response?: Response): ApiClien
     return new ApiClientError({
       kind: "network",
       code: "network_error",
-      message: "The Admin API could not be reached.",
+      message: "无法连接 Admin API。",
       cause: error,
     });
   }
   return new ApiClientError({
     kind: "unknown",
     code: "unknown_client_error",
-    message: "The Admin API request failed unexpectedly.",
+    message: "Admin API 请求发生未知异常。",
     cause: error,
   });
 }

@@ -14,7 +14,10 @@ from nexusmcp.modules.openapi_import.adapters.sqlalchemy_models import (
     OpenApiImportJobModel,
 )
 from nexusmcp.modules.registry.adapters.sqlalchemy_models import UpstreamServiceModel
-from nexusmcp.modules.tool_search.adapters.sqlalchemy_models import ToolSearchEmbeddingModel
+from nexusmcp.modules.tool_search.adapters.sqlalchemy_models import (
+    ToolSearchEmbeddingModel,
+    ToolSearchReindexJobModel,
+)
 
 ALL_MODELS = (
     TenantModel,
@@ -24,6 +27,7 @@ ALL_MODELS = (
     ToolModel,
     ToolVersionModel,
     ToolSearchEmbeddingModel,
+    ToolSearchReindexJobModel,
     ToolBindingModel,
     ApprovalRequestModel,
     ToolExecutionModel,

@@ -108,7 +108,7 @@ test("recovers the reviewed import workflow after a page reload", async () => {
   );
   const queryClient = renderRoute(<ImportDetailPage />, "/imports/import-1", "/imports/:importId");
 
-  expect(await screen.findByRole("button", { name: "Publish version" })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "发布版本" })).toBeInTheDocument();
   expect(screen.getByText("getEmployee")).toBeInTheDocument();
   queryClient.clear();
 });
@@ -136,7 +136,7 @@ test("renders catalog version schemas and its unique binding", async () => {
   const queryClient = renderRoute(<ToolDetailPage />, "/catalog/tool-1", "/catalog/:toolId");
 
   expect(await screen.findByText("directory.get_employee")).toBeInTheDocument();
-  expect(await screen.findByText("HTTP binding")).toBeInTheDocument();
+  expect(await screen.findByText("HTTP Binding")).toBeInTheDocument();
   expect(screen.getByText("Get employee")).toBeInTheDocument();
   queryClient.clear();
 });
@@ -174,14 +174,12 @@ test("requires confirmation before persisting an approval decision", async () =>
   const user = userEvent.setup();
   const queryClient = renderRoute(<ApprovalsPage />, "/approvals");
 
-  await user.click(await screen.findByRole("button", { name: "Approve directory.get_employee" }));
-  expect(
-    screen.getByRole("dialog", { name: "Approve directory.get_employee?" }),
-  ).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Approve request" }));
+  await user.click(await screen.findByRole("button", { name: "批准 directory.get_employee" }));
+  expect(screen.getByRole("dialog", { name: "批准 directory.get_employee？" })).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "批准请求" }));
   await waitFor(() => {
     expect(
-      screen.queryByRole("button", { name: "Approve directory.get_employee" }),
+      screen.queryByRole("button", { name: "批准 directory.get_employee" }),
     ).not.toBeInTheDocument();
   });
   queryClient.clear();
@@ -202,7 +200,7 @@ test("renders execution evidence without payload fields", async () => {
 
   expect(await screen.findByText("directory.get_employee")).toBeInTheDocument();
   expect(screen.queryByText(/arguments/i)).not.toBeInTheDocument();
-  expect(screen.getAllByText("Succeeded")).toHaveLength(2);
+  expect(screen.getAllByText("成功")).toHaveLength(2);
   queryClient.clear();
 });
 

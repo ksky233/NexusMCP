@@ -1,9 +1,9 @@
 # NexusMCP Control Plane 视觉基线
 
-> 状态：Accepted  
-> 日期：2026-08-28  
-> 来源：本地“黑白-细硬”UI System 参考模板  
-> 范围：W2.5～W4 Web Control Plane
+> 状态：Accepted
+> 日期：2026-08-28（2026-08-29 按 v2 校准）
+> 来源：本地“黑白-细硬”UI System v2 参考模板
+> 范围：W2.5～W4.5 Web Control Plane
 
 ## 1. 设计目标
 
@@ -56,6 +56,20 @@ NexusMCP 是企业 Tool Governance Control Plane，不是营销型 SaaS Landing 
 - Table/Form 使用 `13～14px` 主字号；
 - Mono 仅用于 Request ID、Trace ID、Digest、Model Version；
 - Desktop 优先信息密度，Mobile 允许 Card/List 重排但不隐藏治理事实。
+
+### 4.1 v2 后台密度校准
+
+W4.5 不重做视觉体系，只在原基线上强化后台管理界面的结构感：
+
+- Eyebrow 与 Component Label 使用中等字重、较窄字距和更深文字色；
+- Panel、Filter、Table Frame 默认边框提高对比度，但仍保持 1px 细边框；
+- Input/Select/Textarea 的默认、Hover、Focus 边界依次增强；
+- Secondary Button 的边界比普通 Panel 更明确；
+- Table Row 与 Section Divider 从“若隐若现”提升为可稳定扫描的分隔线；
+- Card Hover 位移由 2px 收敛为 1px，减少空气感和营销式漂浮感；
+- 公共 State Panel 与页面间距略微收紧，不压缩业务表单的可操作空间。
+
+这里的“粗”指更高的颜色不透明度和更清晰的层级，不将 1px Border 普遍改为 2px。
 
 ## 5. Shell
 
@@ -117,8 +131,12 @@ W3
 W4
 → Responsive/Accessibility/Visual QA
 → Screenshot 与 Full-stack E2E
+
+W4.5
+→ 用户可见 UI 文案中文化
+→ 按 v2 强化边框、标签字重与后台信息密度
+→ API/状态值/日志/技术标识继续使用英文
 ```
 
 W2.5 不实现 Upstream、Import、Approval 等业务 Mutation，也不引入 Storybook、第二套组件库或复杂 Theme
 Switch。
-

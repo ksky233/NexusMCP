@@ -7,6 +7,11 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from nexusmcp.infrastructure.persistence.models import ALL_MODELS
+
+# Runtime 与 Alembic 必须注册同一组 Table；否则首个跨模块 Flush 无法解析尚未导入的 Foreign Key。
+_ = ALL_MODELS
+
 
 def create_engine(database_url: str, *, echo: bool = False) -> AsyncEngine:
     """创建 SQLAlchemy Async Engine；调用方负责在 Lifespan 中释放。"""

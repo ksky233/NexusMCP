@@ -1,6 +1,6 @@
 # 09｜S6 前置 Web Control Plane 与 Remote MCP 边界
 
-> 状态：产品与工程规划已冻结；W0～W3 已完成，W4 待开始
+> 状态：产品与工程规划已冻结；W0～W4 已完成，W5 待开始
 > 日期：2026-08-27
 > 决策：Remote MCP Deferred；优先 Admin Query API 与 Web UI MVP
 > 工程基线：见 ADR-0018
@@ -306,12 +306,44 @@ Static Build
 - 为刷新恢复新增 `getToolVersion` 与 `getToolVersionBinding`，Admin Contract 扩展为 29 Operation；
 - 详细结果见 [W3 核心业务页面](../实验记录/34_W3_核心业务页面.md)。
 
-### W4｜Search Lab 与 Evidence
+### W4｜Search Lab 与 Evidence（已完成）
 
 - Lexical/Hybrid 对照；
 - Retrieval Snapshot 展示；
 - Benchmark/Security/Protocol Evidence 页面或链接；
 - 一条 Playwright E2E。
+
+完成记录：
+
+- Live Lexical/Hybrid Search Lab 与 Retrieval Snapshot；
+- Benchmark/Security/Protocol/Failure/Residual Risk Evidence 页面；
+- 30-Operation Admin Contract；
+- Multi-stage Build + Unprivileged Nginx + Same-Origin Admin/Health/MCP；
+- Full-stack Playwright `2 passed`，覆盖 Browser Publish→MCP Call→Execution/Audit；
+- 详细结果见 [W4 Search Lab、Evidence 与 Full-stack E2E](../实验记录/35_W4_SearchLabEvidence与FullstackE2E.md)。
+
+### W4.5｜Web UI 中文化与后台密度校准（已完成）
+
+- 用户可见的导航、标题、说明、表单、操作、状态与错误界面使用中文；
+- API 字段、状态码、错误码、日志、Trace/Request ID 与代码标识继续使用英文；
+- 保留 Namespace、Principal、Tool、Policy、Binding、Schema 等必要领域术语，避免生硬全译；
+- 按“黑白-细硬 v2”强化 Panel、Filter、Table、Control 与 Secondary Action 边界；
+- 加深 Eyebrow、Component Label 与 Field Label，收敛 Hover 位移和空气感；
+- Vitest 与 Playwright Accessible Name Selector 同步中文 Contract；
+- 详细结果见 [W4.5 Web UI 中文化与视觉密度](../实验记录/36_W4.5_WebUI中文化与视觉密度.md)。
+
+### W4.6｜Tool Search Index Management（已完成）
+
+- Catalog 增加检索索引管理入口，展示 Published、Current、Missing、Stale 与 Model@Dimensions；
+- 普通更新只处理 Missing/Stale Projection，Current Tool 不重复调用付费 Embedding API；
+- 新增持久化 Reindex Job、每租户单 Active Job 去重、任务状态查询与进程重启中断恢复；
+- Admin API 使用 `202 Accepted + Background Task`，浏览器不持有 Embedding API Key；
+- 第一版 Background Task 与 Web 进程同生命周期，不声称已经是独立分布式 Worker；
+- Search Lab 展示 RRF 分数、Vector 排名、Vector Cosine、Lexical 排名和 FTS 分数；
+- RRF 继续只融合名次，不改变 Agent-facing `lexical | hybrid` Contract；
+- Development Control Plane 启动时幂等创建 Local Tenant，修复首次注册的外键失败；
+- PostgreSQL Repository 只将 `23505 unique_violation` 映射为 `upstream_conflict`；
+- 详细结果见 [W4.6 Tool Search Index Management](../实验记录/37_W4.6_ToolSearchIndexManagement.md)。
 
 ### W5｜S6 包装
 
@@ -355,9 +387,11 @@ Static Build
 | W2.5 UI 基线 | 4～8 小时 |
 | W3 核心页面 | 18～28 小时 |
 | W4 Search Lab/Test | 8～14 小时 |
+| W4.5 中文化/视觉密度 | 3～5 小时 |
+| W4.6 Search Index Management | 8～14 小时 |
 | W5 S6 包装 | 20～30 小时 |
 
-Web 增强本身约 52～88 小时；S6 完整包装另计。若求职时间受限，优先 Dashboard、Import/Review、Catalog、
+Web 增强本身约 63～107 小时；S6 完整包装另计。若求职时间受限，优先 Dashboard、Import/Review、Catalog、
 Execution/Audit 四条可视化主链。
 
 ## 11. 停止条件

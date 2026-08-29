@@ -18,6 +18,7 @@ from nexusmcp.bootstrap.persistence_factories import (
     RuntimeOpenApiImportUnitOfWorkFactory,
     RuntimeRegistryUnitOfWorkFactory,
     RuntimeReviewUnitOfWorkFactory,
+    RuntimeToolSearchUnitOfWorkFactory,
 )
 from nexusmcp.infrastructure.clock import SystemClock
 from nexusmcp.infrastructure.identifiers import UuidIdentifierGenerator
@@ -31,6 +32,7 @@ from nexusmcp.infrastructure.observability import (
     create_telemetry_runtime,
 )
 from nexusmcp.infrastructure.persistence.admin_queries import SqlAlchemyControlPlaneQueries
+from nexusmcp.infrastructure.persistence.local_tenant import ensure_local_development_tenant
 from nexusmcp.infrastructure.persistence.runtime import DatabaseRuntime, DatabaseRuntimePort
 from nexusmcp.interfaces.admin import AdminServices, create_admin_app
 from nexusmcp.interfaces.health.router import create_health_router
@@ -85,12 +87,24 @@ from nexusmcp.modules.registry.use_cases import (
     UpdateUpstream,
 )
 from nexusmcp.modules.tool_search.adapters.siliconflow import SiliconFlowEmbeddingProvider
+from nexusmcp.modules.tool_search.adapters.sqlalchemy_job_store import (
+    SqlAlchemyToolSearchReindexJobStore,
+)
 from nexusmcp.modules.tool_search.adapters.sqlalchemy_vector_search import (
     SqlAlchemyExactVectorToolSearch,
 )
+from nexusmcp.modules.tool_search.document_builder import ToolSearchDocumentBuilder
 from nexusmcp.modules.tool_search.hybrid_search import SearchHybridTools
+from nexusmcp.modules.tool_search.index_management import (
+    CreateToolSearchReindexJob,
+    GetToolSearchReindexJob,
+    InspectToolSearchIndex,
+    ListToolSearchReindexJobs,
+    RunToolSearchReindexJob,
+)
 from nexusmcp.modules.tool_search.ports import EmbeddingProvider
 from nexusmcp.modules.tool_search.rank_fusion import ReciprocalRankFusion
+from nexusmcp.modules.tool_search.reindex_tools import ReindexTools
 from nexusmcp.modules.tool_search.search_tools import SearchTools
 from nexusmcp.modules.tool_search.vector_search import SearchVectorTools
 from nexusmcp.shared.request_context import RequestContext
@@ -159,6 +173,7 @@ def create_app(
     list_visible_tools = ListVisibleTools(resolved_reader)
     resolved_policy_evaluator = policy_evaluator or StaticReadOnlyPolicyEvaluator()
     principal_resolver = ContextPrincipalResolver()
+    reindex_job_store: SqlAlchemyToolSearchReindexJobStore | None = None
     search_backend = published_tool_search
     if search_backend is None and resolved_runtime is not None:
         search_backend = SqlAlchemyPublishedToolSearch(resolved_runtime)
@@ -207,6 +222,7 @@ def create_app(
             principal_resolver=principal_resolver,
             policy_evaluator=resolved_policy_evaluator,
             hybrid_search=hybrid_search,
+            hybrid_diagnostic_search=hybrid_search,
             hybrid_index_version=(
                 hybrid_search.index_version if hybrid_search is not None else None
             ),
@@ -310,6 +326,19 @@ def create_app(
             if resolved_runtime is not None:
                 await resolved_runtime.start()
                 runtime_started = True
+                if (
+                    resolved_settings.environment == "development"
+                    and resolved_settings.control_plane_enabled
+                ):
+                    await ensure_local_development_tenant(
+                        resolved_runtime,
+                        resolved_settings.local_tenant_id,
+                    )
+                if reindex_job_store is not None:
+                    await reindex_job_store.recover_interrupted(
+                        resolved_settings.local_tenant_id,
+                        finished_at=SystemClock().now(),
+                    )
             async with mcp_server.session_manager.run():
                 yield
         finally:
@@ -337,6 +366,20 @@ def create_app(
         import_uow_factory = RuntimeOpenApiImportUnitOfWorkFactory(resolved_runtime)
         review_uow_factory = RuntimeReviewUnitOfWorkFactory(resolved_runtime)
         catalog_uow_factory = RuntimeCatalogUnitOfWorkFactory(resolved_runtime)
+        tool_search_uow_factory = RuntimeToolSearchUnitOfWorkFactory(resolved_runtime)
+        published_tool_reader = SqlAlchemyPublishedToolReader(resolved_runtime)
+        document_builder = ToolSearchDocumentBuilder()
+        reindex_job_store = SqlAlchemyToolSearchReindexJobStore(resolved_runtime)
+        reindex_tools = ReindexTools(
+            published_tools=published_tool_reader,
+            unit_of_work_factory=tool_search_uow_factory,
+            document_builder=document_builder,
+            embedding_provider=resolved_embedding_provider,
+            embedding_model=resolved_settings.embedding_model,
+            embedding_dimensions=resolved_settings.embedding_dimensions,
+            clock=clock,
+            identifier_generator=identifier_generator,
+        )
         admin_app = create_admin_app(
             AdminServices(
                 register_upstream=RegisterUpstream(
@@ -373,6 +416,30 @@ def create_app(
                 ),
                 publish_tool=PublishTool(catalog_uow_factory, clock),
                 search_tools=SearchPublishedTools(SqlAlchemyPublishedToolSearch(resolved_runtime)),
+                search_lab=search_tools,
+                inspect_search_index=InspectToolSearchIndex(
+                    published_tools=published_tool_reader,
+                    unit_of_work_factory=tool_search_uow_factory,
+                    document_builder=document_builder,
+                    embedding_model=resolved_settings.embedding_model,
+                    embedding_dimensions=resolved_settings.embedding_dimensions,
+                    embedding_available=resolved_embedding_provider is not None,
+                ),
+                create_reindex_job=CreateToolSearchReindexJob(
+                    store=reindex_job_store,
+                    identifier_generator=identifier_generator,
+                    clock=clock,
+                    embedding_model=resolved_settings.embedding_model,
+                    embedding_dimensions=resolved_settings.embedding_dimensions,
+                    embedding_available=resolved_embedding_provider is not None,
+                ),
+                run_reindex_job=RunToolSearchReindexJob(
+                    store=reindex_job_store,
+                    reindex_tools=reindex_tools,
+                    clock=clock,
+                ),
+                get_reindex_job=GetToolSearchReindexJob(reindex_job_store),
+                list_reindex_jobs=ListToolSearchReindexJobs(reindex_job_store),
                 decide_approval=decide_approval,
                 get_approval=get_approval,
             ),

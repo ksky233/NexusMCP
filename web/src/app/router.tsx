@@ -1,6 +1,5 @@
 import { createBrowserRouter } from "react-router-dom";
 
-import { PlaceholderPage } from "@/components/common/placeholder-page";
 import { NotFoundPage } from "@/components/common/not-found-page";
 import { AppShell } from "@/layouts/app-shell";
 
@@ -85,13 +84,17 @@ export const router = createBrowserRouter([
       },
       {
         path: "search-lab",
-        element: (
-          <PlaceholderPage
-            eyebrow="Retrieval"
-            title="Search Lab"
-            description="Lexical and Hybrid retrieval comparison is planned for W4."
-          />
-        ),
+        lazy: async () => {
+          const { SearchLabPage } = await import("@/features/search-lab/pages/search-lab-page");
+          return { Component: SearchLabPage };
+        },
+      },
+      {
+        path: "evidence",
+        lazy: async () => {
+          const { EvidencePage } = await import("@/features/evidence/pages/evidence-page");
+          return { Component: EvidencePage };
+        },
       },
       { path: "*", Component: NotFoundPage },
     ],
@@ -101,7 +104,7 @@ export const router = createBrowserRouter([
 function DashboardRouteFallback() {
   return (
     <div className="state-panel" role="status">
-      Loading dashboard module…
+      正在加载系统概览模块…
     </div>
   );
 }

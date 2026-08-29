@@ -13,7 +13,8 @@
     "typecheck": "tsc -b --pretty false",
     "lint": "oxlint --max-warnings=0 --ignore-pattern src/generated/api src vite.config.ts openapi-ts.config.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",
@@ -31,6 +32,7 @@
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "0.99.0",
+    "@playwright/test": "1.62.1",
     "@tailwindcss/vite": "4.3.3",
     "@testing-library/dom": "10.4.1",
     "@testing-library/jest-dom": "7.0.1",

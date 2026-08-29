@@ -275,6 +275,16 @@ class ToolSearchModeUnavailableError(NexusMcpError):
     safe_message = "The requested tool search mode is not available."
 
 
+class ToolSearchReindexJobNotFoundError(NexusMcpError):
+    code = "tool_search_reindex_job_not_found"
+    safe_message = "The requested tool search reindex job was not found."
+
+
+class ToolSearchReindexJobConflictError(NexusMcpError):
+    code = "tool_search_reindex_job_conflict"
+    safe_message = "A tool search reindex job is already active for this tenant."
+
+
 class EmbeddingAuthenticationError(NexusMcpError):
     code = "embedding_authentication_failed"
     safe_message = "The embedding provider could not be authenticated."

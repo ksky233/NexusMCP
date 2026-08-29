@@ -408,6 +408,24 @@
         "title": "AuditOutcome",
         "type": "string"
       },
+      "CreateToolSearchReindexJobRequest": {
+        "properties": {
+          "batch_size": {
+            "default": 16,
+            "maximum": 64.0,
+            "minimum": 1.0,
+            "title": "Batch Size",
+            "type": "integer"
+          },
+          "force": {
+            "default": false,
+            "title": "Force",
+            "type": "boolean"
+          }
+        },
+        "title": "CreateToolSearchReindexJobRequest",
+        "type": "object"
+      },
       "DashboardResponse": {
         "additionalProperties": false,
         "properties": {
@@ -1543,6 +1561,202 @@
         "title": "ReviewOperationSummaryResponse",
         "type": "object"
       },
+      "SearchLabHitResponse": {
+        "properties": {
+          "canonical_name": {
+            "title": "Canonical Name",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "input_schema": {
+            "additionalProperties": true,
+            "title": "Input Schema",
+            "type": "object"
+          },
+          "lexical_rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lexical Rank"
+          },
+          "lexical_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lexical Score"
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Schema"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "rank": {
+            "title": "Rank",
+            "type": "number"
+          },
+          "rrf_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rrf Score"
+          },
+          "score_kind": {
+            "enum": [
+              "fts",
+              "rrf"
+            ],
+            "title": "Score Kind",
+            "type": "string"
+          },
+          "side_effect": {
+            "$ref": "#/components/schemas/ToolSideEffect"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "tool_id": {
+            "title": "Tool Id",
+            "type": "string"
+          },
+          "tool_version_id": {
+            "title": "Tool Version Id",
+            "type": "string"
+          },
+          "vector_cosine_similarity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vector Cosine Similarity"
+          },
+          "vector_rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vector Rank"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/ToolVisibility"
+          }
+        },
+        "required": [
+          "position",
+          "tool_id",
+          "tool_version_id",
+          "canonical_name",
+          "display_name",
+          "description",
+          "version",
+          "visibility",
+          "side_effect",
+          "owner",
+          "tags",
+          "rank",
+          "score_kind",
+          "lexical_rank",
+          "lexical_score",
+          "vector_rank",
+          "vector_cosine_similarity",
+          "rrf_score",
+          "input_schema",
+          "output_schema"
+        ],
+        "title": "SearchLabHitResponse",
+        "type": "object"
+      },
+      "SearchLabResponse": {
+        "properties": {
+          "hits": {
+            "items": {
+              "$ref": "#/components/schemas/SearchLabHitResponse"
+            },
+            "title": "Hits",
+            "type": "array"
+          },
+          "index_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Index Version"
+          },
+          "retrieval_mode": {
+            "$ref": "#/components/schemas/ToolRetrievalMode"
+          }
+        },
+        "required": [
+          "retrieval_mode",
+          "index_version",
+          "hits"
+        ],
+        "title": "SearchLabResponse",
+        "type": "object"
+      },
       "SearchProjectionResponse": {
         "additionalProperties": false,
         "properties": {
@@ -1863,6 +2077,258 @@
           "page"
         ],
         "title": "ToolPageResponse",
+        "type": "object"
+      },
+      "ToolRetrievalMode": {
+        "enum": [
+          "lexical",
+          "hybrid"
+        ],
+        "title": "ToolRetrievalMode",
+        "type": "string"
+      },
+      "ToolSearchIndexItemResponse": {
+        "properties": {
+          "canonical_name": {
+            "title": "Canonical Name",
+            "type": "string"
+          },
+          "indexed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indexed At"
+          },
+          "state": {
+            "enum": [
+              "missing",
+              "stale",
+              "current"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "tool_id": {
+            "title": "Tool Id",
+            "type": "string"
+          },
+          "tool_version_id": {
+            "title": "Tool Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_id",
+          "tool_version_id",
+          "canonical_name",
+          "state",
+          "indexed_at"
+        ],
+        "title": "ToolSearchIndexItemResponse",
+        "type": "object"
+      },
+      "ToolSearchIndexStatusResponse": {
+        "properties": {
+          "current_count": {
+            "title": "Current Count",
+            "type": "integer"
+          },
+          "embedding_available": {
+            "title": "Embedding Available",
+            "type": "boolean"
+          },
+          "embedding_dimensions": {
+            "title": "Embedding Dimensions",
+            "type": "integer"
+          },
+          "embedding_model": {
+            "title": "Embedding Model",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ToolSearchIndexItemResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "missing_count": {
+            "title": "Missing Count",
+            "type": "integer"
+          },
+          "page": {
+            "$ref": "#/components/schemas/PageMetadata"
+          },
+          "published_count": {
+            "title": "Published Count",
+            "type": "integer"
+          },
+          "stale_count": {
+            "title": "Stale Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "published_count",
+          "current_count",
+          "missing_count",
+          "stale_count",
+          "embedding_model",
+          "embedding_dimensions",
+          "embedding_available",
+          "items",
+          "page"
+        ],
+        "title": "ToolSearchIndexStatusResponse",
+        "type": "object"
+      },
+      "ToolSearchReindexJobPageResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ToolSearchReindexJobResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "$ref": "#/components/schemas/PageMetadata"
+          }
+        },
+        "required": [
+          "items",
+          "page"
+        ],
+        "title": "ToolSearchReindexJobPageResponse",
+        "type": "object"
+      },
+      "ToolSearchReindexJobResponse": {
+        "properties": {
+          "batch_count": {
+            "title": "Batch Count",
+            "type": "integer"
+          },
+          "batch_size": {
+            "title": "Batch Size",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_count": {
+            "title": "Current Count",
+            "type": "integer"
+          },
+          "embedded_count": {
+            "title": "Embedded Count",
+            "type": "integer"
+          },
+          "embedding_dimensions": {
+            "title": "Embedding Dimensions",
+            "type": "integer"
+          },
+          "embedding_model": {
+            "title": "Embedding Model",
+            "type": "string"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "force": {
+            "title": "Force",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "pending_count": {
+            "title": "Pending Count",
+            "type": "integer"
+          },
+          "published_count": {
+            "title": "Published Count",
+            "type": "integer"
+          },
+          "requested_by": {
+            "title": "Requested By",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "running",
+              "succeeded",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "requested_by",
+          "status",
+          "force",
+          "batch_size",
+          "embedding_model",
+          "embedding_dimensions",
+          "published_count",
+          "current_count",
+          "pending_count",
+          "embedded_count",
+          "batch_count",
+          "error_code",
+          "created_at",
+          "started_at",
+          "finished_at"
+        ],
+        "title": "ToolSearchReindexJobResponse",
         "type": "object"
       },
       "ToolSideEffect": {
@@ -3574,6 +4040,111 @@
         "summary": "Get Search Projection Status"
       }
     },
+    "/search/tools": {
+      "get": {
+        "operationId": "searchTools",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 500,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "retrieval_mode",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ToolRetrievalMode"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "maximum": 10,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "namespace",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Namespace"
+            }
+          },
+          {
+            "in": "query",
+            "name": "side_effect",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ToolSideEffect"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Side Effect"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchLabResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Search Tool Candidates"
+      }
+    },
     "/tool-bindings/{tool_binding_id}": {
       "get": {
         "operationId": "getToolBinding",
@@ -3631,6 +4202,227 @@
           }
         },
         "summary": "Get Tool Binding"
+      }
+    },
+    "/tool-search/index-status": {
+      "get": {
+        "operationId": "getToolSearchIndexStatus",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolSearchIndexStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get Tool Search Index Status"
+      }
+    },
+    "/tool-search/reindex-jobs": {
+      "get": {
+        "operationId": "listToolSearchReindexJobs",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolSearchReindexJobPageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "List Tool Search Reindex Jobs"
+      },
+      "post": {
+        "operationId": "createToolSearchReindexJob",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateToolSearchReindexJobRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolSearchReindexJobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Create Tool Search Reindex Job"
+      }
+    },
+    "/tool-search/reindex-jobs/{job_id}": {
+      "get": {
+        "operationId": "getToolSearchReindexJob",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolSearchReindexJobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Get Tool Search Reindex Job"
       }
     },
     "/tool-versions/{tool_version_id}": {

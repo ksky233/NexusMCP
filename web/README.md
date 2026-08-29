@@ -87,6 +87,15 @@ The Control Plane uses a restrained black/white thin-border system:
 
 The tracked design rules are in `docs/前端/01_ControlPlane视觉基线.md`.
 
+User-visible navigation, headings, form labels, actions, status text and safe client error messages use Chinese for
+the project's primary job-search audience. API fields, protocol values, error codes, log keys, identifiers and code
+remain English. Necessary domain terms such as Tool, Principal, Namespace, Policy and Schema are retained where a
+forced translation would reduce precision.
+
+W4.5 calibrates the baseline against the v2 reference: stronger 1px borders, darker medium-weight labels, clearer
+controls and table dividers, tighter state panels and reduced hover movement. This is a density refinement, not a
+second theme.
+
 ## Implemented Control Plane
 
 - Upstream register, list, detail, edit and disable;
@@ -95,4 +104,20 @@ The tracked design rules are in `docs/前端/01_ControlPlane视觉基线.md`.
 - Approval list and confirmed decision;
 - Execution, attempt and audit filters/timelines.
 
-Search Lab and full-stack Playwright evidence remain in W4.
+Search Lab, tracked Evidence, Multi-stage Nginx and Full-stack Playwright are implemented in W4. UI localization and
+the v2 admin-density calibration are implemented in W4.5.
+
+W4.6 adds Tool Search Index Management to Catalog: accurate Missing/Stale/Current projection state, persisted
+single-active Reindex Jobs, background execution status and restart interruption recovery. Search Lab also exposes
+Admin-only RRF, FTS rank, Vector rank and Cosine diagnostics while the Agent-facing search contract remains
+`lexical | hybrid`.
+
+Production-like verification:
+
+```powershell
+docker build --pull=false -f Dockerfile -t nexusmcp-web:w4 ..
+pnpm test:e2e
+```
+
+The Playwright command assumes disposable PostgreSQL, Fake Upstream, NexusMCP and the Nginx Container are already
+running. See `docs/学习笔记/08_Multi-stageBuild_Nginx与Full-stackE2E.md` for the orchestration and safety boundary.

@@ -11,7 +11,7 @@ const buttonVariants = cva(
       variant: {
         primary: "border-ink bg-ink text-mist shadow-hairline hover:border-slate hover:bg-slate",
         secondary:
-          "border-slate/30 bg-paper text-slate hover:border-slate/50 hover:bg-mist/50 hover:text-ink",
+          "border-slate/42 bg-paper text-slate hover:border-slate/60 hover:bg-mist/70 hover:text-ink",
         ghost: "border-transparent bg-transparent text-slate hover:bg-mist hover:text-ink",
         danger: "border-wine/35 bg-wine/6 text-wine hover:border-wine/50 hover:bg-wine/10",
       },

@@ -10,8 +10,8 @@
   --color-slate: var(--slate);
   --color-ink-muted: color-mix(in srgb, var(--slate) 72%, transparent);
   --color-ink-subtle: color-mix(in srgb, var(--slate) 52%, transparent);
-  --color-line: color-mix(in srgb, var(--slate) 18%, transparent);
-  --color-line-strong: color-mix(in srgb, var(--slate) 30%, transparent);
+  --color-line: color-mix(in srgb, var(--slate) 24%, transparent);
+  --color-line-strong: color-mix(in srgb, var(--slate) 38%, transparent);
   --color-accent: var(--ink);
   --color-accent-strong: var(--slate);
   --color-accent-soft: var(--mist);
@@ -84,9 +84,12 @@ summary {
     animation: page-enter 200ms ease-out both;
   }
 
-  .eyebrow,
+  .eyebrow {
+    @apply text-[12px] font-medium uppercase tracking-[0.1em] text-ink/75;
+  }
+
   .component-label {
-    @apply text-[11px] font-normal uppercase tracking-[0.18em] text-slate/55;
+    @apply text-[11px] font-medium uppercase tracking-[0.08em] text-ink/65;
   }
 
   .page-title {
@@ -98,15 +101,15 @@ summary {
   }
 
   .panel {
-    @apply min-w-0 rounded-[3px] border border-slate/20 bg-paper shadow-hairline;
+    @apply min-w-0 rounded-[3px] border border-slate/30 bg-paper shadow-hairline;
   }
 
   .panel-interactive {
-    @apply transition-[border-color,box-shadow,transform,background-color] duration-200 hover:-translate-y-0.5 hover:border-slate/30 hover:bg-white hover:shadow-float;
+    @apply transition-[border-color,box-shadow,transform,background-color] duration-200 hover:-translate-y-px hover:border-slate/40 hover:bg-white hover:shadow-[0_10px_22px_rgba(34,40,49,0.065)];
   }
 
   .state-panel {
-    @apply flex min-h-64 items-center justify-center gap-3 rounded-[3px] border border-slate/20 bg-paper p-8 text-sm text-slate/70 shadow-hairline;
+    @apply flex min-h-56 items-center justify-center gap-3 rounded-[3px] border border-slate/30 bg-paper p-6 text-sm text-slate/75 shadow-hairline;
   }
 
   .hairline-divider {

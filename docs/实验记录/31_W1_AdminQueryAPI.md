@@ -112,7 +112,8 @@ Dashboard 返回：
 - 全量门禁结果见本次提交记录。
 
 > W3 Addendum：为保证 Review/Publish 与 Catalog/Binding 页面刷新后可恢复，新增 `getToolVersion` 和
-> `getToolVersionBinding`，当前 Admin Contract 为 29 个稳定 Operation。
+> `getToolVersionBinding`，该阶段 Admin Contract 为 29 个稳定 Operation。W4 新增治理版 `searchTools` 后，
+> Contract 为 30 个 Operation；W4.6 增加 Index Status 与 Reindex Job 后，当前为 34 个 Operation。
 
 ## 8. 下一步
 

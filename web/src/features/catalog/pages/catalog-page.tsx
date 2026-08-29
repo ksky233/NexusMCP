@@ -17,6 +17,8 @@ import { FieldLabel, Input, Select } from "@/components/ui/form-controls";
 import { Pagination } from "@/components/ui/pagination";
 import { StatusPill } from "@/components/ui/status-pill";
 import { useTools } from "@/features/catalog/hooks/use-catalog";
+import { useSearchIndexStatus } from "@/features/catalog/hooks/use-search-index";
+import { SearchIndexPanel } from "@/features/catalog/parts/search-index-panel";
 import type {
   ToolSideEffect,
   ToolStatus,
@@ -46,6 +48,10 @@ export function CatalogPage() {
     visibility,
     side_effect: sideEffect,
   });
+  const searchIndex = useSearchIndexStatus();
+  const indexByVersion = new Map(
+    searchIndex.data?.items.map((item) => [item.tool_version_id, item]) ?? [],
+  );
 
   function update(name: string, value: string) {
     const next = new URLSearchParams(params);
@@ -60,15 +66,17 @@ export function CatalogPage() {
       <PageHeader
         actions={
           <Button onClick={() => void tools.refetch()} size="small" variant="secondary">
-            <RefreshCw aria-hidden="true" className="size-3.5" /> Refresh
+            <RefreshCw aria-hidden="true" className="size-3.5" /> 刷新
           </Button>
         }
-        description="Inspect stable Tool identities, versioned contracts, visibility and execution bindings."
-        eyebrow="Catalog"
-        title="Tool Catalog"
+        description="查看稳定 Tool Identity、版本化 Contract、可见范围与执行 Binding。"
+        eyebrow="Catalog · 工具治理"
+        title="工具目录"
       />
 
-      <div className="mb-5 grid gap-4 border border-slate/18 bg-paper p-4 sm:grid-cols-2 xl:grid-cols-5">
+      <SearchIndexPanel />
+
+      <div className="mb-5 grid gap-4 border border-slate/30 bg-paper p-4 sm:grid-cols-2 xl:grid-cols-5">
         <div>
           <FieldLabel htmlFor="catalog-namespace">Namespace</FieldLabel>
           <Input
@@ -79,60 +87,60 @@ export function CatalogPage() {
             onKeyDown={(event) =>
               event.key === "Enter" && update("namespace", event.currentTarget.value.trim())
             }
-            placeholder="All"
+            placeholder="全部"
           />
         </div>
         <Filter
           id="catalog-status"
-          label="Tool status"
+          label="Tool 状态"
           onChange={(value) => update("status", value)}
           value={status}
         >
-          <option value="active">Active</option>
-          <option value="disabled">Disabled</option>
+          <option value="active">已启用</option>
+          <option value="disabled">已停用</option>
         </Filter>
         <Filter
           id="catalog-version"
-          label="Version status"
+          label="版本状态"
           onChange={(value) => update("version_status", value)}
           value={versionStatus}
         >
-          <option value="draft">Draft</option>
-          <option value="review">Review</option>
-          <option value="published">Published</option>
-          <option value="retired">Retired</option>
+          <option value="draft">草稿</option>
+          <option value="review">审核中</option>
+          <option value="published">已发布</option>
+          <option value="retired">已退役</option>
         </Filter>
         <Filter
           id="catalog-visibility"
-          label="Visibility"
+          label="可见范围"
           onChange={(value) => update("visibility", value)}
           value={visibility}
         >
-          <option value="public">Public</option>
-          <option value="authenticated">Authenticated</option>
-          <option value="restricted">Restricted</option>
+          <option value="public">公开</option>
+          <option value="authenticated">需认证</option>
+          <option value="restricted">受限</option>
         </Filter>
         <Filter
           id="catalog-side-effect"
-          label="Side effect"
+          label="副作用"
           onChange={(value) => update("side_effect", value)}
           value={sideEffect}
         >
-          <option value="read_only">Read only</option>
-          <option value="idempotent_write">Idempotent write</option>
-          <option value="non_idempotent_write">Non-idempotent write</option>
-          <option value="unknown">Unknown</option>
+          <option value="read_only">只读</option>
+          <option value="idempotent_write">幂等写</option>
+          <option value="non_idempotent_write">非幂等写</option>
+          <option value="unknown">未知</option>
         </Filter>
       </div>
 
-      {tools.isPending ? <LoadingState label="Loading tool catalog…" /> : null}
+      {tools.isPending ? <LoadingState label="正在加载工具目录…" /> : null}
       {tools.isError ? (
         <ErrorState error={tools.error} onRetry={() => void tools.refetch()} />
       ) : null}
       {tools.data?.items.length === 0 ? (
         <EmptyState
-          title="No tools found"
-          description="Publish a reviewed operation or clear the catalog filters."
+          title="未找到 Tool"
+          description="请发布一个审核通过的 Operation，或清除当前筛选条件。"
         />
       ) : null}
       {tools.data && tools.data.items.length > 0 ? (
@@ -142,9 +150,10 @@ export function CatalogPage() {
               <TableHead>
                 <tr>
                   <TableHeaderCell>Tool</TableHeaderCell>
-                  <TableHeaderCell>Owner</TableHeaderCell>
-                  <TableHeaderCell>Version</TableHeaderCell>
+                  <TableHeaderCell>负责人</TableHeaderCell>
+                  <TableHeaderCell>版本</TableHeaderCell>
                   <TableHeaderCell>Contract</TableHeaderCell>
+                  <TableHeaderCell>检索索引</TableHeaderCell>
                 </tr>
               </TableHead>
               <TableBody>
@@ -174,13 +183,40 @@ export function CatalogPage() {
                         {humanize(tool.side_effect)}
                       </span>
                     </TableCell>
+                    <TableCell>
+                      {indexByVersion.has(tool.latest_version_id) ? (
+                        <>
+                          <StatusPill
+                            tone={indexTone(indexByVersion.get(tool.latest_version_id)?.state)}
+                          >
+                            {humanize(
+                              indexByVersion.get(tool.latest_version_id)?.state ?? "missing",
+                            )}
+                          </StatusPill>
+                          {indexByVersion.get(tool.latest_version_id)?.indexed_at ? (
+                            <span className="mt-2 block text-xs text-slate/50">
+                              {new Intl.DateTimeFormat("zh-CN", {
+                                dateStyle: "short",
+                                timeStyle: "short",
+                              }).format(
+                                new Date(
+                                  indexByVersion.get(tool.latest_version_id)?.indexed_at ?? "",
+                                ),
+                              )}
+                            </span>
+                          ) : null}
+                        </>
+                      ) : (
+                        <span className="text-xs text-slate/45">不适用</span>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableFrame>
           <div className="mt-5 flex items-center justify-between gap-4">
-            <span className="text-xs text-slate/50">{tools.data.page.total} tools</span>
+            <span className="text-xs text-slate/50">共 {tools.data.page.total} 个 Tool</span>
             <Pagination
               page={page}
               totalPages={Math.ceil(tools.data.page.total / PAGE_SIZE)}
@@ -196,6 +232,12 @@ export function CatalogPage() {
       ) : null}
     </section>
   );
+}
+
+function indexTone(state: string | undefined) {
+  if (state === "current") return "completed" as const;
+  if (state === "stale") return "review" as const;
+  return "pending" as const;
 }
 
 function Filter({
@@ -215,7 +257,7 @@ function Filter({
     <div>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <Select id={id} onChange={(event) => onChange(event.currentTarget.value)} value={value ?? ""}>
-        <option value="">All</option>
+        <option value="">全部</option>
         {children}
       </Select>
     </div>

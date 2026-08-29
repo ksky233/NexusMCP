@@ -225,6 +225,20 @@ export type AuditEventResponse = {
 export type AuditOutcome = 'allowed' | 'denied' | 'approval_required' | 'succeeded' | 'failed' | 'unknown' | 'cancelled';
 
 /**
+ * CreateToolSearchReindexJobRequest
+ */
+export type CreateToolSearchReindexJobRequest = {
+    /**
+     * Batch Size
+     */
+    batch_size?: number;
+    /**
+     * Force
+     */
+    force?: boolean;
+};
+
+/**
  * DashboardResponse
  */
 export type DashboardResponse = {
@@ -888,6 +902,105 @@ export type ReviewOperationSummaryResponse = {
 };
 
 /**
+ * SearchLabHitResponse
+ */
+export type SearchLabHitResponse = {
+    /**
+     * Canonical Name
+     */
+    canonical_name: string;
+    /**
+     * Description
+     */
+    description: string;
+    /**
+     * Display Name
+     */
+    display_name: string;
+    /**
+     * Input Schema
+     */
+    input_schema: {
+        [key: string]: unknown;
+    };
+    /**
+     * Lexical Rank
+     */
+    lexical_rank: number | null;
+    /**
+     * Lexical Score
+     */
+    lexical_score: number | null;
+    /**
+     * Output Schema
+     */
+    output_schema: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Owner
+     */
+    owner: string | null;
+    /**
+     * Position
+     */
+    position: number;
+    /**
+     * Rank
+     */
+    rank: number;
+    /**
+     * Rrf Score
+     */
+    rrf_score: number | null;
+    /**
+     * Score Kind
+     */
+    score_kind: 'fts' | 'rrf';
+    side_effect: ToolSideEffect;
+    /**
+     * Tags
+     */
+    tags: Array<string>;
+    /**
+     * Tool Id
+     */
+    tool_id: string;
+    /**
+     * Tool Version Id
+     */
+    tool_version_id: string;
+    /**
+     * Vector Cosine Similarity
+     */
+    vector_cosine_similarity: number | null;
+    /**
+     * Vector Rank
+     */
+    vector_rank: number | null;
+    /**
+     * Version
+     */
+    version: number;
+    visibility: ToolVisibility;
+};
+
+/**
+ * SearchLabResponse
+ */
+export type SearchLabResponse = {
+    /**
+     * Hits
+     */
+    hits: Array<SearchLabHitResponse>;
+    /**
+     * Index Version
+     */
+    index_version: string | null;
+    retrieval_mode: ToolRetrievalMode;
+};
+
+/**
  * SearchProjectionResponse
  */
 export type SearchProjectionResponse = {
@@ -1102,6 +1215,161 @@ export type ToolPageResponse = {
      */
     items: Array<ToolSummaryResponse>;
     page: PageMetadata;
+};
+
+/**
+ * ToolRetrievalMode
+ */
+export type ToolRetrievalMode = 'lexical' | 'hybrid';
+
+/**
+ * ToolSearchIndexItemResponse
+ */
+export type ToolSearchIndexItemResponse = {
+    /**
+     * Canonical Name
+     */
+    canonical_name: string;
+    /**
+     * Indexed At
+     */
+    indexed_at: string | null;
+    /**
+     * State
+     */
+    state: 'missing' | 'stale' | 'current';
+    /**
+     * Tool Id
+     */
+    tool_id: string;
+    /**
+     * Tool Version Id
+     */
+    tool_version_id: string;
+};
+
+/**
+ * ToolSearchIndexStatusResponse
+ */
+export type ToolSearchIndexStatusResponse = {
+    /**
+     * Current Count
+     */
+    current_count: number;
+    /**
+     * Embedding Available
+     */
+    embedding_available: boolean;
+    /**
+     * Embedding Dimensions
+     */
+    embedding_dimensions: number;
+    /**
+     * Embedding Model
+     */
+    embedding_model: string;
+    /**
+     * Items
+     */
+    items: Array<ToolSearchIndexItemResponse>;
+    /**
+     * Missing Count
+     */
+    missing_count: number;
+    page: PageMetadata;
+    /**
+     * Published Count
+     */
+    published_count: number;
+    /**
+     * Stale Count
+     */
+    stale_count: number;
+};
+
+/**
+ * ToolSearchReindexJobPageResponse
+ */
+export type ToolSearchReindexJobPageResponse = {
+    /**
+     * Items
+     */
+    items: Array<ToolSearchReindexJobResponse>;
+    page: PageMetadata;
+};
+
+/**
+ * ToolSearchReindexJobResponse
+ */
+export type ToolSearchReindexJobResponse = {
+    /**
+     * Batch Count
+     */
+    batch_count: number;
+    /**
+     * Batch Size
+     */
+    batch_size: number;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Current Count
+     */
+    current_count: number;
+    /**
+     * Embedded Count
+     */
+    embedded_count: number;
+    /**
+     * Embedding Dimensions
+     */
+    embedding_dimensions: number;
+    /**
+     * Embedding Model
+     */
+    embedding_model: string;
+    /**
+     * Error Code
+     */
+    error_code: string | null;
+    /**
+     * Finished At
+     */
+    finished_at: string | null;
+    /**
+     * Force
+     */
+    force: boolean;
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Pending Count
+     */
+    pending_count: number;
+    /**
+     * Published Count
+     */
+    published_count: number;
+    /**
+     * Requested By
+     */
+    requested_by: string;
+    /**
+     * Started At
+     */
+    started_at: string | null;
+    /**
+     * Status
+     */
+    status: 'pending' | 'running' | 'succeeded' | 'failed';
+    /**
+     * Tenant Id
+     */
+    tenant_id: string;
 };
 
 /**
@@ -2076,6 +2344,53 @@ export type GetSearchProjectionStatusResponses = {
 
 export type GetSearchProjectionStatusResponse = GetSearchProjectionStatusResponses[keyof GetSearchProjectionStatusResponses];
 
+export type SearchToolsData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Q
+         */
+        q: string;
+        retrieval_mode: ToolRetrievalMode;
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Namespace
+         */
+        namespace?: string | null;
+        /**
+         * Side Effect
+         */
+        side_effect?: ToolSideEffect | null;
+    };
+    url: '/search/tools';
+};
+
+export type SearchToolsErrors = {
+    /**
+     * Unprocessable Entity
+     */
+    422: ProblemDetails;
+    /**
+     * Service Unavailable
+     */
+    503: ProblemDetails;
+};
+
+export type SearchToolsError = SearchToolsErrors[keyof SearchToolsErrors];
+
+export type SearchToolsResponses = {
+    /**
+     * Successful Response
+     */
+    200: SearchLabResponse;
+};
+
+export type SearchToolsResponse = SearchToolsResponses[keyof SearchToolsResponses];
+
 export type GetToolBindingData = {
     body?: never;
     path: {
@@ -2113,6 +2428,145 @@ export type GetToolBindingResponses = {
 };
 
 export type GetToolBindingResponse = GetToolBindingResponses[keyof GetToolBindingResponses];
+
+export type GetToolSearchIndexStatusData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Offset
+         */
+        offset?: number;
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/tool-search/index-status';
+};
+
+export type GetToolSearchIndexStatusErrors = {
+    /**
+     * Unprocessable Entity
+     */
+    422: ProblemDetails;
+    /**
+     * Service Unavailable
+     */
+    503: ProblemDetails;
+};
+
+export type GetToolSearchIndexStatusError = GetToolSearchIndexStatusErrors[keyof GetToolSearchIndexStatusErrors];
+
+export type GetToolSearchIndexStatusResponses = {
+    /**
+     * Successful Response
+     */
+    200: ToolSearchIndexStatusResponse;
+};
+
+export type GetToolSearchIndexStatusResponse = GetToolSearchIndexStatusResponses[keyof GetToolSearchIndexStatusResponses];
+
+export type ListToolSearchReindexJobsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Offset
+         */
+        offset?: number;
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/tool-search/reindex-jobs';
+};
+
+export type ListToolSearchReindexJobsErrors = {
+    /**
+     * Unprocessable Entity
+     */
+    422: ProblemDetails;
+};
+
+export type ListToolSearchReindexJobsError = ListToolSearchReindexJobsErrors[keyof ListToolSearchReindexJobsErrors];
+
+export type ListToolSearchReindexJobsResponses = {
+    /**
+     * Successful Response
+     */
+    200: ToolSearchReindexJobPageResponse;
+};
+
+export type ListToolSearchReindexJobsResponse = ListToolSearchReindexJobsResponses[keyof ListToolSearchReindexJobsResponses];
+
+export type CreateToolSearchReindexJobData = {
+    body: CreateToolSearchReindexJobRequest;
+    path?: never;
+    query?: never;
+    url: '/tool-search/reindex-jobs';
+};
+
+export type CreateToolSearchReindexJobErrors = {
+    /**
+     * Conflict
+     */
+    409: ProblemDetails;
+    /**
+     * Unprocessable Entity
+     */
+    422: ProblemDetails;
+    /**
+     * Service Unavailable
+     */
+    503: ProblemDetails;
+};
+
+export type CreateToolSearchReindexJobError = CreateToolSearchReindexJobErrors[keyof CreateToolSearchReindexJobErrors];
+
+export type CreateToolSearchReindexJobResponses = {
+    /**
+     * Successful Response
+     */
+    202: ToolSearchReindexJobResponse;
+};
+
+export type CreateToolSearchReindexJobResponse = CreateToolSearchReindexJobResponses[keyof CreateToolSearchReindexJobResponses];
+
+export type GetToolSearchReindexJobData = {
+    body?: never;
+    path: {
+        /**
+         * Job Id
+         */
+        job_id: string;
+    };
+    query?: never;
+    url: '/tool-search/reindex-jobs/{job_id}';
+};
+
+export type GetToolSearchReindexJobErrors = {
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+    /**
+     * Unprocessable Entity
+     */
+    422: ProblemDetails;
+};
+
+export type GetToolSearchReindexJobError = GetToolSearchReindexJobErrors[keyof GetToolSearchReindexJobErrors];
+
+export type GetToolSearchReindexJobResponses = {
+    /**
+     * Successful Response
+     */
+    200: ToolSearchReindexJobResponse;
+};
+
+export type GetToolSearchReindexJobResponse = GetToolSearchReindexJobResponses[keyof GetToolSearchReindexJobResponses];
 
 export type GetToolVersionData = {
     body?: never;

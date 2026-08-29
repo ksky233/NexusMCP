@@ -25,9 +25,11 @@ class SqlAlchemyUpstreamRepository:
         try:
             await self._session.flush()
         except IntegrityError as error:
-            raise UpstreamConflictError(
-                "upstream registration violated a database uniqueness constraint"
-            ) from error
+            if getattr(error.orig, "sqlstate", None) == "23505":
+                raise UpstreamConflictError(
+                    "upstream registration violated a database uniqueness constraint"
+                ) from error
+            raise
 
     async def save(self, tenant_id: str, upstream: UpstreamService) -> None:
         _require_matching_tenant(tenant_id, upstream.tenant_id)

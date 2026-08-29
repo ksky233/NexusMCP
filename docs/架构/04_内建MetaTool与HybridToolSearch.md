@@ -388,3 +388,36 @@ Hybrid 在该小 Dataset 上没有超过 Vector：精确 Query 中两路一致�
 
 两个 No-Match Case 都被 Exact Vector 返回最近候选。S4 不用 2 个负例拍脑袋设置阈值；后续需要扩充
 Hard Negative、记录正负 Cosine Score Distribution，再按 False Activation Cost 选择 Confidence Gate。
+
+## 17. W4.6 Index Management 与 Search Diagnostics
+
+Publish 事务仍不直接调用外部 Embedding Provider：
+
+```text
+Publish Commit
+→ Tool Search Index 显示 Missing
+→ Admin 创建 Reindex Job
+→ 202 Accepted
+→ In-process Background Task
+→ Missing/Stale Document Batch Embedding
+→ PostgreSQL Projection Upsert
+→ Job Terminal Summary
+```
+
+`tool_search_reindex_job` 持久化请求人、Model@Dimensions、Force、Batch Size、状态、计数与安全错误码；
+PostgreSQL Partial Unique Index 保证每个 Tenant 最多一个 `pending | running` Job。Web 进程重启时无法继续的
+Active Job 会被标为 `failed/reindex_job_interrupted`，避免永远占用 Active Slot。
+
+第一版后台任务与 Admin Web 进程同生命周期，适合模块化单体和本地作品集验证；多 Worker/多区域部署前需要将
+Job Claim 与执行迁移到独立 Worker/Queue，不把 FastAPI Background Task 描述成分布式任务系统。
+
+Search Lab 的 Admin-only Diagnostics 增加：
+
+```text
+RRF Score
+Lexical Rank / ts_rank_cd
+Vector Rank / Cosine Similarity
+```
+
+Agent-facing Meta Tool Contract 不依赖这些 Raw Diagnostics。RRF 仍然只使用名次，避免把 FTS 与 Cosine 的
+不同量纲直接相加。

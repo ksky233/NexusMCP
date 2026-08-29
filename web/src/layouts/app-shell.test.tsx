@@ -19,11 +19,9 @@ test("keeps the local admin warning and accessible navigation visible", () => {
 
   render(<RouterProvider router={router} />);
 
-  expect(
-    screen.getByText("Local Development Admin · Not Production Authentication"),
-  ).toBeInTheDocument();
-  expect(screen.getByRole("navigation", { name: "Control plane" })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Tool Catalog" })).toHaveAttribute("href", "/catalog");
+  expect(screen.getByText("本地开发管理员 · 非生产级身份认证")).toBeInTheDocument();
+  expect(screen.getByRole("navigation", { name: "控制台导航" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "工具目录" })).toHaveAttribute("href", "/catalog");
 });
 
 test("opens and closes the accessible mobile navigation", async () => {
@@ -40,10 +38,8 @@ test("opens and closes the accessible mobile navigation", async () => {
   );
   render(<RouterProvider router={router} />);
 
-  await user.click(screen.getByRole("button", { name: "Open navigation" }));
-  expect(screen.getByRole("dialog", { name: "Control plane navigation" })).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Close navigation" }));
-  expect(
-    screen.queryByRole("dialog", { name: "Control plane navigation" }),
-  ).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "打开导航" }));
+  expect(screen.getByRole("dialog", { name: "控制台导航" })).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "关闭导航" }));
+  expect(screen.queryByRole("dialog", { name: "控制台导航" })).not.toBeInTheDocument();
 });

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
-from fastapi import Depends, FastAPI, Query, Request, status
+from fastapi import BackgroundTasks, Depends, FastAPI, Query, Request, status
 from pydantic import BaseModel, Field
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.responses import Response
@@ -51,9 +51,21 @@ from nexusmcp.modules.registry.use_cases import (
     UpdateUpstream,
     UpdateUpstreamCommand,
 )
+from nexusmcp.modules.tool_search.domain import ToolRetrievalMode
+from nexusmcp.modules.tool_search.index_management import (
+    CreateToolSearchReindexJob,
+    GetToolSearchReindexJob,
+    InspectToolSearchIndex,
+    ListToolSearchReindexJobs,
+    RunToolSearchReindexJob,
+    ToolSearchIndexItem,
+    ToolSearchIndexSnapshot,
+    ToolSearchReindexJob,
+)
+from nexusmcp.modules.tool_search.search_tools import SearchTools, SearchToolsQuery
 from nexusmcp.shared.errors import FeatureNotEnabledError
 from nexusmcp.shared.log_context import bind_log_context
-from nexusmcp.shared.request_context import ActorContext
+from nexusmcp.shared.request_context import ActorContext, ProtocolEra, RequestContext
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,6 +80,12 @@ class AdminServices:
     submit_version_review: SubmitToolVersionForReview
     publish_tool: PublishTool
     search_tools: SearchPublishedTools
+    search_lab: SearchTools | None
+    inspect_search_index: InspectToolSearchIndex
+    create_reindex_job: CreateToolSearchReindexJob
+    run_reindex_job: RunToolSearchReindexJob
+    get_reindex_job: GetToolSearchReindexJob
+    list_reindex_jobs: ListToolSearchReindexJobs
     decide_approval: DecideApproval
     get_approval: GetApproval
 
@@ -245,6 +263,85 @@ class SearchToolResponse(BaseModel):
     visibility: ToolVisibility
     side_effect: ToolSideEffect
     rank: float
+
+
+class SearchLabHitResponse(BaseModel):
+    position: int
+    tool_id: str
+    tool_version_id: str
+    canonical_name: str
+    display_name: str
+    description: str
+    version: int
+    visibility: ToolVisibility
+    side_effect: ToolSideEffect
+    owner: str | None
+    tags: list[str]
+    rank: float
+    score_kind: Literal["fts", "rrf"]
+    lexical_rank: int | None
+    lexical_score: float | None
+    vector_rank: int | None
+    vector_cosine_similarity: float | None
+    rrf_score: float | None
+    input_schema: dict[str, Any]
+    output_schema: dict[str, Any] | None
+
+
+class SearchLabResponse(BaseModel):
+    retrieval_mode: ToolRetrievalMode
+    index_version: str | None
+    hits: list[SearchLabHitResponse]
+
+
+class ToolSearchIndexItemResponse(BaseModel):
+    tool_id: str
+    tool_version_id: str
+    canonical_name: str
+    state: Literal["missing", "stale", "current"]
+    indexed_at: datetime | None
+
+
+class ToolSearchIndexStatusResponse(BaseModel):
+    published_count: int
+    current_count: int
+    missing_count: int
+    stale_count: int
+    embedding_model: str
+    embedding_dimensions: int
+    embedding_available: bool
+    items: list[ToolSearchIndexItemResponse]
+    page: PageMetadata
+
+
+class CreateToolSearchReindexJobRequest(BaseModel):
+    force: bool = False
+    batch_size: int = Field(default=16, ge=1, le=64)
+
+
+class ToolSearchReindexJobResponse(BaseModel):
+    id: str
+    tenant_id: str
+    requested_by: str
+    status: Literal["pending", "running", "succeeded", "failed"]
+    force: bool
+    batch_size: int
+    embedding_model: str
+    embedding_dimensions: int
+    published_count: int
+    current_count: int
+    pending_count: int
+    embedded_count: int
+    batch_count: int
+    error_code: str | None
+    created_at: datetime
+    started_at: datetime | None
+    finished_at: datetime | None
+
+
+class ToolSearchReindexJobPageResponse(BaseModel):
+    items: list[ToolSearchReindexJobResponse]
+    page: PageMetadata
 
 
 class ApprovalResponse(BaseModel):
@@ -592,6 +689,172 @@ def create_admin_app(
         ]
 
     @app.get(
+        "/tool-search/index-status",
+        response_model=ToolSearchIndexStatusResponse,
+        operation_id="getToolSearchIndexStatus",
+        responses=problem_responses(503),
+    )
+    async def get_tool_search_index_status(
+        context: AdminContext,
+        offset: Annotated[int, Query(ge=0)] = 0,
+        limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    ) -> ToolSearchIndexStatusResponse:
+        snapshot = await services.inspect_search_index.execute(context.tenant_id)
+        return _index_status_response(snapshot, offset=offset, limit=limit)
+
+    @app.post(
+        "/tool-search/reindex-jobs",
+        response_model=ToolSearchReindexJobResponse,
+        status_code=status.HTTP_202_ACCEPTED,
+        operation_id="createToolSearchReindexJob",
+        responses=problem_responses(409, 503),
+    )
+    async def create_tool_search_reindex_job(
+        request: CreateToolSearchReindexJobRequest,
+        context: AdminContext,
+        background_tasks: BackgroundTasks,
+    ) -> ToolSearchReindexJobResponse:
+        job = await services.create_reindex_job.execute(
+            context,
+            force=request.force,
+            batch_size=request.batch_size,
+        )
+        background_tasks.add_task(
+            services.run_reindex_job.execute,
+            context.tenant_id,
+            job.id,
+        )
+        return _reindex_job_response(job)
+
+    @app.get(
+        "/tool-search/reindex-jobs",
+        response_model=ToolSearchReindexJobPageResponse,
+        operation_id="listToolSearchReindexJobs",
+        responses=problem_responses(422),
+    )
+    async def list_tool_search_reindex_jobs(
+        context: AdminContext,
+        offset: Annotated[int, Query(ge=0)] = 0,
+        limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    ) -> ToolSearchReindexJobPageResponse:
+        jobs, total = await services.list_reindex_jobs.execute(
+            context.tenant_id,
+            offset=offset,
+            limit=limit,
+        )
+        return ToolSearchReindexJobPageResponse(
+            items=[_reindex_job_response(job) for job in jobs],
+            page=PageMetadata(offset=offset, limit=limit, total=total),
+        )
+
+    @app.get(
+        "/tool-search/reindex-jobs/{job_id}",
+        response_model=ToolSearchReindexJobResponse,
+        operation_id="getToolSearchReindexJob",
+        responses=problem_responses(404),
+    )
+    async def get_tool_search_reindex_job(
+        job_id: str,
+        context: AdminContext,
+    ) -> ToolSearchReindexJobResponse:
+        return _reindex_job_response(
+            await services.get_reindex_job.execute(context.tenant_id, job_id)
+        )
+
+    @app.get(
+        "/search/tools",
+        response_model=SearchLabResponse,
+        operation_id="searchTools",
+        responses=problem_responses(422, 503),
+    )
+    async def search_tool_candidates(
+        context: AdminContext,
+        query_text: Annotated[str, Query(alias="q", min_length=1, max_length=500)],
+        retrieval_mode: ToolRetrievalMode,
+        limit: Annotated[int, Query(ge=1, le=10)] = 5,
+        namespace: Annotated[str | None, Query(min_length=1, max_length=64)] = None,
+        side_effect: ToolSideEffect | None = None,
+    ) -> SearchLabResponse:
+        if services.search_lab is None:
+            raise FeatureNotEnabledError("Tool Search Lab was not composed")
+        result = await services.search_lab.execute(
+            SearchToolsQuery(
+                context=RequestContext(
+                    request_id=context.request_id,
+                    trace_id=context.trace_id,
+                    tenant_id=context.tenant_id,
+                    principal_id=context.principal_id,
+                    authn_method=context.authn_method,
+                    principal_type=context.principal_type,
+                    roles=context.roles,
+                    principal_attributes=context.principal_attributes,
+                    protocol_version="2026-07-28",
+                    protocol_era=ProtocolEra.MODERN,
+                ),
+                text=query_text,
+                retrieval_mode=retrieval_mode,
+                limit=limit,
+                namespace=namespace,
+                side_effect=side_effect,
+            )
+        )
+        return SearchLabResponse(
+            retrieval_mode=result.retrieval_mode,
+            index_version=result.index_version,
+            hits=[
+                SearchLabHitResponse(
+                    position=position,
+                    tool_id=hit.tool.tool_id,
+                    tool_version_id=hit.tool.tool_version_id,
+                    canonical_name=hit.tool.canonical_name,
+                    display_name=hit.tool.display_name,
+                    description=hit.tool.description,
+                    version=hit.tool.version,
+                    visibility=hit.tool.visibility,
+                    side_effect=hit.tool.side_effect,
+                    owner=hit.tool.owner,
+                    tags=list(hit.tool.tags),
+                    rank=hit.rank,
+                    score_kind=(
+                        result.diagnostics[hit.tool.tool_version_id].score_kind
+                        if result.diagnostics is not None
+                        else ("rrf" if result.retrieval_mode is ToolRetrievalMode.HYBRID else "fts")
+                    ),
+                    lexical_rank=(
+                        result.diagnostics[hit.tool.tool_version_id].lexical_rank
+                        if result.diagnostics is not None
+                        else None
+                    ),
+                    lexical_score=(
+                        result.diagnostics[hit.tool.tool_version_id].lexical_score
+                        if result.diagnostics is not None
+                        else None
+                    ),
+                    vector_rank=(
+                        result.diagnostics[hit.tool.tool_version_id].vector_rank
+                        if result.diagnostics is not None
+                        else None
+                    ),
+                    vector_cosine_similarity=(
+                        result.diagnostics[hit.tool.tool_version_id].vector_cosine_similarity
+                        if result.diagnostics is not None
+                        else None
+                    ),
+                    rrf_score=(
+                        result.diagnostics[hit.tool.tool_version_id].rrf_score
+                        if result.diagnostics is not None
+                        else None
+                    ),
+                    input_schema=dict(hit.tool.input_schema),
+                    output_schema=(
+                        dict(hit.tool.output_schema) if hit.tool.output_schema is not None else None
+                    ),
+                )
+                for position, hit in enumerate(result.hits, start=1)
+            ],
+        )
+
+    @app.get(
         "/approvals/{approval_id}",
         response_model=ApprovalResponse,
         operation_id="getApproval",
@@ -646,6 +909,58 @@ def create_admin_app(
 
     app.include_router(create_admin_query_router(services.queries))
     return app
+
+
+def _index_status_response(
+    snapshot: ToolSearchIndexSnapshot,
+    *,
+    offset: int,
+    limit: int,
+) -> ToolSearchIndexStatusResponse:
+    selected = snapshot.items[offset : offset + limit]
+    return ToolSearchIndexStatusResponse(
+        published_count=snapshot.published_count,
+        current_count=snapshot.current_count,
+        missing_count=snapshot.missing_count,
+        stale_count=snapshot.stale_count,
+        embedding_model=snapshot.embedding_model,
+        embedding_dimensions=snapshot.embedding_dimensions,
+        embedding_available=snapshot.embedding_available,
+        items=[_index_item_response(item) for item in selected],
+        page=PageMetadata(offset=offset, limit=limit, total=len(snapshot.items)),
+    )
+
+
+def _index_item_response(item: ToolSearchIndexItem) -> ToolSearchIndexItemResponse:
+    return ToolSearchIndexItemResponse(
+        tool_id=item.tool_id,
+        tool_version_id=item.tool_version_id,
+        canonical_name=item.canonical_name,
+        state=item.state.value,
+        indexed_at=item.indexed_at,
+    )
+
+
+def _reindex_job_response(job: ToolSearchReindexJob) -> ToolSearchReindexJobResponse:
+    return ToolSearchReindexJobResponse(
+        id=job.id,
+        tenant_id=job.tenant_id,
+        requested_by=job.requested_by,
+        status=job.status.value,
+        force=job.force,
+        batch_size=job.batch_size,
+        embedding_model=job.embedding_model,
+        embedding_dimensions=job.embedding_dimensions,
+        published_count=job.published_count,
+        current_count=job.current_count,
+        pending_count=job.pending_count,
+        embedded_count=job.embedded_count,
+        batch_count=job.batch_count,
+        error_code=job.error_code,
+        created_at=job.created_at,
+        started_at=job.started_at,
+        finished_at=job.finished_at,
+    )
 
 
 def _normalize_problem_response_media_types(schema: dict[str, Any]) -> None:

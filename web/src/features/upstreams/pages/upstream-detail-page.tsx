@@ -24,7 +24,7 @@ export function UpstreamDetailPage() {
   const update = useUpdateUpstream(upstreamId);
   const disable = useDisableUpstream(upstreamId);
 
-  if (upstream.isPending) return <LoadingState label="Loading upstream detail…" />;
+  if (upstream.isPending) return <LoadingState label="正在加载上游服务详情…" />;
   if (upstream.isError)
     return <ErrorState error={upstream.error} onRetry={() => void upstream.refetch()} />;
 
@@ -35,13 +35,13 @@ export function UpstreamDetailPage() {
         className="mb-7 inline-flex items-center gap-2 text-xs text-slate/60 hover:text-ink"
         to="/upstreams"
       >
-        <ArrowLeft aria-hidden="true" className="size-3.5" /> Back to upstreams
+        <ArrowLeft aria-hidden="true" className="size-3.5" /> 返回上游服务
       </Link>
       <PageHeader
         actions={
           <>
             <Button onClick={() => setEditing((value) => !value)} size="small" variant="secondary">
-              <Pencil aria-hidden="true" className="size-3.5" /> Edit
+              <Pencil aria-hidden="true" className="size-3.5" /> 编辑
             </Button>
             <Button
               disabled={data.status === "disabled"}
@@ -49,12 +49,12 @@ export function UpstreamDetailPage() {
               size="small"
               variant="danger"
             >
-              <Ban aria-hidden="true" className="size-3.5" /> Disable
+              <Ban aria-hidden="true" className="size-3.5" /> 停用
             </Button>
           </>
         }
-        description={data.description ?? "No description provided."}
-        eyebrow="Registry · HTTP/OpenAPI"
+        description={data.description ?? "暂无描述。"}
+        eyebrow="Registry · HTTP/OpenAPI 上游"
         title={`${data.namespace}.${data.name}`}
       />
 
@@ -93,46 +93,46 @@ export function UpstreamDetailPage() {
 
       <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
         <article className="panel p-6 sm:p-7">
-          <p className="component-label">Connection</p>
+          <p className="component-label">连接信息</p>
           <dl className="mt-6 grid gap-x-8 gap-y-5 sm:grid-cols-2">
             <Definition label="Endpoint" mono value={data.endpoint} />
-            <Definition label="Owner" value={data.owner} />
-            <Definition label="Transport" value={data.transport_type.toUpperCase()} />
-            <Definition label="Auth scheme" value={data.auth_scheme ?? "none"} />
-            <Definition label="Protocol minimum" value={data.protocol_min ?? "—"} />
-            <Definition label="Protocol maximum" value={data.protocol_max ?? "—"} />
+            <Definition label="负责人" value={data.owner} />
+            <Definition label="传输类型" value={data.transport_type.toUpperCase()} />
+            <Definition label="认证方案" value={data.auth_scheme ?? "none"} />
+            <Definition label="最低协议版本" value={data.protocol_min ?? "—"} />
+            <Definition label="最高协议版本" value={data.protocol_max ?? "—"} />
           </dl>
         </article>
         <article className="panel p-6 sm:p-7">
           <div className="flex items-center justify-between gap-4">
-            <p className="component-label">Lifecycle</p>
+            <p className="component-label">生命周期</p>
             <StatusPill tone={statusTone(data.status)}>{humanize(data.status)}</StatusPill>
           </div>
           <dl className="mt-6 space-y-5">
-            <Definition label="Created" value={formatDateTime(data.created_at)} />
-            <Definition label="Updated" value={formatDateTime(data.updated_at)} />
-            <Definition label="Tenant" mono value={data.tenant_id} />
+            <Definition label="创建时间" value={formatDateTime(data.created_at)} />
+            <Definition label="更新时间" value={formatDateTime(data.updated_at)} />
+            <Definition label="Tenant ID" mono value={data.tenant_id} />
           </dl>
         </article>
       </div>
 
       <article className="panel mt-5 p-6 sm:p-7">
-        <p className="component-label">Non-sensitive config</p>
+        <p className="component-label">非敏感配置</p>
         <pre className="mt-5 overflow-x-auto border border-slate/15 bg-canvas p-4 font-mono text-xs leading-6 text-slate">
           {JSON.stringify(data.config, null, 2)}
         </pre>
       </article>
 
       <ConfirmDialog
-        confirmLabel={disable.isPending ? "Disabling…" : "Disable upstream"}
+        confirmLabel={disable.isPending ? "正在停用…" : "确认停用"}
         danger
-        description="New tool calls will no longer resolve through this upstream. Published history and audit evidence remain available."
+        description="新的 Tool 调用将不再通过该上游服务执行；已发布历史与审计证据仍会保留。"
         onConfirm={() => {
           void disable.mutateAsync().then(() => setDisableOpen(false));
         }}
         onOpenChange={setDisableOpen}
         open={disableOpen}
-        title="Disable this upstream?"
+        title="确认停用该上游服务？"
       />
     </section>
   );

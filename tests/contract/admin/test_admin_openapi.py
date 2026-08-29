@@ -24,6 +24,8 @@ EXPECTED_OPERATION_IDS = {
     "getToolBinding",
     "getToolVersion",
     "getToolVersionBinding",
+    "getToolSearchIndexStatus",
+    "getToolSearchReindexJob",
     "getUpstream",
     "listUpstreams",
     "listApprovals",
@@ -34,11 +36,14 @@ EXPECTED_OPERATION_IDS = {
     "listReviewOperations",
     "listTools",
     "listToolVersions",
+    "listToolSearchReindexJobs",
     "publishToolVersion",
     "registerUpstream",
+    "createToolSearchReindexJob",
     "rejectApproval",
     "reviewImportedOperation",
     "searchCatalog",
+    "searchTools",
     "submitOpenApiImport",
     "submitToolVersionReview",
     "updateUpstream",
@@ -96,6 +101,7 @@ def test_admin_query_contract_uses_page_envelopes_and_redacted_operational_field
         "ExecutionPageResponse",
         "ExecutionAttemptPageResponse",
         "AuditEventPageResponse",
+        "ToolSearchReindexJobPageResponse",
     ):
         assert schemas[schema_name]["required"] == ["items", "page"]
 

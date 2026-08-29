@@ -15,5 +15,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "openapi-ts.config.ts"]
+  "include": ["vite.config.ts", "openapi-ts.config.ts", "playwright.config.ts"]
 }

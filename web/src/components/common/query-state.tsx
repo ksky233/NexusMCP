@@ -3,7 +3,7 @@ import { AlertTriangle, Inbox, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { asApiClientError } from "@/lib/api/api-error";
 
-export function LoadingState({ label = "Loading control plane data…" }: { label?: string }) {
+export function LoadingState({ label = "正在加载控制台数据…" }: { label?: string }) {
   return (
     <div className="state-panel" role="status">
       <LoaderCircle aria-hidden="true" className="size-4 animate-spin stroke-[1.5] text-slate" />
@@ -31,15 +31,15 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
       <AlertTriangle aria-hidden="true" className="size-6 stroke-[1.35] text-wine" />
       <div>
         <p className="component-label !text-wine">{normalized.code}</p>
-        <h2 className="mt-3 text-lg font-light text-ink">Unable to load this view</h2>
+        <h2 className="mt-3 text-lg font-light text-ink">当前页面加载失败</h2>
         <p className="mt-2 max-w-xl text-sm leading-6 text-slate/68">{normalized.message}</p>
         {normalized.requestId ? (
-          <p className="mt-4 font-mono text-xs text-slate/55">Request ID: {normalized.requestId}</p>
+          <p className="mt-4 font-mono text-xs text-slate/55">Request ID：{normalized.requestId}</p>
         ) : null}
       </div>
       {onRetry ? (
         <Button variant="secondary" onClick={onRetry}>
-          Try again
+          重新尝试
         </Button>
       ) : null}
     </div>
@@ -55,7 +55,7 @@ export function InlineError({ error }: { error: unknown }) {
       <span>{normalized.message}</span>
       {normalized.requestId ? (
         <span className="mt-1 block font-mono text-xs text-wine/70">
-          Request ID: {normalized.requestId}
+          Request ID：{normalized.requestId}
         </span>
       ) : null}
     </div>

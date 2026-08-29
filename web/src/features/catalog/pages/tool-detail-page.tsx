@@ -14,7 +14,7 @@ export function ToolDetailPage() {
   const toolId = useParams().toolId ?? "";
   const tool = useTool(toolId);
   const versions = useToolVersions(toolId);
-  if (tool.isPending || versions.isPending) return <LoadingState label="Loading tool contract…" />;
+  if (tool.isPending || versions.isPending) return <LoadingState label="正在加载 Tool Contract…" />;
   if (tool.isError) return <ErrorState error={tool.error} onRetry={() => void tool.refetch()} />;
   if (versions.isError)
     return <ErrorState error={versions.error} onRetry={() => void versions.refetch()} />;
@@ -24,23 +24,23 @@ export function ToolDetailPage() {
         className="mb-7 inline-flex items-center gap-2 text-xs text-slate/60 hover:text-ink"
         to="/catalog"
       >
-        <ArrowLeft className="size-3.5" /> Back to catalog
+        <ArrowLeft className="size-3.5" /> 返回工具目录
       </Link>
       <PageHeader
         actions={
           <StatusPill tone={statusTone(tool.data.status)}>{humanize(tool.data.status)}</StatusPill>
         }
-        description={`Owned by ${tool.data.owner} · Namespace ${tool.data.namespace}`}
-        eyebrow="Catalog · Stable identity"
+        description={`负责人 ${tool.data.owner} · Namespace ${tool.data.namespace}`}
+        eyebrow="Catalog · 稳定身份"
         title={tool.data.canonical_name}
       />
       <article className="panel mb-5 p-6 sm:p-7">
-        <p className="component-label">Identity evidence</p>
+        <p className="component-label">身份信息</p>
         <dl className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
           <Definition label="Tool ID" value={tool.data.id} mono />
-          <Definition label="Tenant" value={tool.data.tenant_id} mono />
-          <Definition label="Created" value={formatDateTime(tool.data.created_at)} />
-          <Definition label="Updated" value={formatDateTime(tool.data.updated_at)} />
+          <Definition label="Tenant ID" value={tool.data.tenant_id} mono />
+          <Definition label="创建时间" value={formatDateTime(tool.data.created_at)} />
+          <Definition label="更新时间" value={formatDateTime(tool.data.updated_at)} />
         </dl>
       </article>
       <div className="space-y-4">
@@ -68,24 +68,24 @@ function VersionPanel({ version }: { version: ToolVersionDetailResponse }) {
         </div>
         <Button onClick={() => setExpanded((value) => !value)} size="small" variant="secondary">
           {expanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}{" "}
-          {expanded ? "Hide contract" : "Inspect contract"}
+          {expanded ? "收起 Contract" : "查看 Contract"}
         </Button>
       </div>
       {expanded ? (
         <div className="mt-6 border-t border-slate/15 pt-6">
           <dl className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-            <Definition label="Visibility" value={humanize(version.visibility)} />
-            <Definition label="Side effect" value={humanize(version.side_effect)} />
-            <Definition label="Schema digest" value={version.schema_digest} mono />
-            <Definition label="Published" value={formatDateTime(version.published_at)} />
+            <Definition label="可见范围" value={humanize(version.visibility)} />
+            <Definition label="副作用" value={humanize(version.side_effect)} />
+            <Definition label="Schema Digest" value={version.schema_digest} mono />
+            <Definition label="发布时间" value={formatDateTime(version.published_at)} />
           </dl>
           <div className="mt-5 grid gap-5 xl:grid-cols-2">
-            <Schema label="Input schema" value={version.input_schema} />
-            <Schema label="Output schema" value={version.output_schema} />
+            <Schema label="Input Schema" value={version.input_schema} />
+            <Schema label="Output Schema" value={version.output_schema} />
           </div>
           {binding.isPending ? (
             <div className="mt-5">
-              <LoadingState label="Loading binding…" />
+              <LoadingState label="正在加载 Binding…" />
             </div>
           ) : null}
           {binding.error ? (
@@ -96,16 +96,16 @@ function VersionPanel({ version }: { version: ToolVersionDetailResponse }) {
           {binding.data ? (
             <div className="mt-5 border border-slate/15 bg-canvas p-5">
               <div className="flex items-center justify-between gap-3">
-                <p className="component-label">HTTP binding</p>
+                <p className="component-label">HTTP Binding</p>
                 <StatusPill tone={statusTone(binding.data.status)}>
                   {humanize(binding.data.status)}
                 </StatusPill>
               </div>
               <dl className="mt-5 grid gap-5 sm:grid-cols-2">
-                <Definition label="Binding digest" value={binding.data.binding_digest} mono />
-                <Definition label="Upstream ID" value={binding.data.upstream_service_id} mono />
+                <Definition label="Binding Digest" value={binding.data.binding_digest} mono />
+                <Definition label="上游服务 ID" value={binding.data.upstream_service_id} mono />
               </dl>
-              <Schema label="Binding config" value={binding.data.binding_config} />
+              <Schema label="Binding Config" value={binding.data.binding_config} />
             </div>
           ) : null}
         </div>

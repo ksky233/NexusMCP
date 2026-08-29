@@ -22,7 +22,7 @@ test("pagination keeps a bounded window around the current page", async () => {
   expect(screen.getByRole("button", { name: "4" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "8" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "6" })).toHaveAttribute("aria-current", "page");
-  await user.click(screen.getByRole("button", { name: "Next page" }));
+  await user.click(screen.getByRole("button", { name: "下一页" }));
   expect(onPageChange).toHaveBeenCalledWith(7);
 });
 

@@ -128,3 +128,130 @@ jobs:
 
       - name: Frontend build
         run: pnpm build
+
+  fullstack-e2e:
+    name: Nginx full-stack E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXUSMCP_CATALOG_BACKEND: postgresql
+      NEXUSMCP_DATABASE_URL: postgresql+asyncpg://nexusmcp:nexusmcp_test@127.0.0.1:5432/nexusmcp_test
+      NEXUSMCP_TEST_DATABASE_URL: postgresql+asyncpg://nexusmcp:nexusmcp_test@127.0.0.1:5432/nexusmcp_test
+      NEXUSMCP_LOCAL_TENANT_ID: 00000000-0000-0000-0000-00000000000a
+      NEXUSMCP_CONTROL_PLANE_ENABLED: "true"
+      NEXUSMCP_TOOL_EXECUTION_ENABLED: "true"
+      NEXUSMCP_UPSTREAM_EGRESS_POLICY_ENABLED: "true"
+      NEXUSMCP_UPSTREAM_ALLOWED_PORTS: "[9001]"
+      NEXUSMCP_UPSTREAM_ALLOW_LOCAL_DEMO: "true"
+      NEXUSMCP_OPENAPI_FIXTURE_ROOT: examples/upstream_apis
+
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.6-pg18-trixie
+        env:
+          POSTGRES_DB: nexusmcp_test
+          POSTGRES_USER: nexusmcp
+          POSTGRES_PASSWORD: nexusmcp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nexusmcp -d nexusmcp_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.12.5"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install Python
+        run: uv python install
+
+      - name: Install Python project
+        run: uv sync --frozen
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          version: 10.15.1
+          run_install: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 22.18.0
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install frontend and Chromium
+        working-directory: web
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+
+      - name: Migrate and seed disposable database
+        run: |
+          uv run alembic upgrade head
+          uv run python tests/e2e/seed_web_control_plane.py
+
+      - name: Start fake upstream and NexusMCP
+        run: |
+          uv run uvicorn examples.upstream_apis.employee_directory.app:app --host 127.0.0.1 --port 9001 > e2e-fake-upstream.log 2>&1 &
+          uv run uvicorn nexusmcp.main:app --host 0.0.0.0 --port 8000 > e2e-backend.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8000/health/ready > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
+
+      - name: Build and start unprivileged Nginx
+        run: |
+          docker build --pull=false -f web/Dockerfile -t nexusmcp-web:e2e .
+          docker run -d --name nexusmcp-web-e2e \
+            --add-host host.docker.internal:host-gateway \
+            -p 127.0.0.1:8088:8080 \
+            nexusmcp-web:e2e
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8088/healthz > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
+
+      - name: Playwright full-stack E2E
+        working-directory: web
+        run: pnpm test:e2e
+
+      - name: Show E2E diagnostics
+        if: failure()
+        run: |
+          docker logs nexusmcp-web-e2e || true
+          cat e2e-backend.log || true
+          cat e2e-fake-upstream.log || true
+
+      - name: Upload Playwright evidence
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-e2e-failure
+          path: |
+            web/test-results
+            web/playwright-report
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Stop E2E Nginx
+        if: always()
+        run: docker rm -f nexusmcp-web-e2e || true

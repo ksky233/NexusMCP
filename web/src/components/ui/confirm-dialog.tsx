@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 export function ConfirmDialog({
   open,
   onOpenChange,
-  eyebrow = "Confirm action",
+  eyebrow = "确认操作",
   title,
   description,
   confirmLabel,
@@ -35,7 +35,7 @@ export function ConfirmDialog({
                   <Dialog.Title className="mt-2 text-xl font-normal text-ink">{title}</Dialog.Title>
                 </div>
                 <Dialog.Close
-                  aria-label="Close dialog"
+                  aria-label="关闭弹窗"
                   className="grid size-9 cursor-pointer place-items-center rounded-[3px] border border-transparent text-slate/55 outline-none hover:border-slate/20 hover:bg-mist focus-visible:ring-2 focus-visible:ring-slate/45"
                 >
                   <X aria-hidden="true" className="size-4" />
@@ -44,8 +44,8 @@ export function ConfirmDialog({
               <Dialog.Description className="mt-4 text-sm leading-7 text-slate/70">
                 {description}
               </Dialog.Description>
-              <div className="mt-7 flex justify-end gap-3 border-t border-slate/15 pt-5">
-                <Dialog.Close render={<Button variant="secondary" />}>Cancel</Dialog.Close>
+              <div className="mt-7 flex justify-end gap-3 border-t border-slate/20 pt-5">
+                <Dialog.Close render={<Button variant="secondary" />}>取消</Dialog.Close>
                 <Button onClick={onConfirm} variant={danger ? "danger" : "primary"}>
                   {confirmLabel}
                 </Button>
