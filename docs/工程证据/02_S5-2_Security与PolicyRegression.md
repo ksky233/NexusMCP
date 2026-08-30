@@ -42,7 +42,7 @@ Hard Deny：Cloud Metadata、IPv4/IPv6 Link-Local、Unspecified、Multicast、Re
 - Default DENY；
 - Tenant ALLOW；
 - Role > Tenant；
-- Principal > Role；
+- Principal > Role（通用机制证据；ADR-0019 的产品主线使用 Agent Service Principal）；
 - Tool-specific > Global；
 - 同特异性按 Priority；
 - 同 Priority：`DENY > REQUIRE_APPROVAL > ALLOW`；
@@ -92,7 +92,7 @@ Manifest 的每个 Pytest Node 都由防腐测试确认文件与测试函数真�
 - 第一版 Policy 是部署静态配置，无 UI、热更新、审批和 Tenant 自助；
 - Application Layer 不能替代 Network Firewall/Egress Proxy；
 - Allowed Host 的 DNS 持续监控尚未实现；
-- Policy Condition DSL、Rate Limit 和完整 OIDC 不属于 S5-2。
+- Policy Condition DSL、Rate Limit、生产 Agent Service Identity 和 Admin SSO 不属于 S5-2。
 
 ## 7. 下一步
 

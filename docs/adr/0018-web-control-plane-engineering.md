@@ -9,9 +9,9 @@ NexusMCP 已经拥有 Local Admin REST API，覆盖 Upstream、OpenAPI Import、
 和 Approval，并已建立 Execution/Audit Reader 接缝。S6 前置增强需要把这些 Control Plane 状态机可视化，
 提高演示、学习和面试可理解性。
 
-当前没有普通业务员工直接使用 NexusMCP Web 的需求。普通员工通过 Codex、客服助手、销售助手等 Agent
-消费 MCP Tool；Web 使用者是 Platform Administrator、Tool Owner、Security Administrator、Approver、
-Operator 和 Auditor。角色不同，但共享同一个 Control Plane，而不是 `admin-web/user-web` 两个产品。
+普通业务员工不是 NexusMCP 使用者。员工通过客服助手、销售助手等上层 Agent 服务使用业务能力，员工身份、
+会话和行为追踪由 Agent 服务负责。Web 使用者统一称为 Admin Operator；Tool Owner、Approver、Operator
+和 Auditor 是管理职责，不需要拆成多个 Web 产品或立即建设复杂角色中心。
 
 个人 React 工程手册的默认 Profile 是 React + TypeScript + Vite SPA、React Router、TanStack Query、
 FastAPI OpenAPI Code Generation、Feature-first Directory 和分层质量门禁，与当前项目形态一致。但手册
@@ -34,13 +34,10 @@ web/
 NexusMCP Control Plane
 ```
 
-不创建 `admin-web` 或假设中的 `user-web`。只有未来出现独立 Employee Portal，并且它具有不同用户、认证、
-部署、发布节奏和 UX 时，才迁移为：
+不创建 `admin-web`、`user-web` 或 Employee Portal。员工门户属于业务系统或 Agent 产品，不属于本仓库：
 
 ```text
-apps/
-├── control-plane-web/
-└── employee-portal/
+NexusMCP Control Plane  ≠  Employee Portal
 ```
 
 ### 2. Runtime Profile
@@ -213,9 +210,9 @@ No Login / No Session / No CSRF / No Production RBAC
 UI 必须持续显示 `Local Development Admin · Not Production Authentication`。不制作虚假 Login、不把固定
 Principal 包装成真实用户系统、不在浏览器保存 Token。
 
-未来 Production Admin OIDC/AuthN/AuthZ 形成独立 ADR 后，再引入 Session Bootstrap、Route Guard、Role
-Navigation、Logout、CSRF 和 User Cache 清理。Frontend Permission 只控制展示和交互引导，永远不能替代
-Backend 鉴权。
+生产 Admin 优先委托企业 SSO/Trusted Proxy，只认证少量管理员，不建设员工用户中心。引入 Session Bootstrap、
+Route Guard、Logout 和 CSRF 前应单独冻结 Admin Auth ADR。Frontend Permission 只控制展示和交互引导，
+永远不能替代 Backend 鉴权。
 
 ### 9. UI and Interaction
 
@@ -312,7 +309,8 @@ Register HTTP Upstream
 
 - `admin-web/user-web` 多应用拆分；
 - Remote MCP；
-- Production Login/OIDC/RBAC；
+- Production Admin SSO/Trusted Proxy；
+- 企业员工 Login/Role/Portal；
 - 动态 Policy Builder；
 - Secret Value 输入或展示；
 - Egress Policy 在线编辑；
@@ -342,7 +340,7 @@ Register HTTP Upstream
 - Feature Hook 保留 Query/Mutation 语义，代码比全自动 Hook 多，但边界更清楚；
 - Local Admin UI 可以立即展示当前治理链，但不能对外声称 Production Admin IAM；
 - Nginx 与 Full-stack Playwright 增加部署资产，但能证明真实 Same-Origin Route 和数据库联通；
-- 未来 Employee Portal 如出现，可以依据独立用户/认证/部署证据再拆应用。
+- 员工 Portal 始终由业务系统或 Agent 产品独立建设，不进入 NexusMCP Frontend。
 
 ## Verification
 

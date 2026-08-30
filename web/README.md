@@ -81,7 +81,7 @@ The Control Plane uses a restrained black/white thin-border system:
 - Ink/Slate/Mist/Paper/Canvas structural palette;
 - Teal only for in-progress states;
 - Wine only for error and destructive actions;
-- 3px/6px radius and hairline shadows;
+- 4px/8px radius and hairline shadows;
 - White desktop sidebar and Base UI mobile navigation;
 - no decorative gradients, colorful metric tiles or marketing-style cards.
 

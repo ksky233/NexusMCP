@@ -118,7 +118,10 @@ S6 前置投入优先用于 Web UI，因为现有 Local Admin API 已有真实 C
 Web UI 只是现有业务的展示和操作层，不改变核心产品边界，能够显著提高 Demo 和面试可理解性。
 
 第一版必须明确标注 `Local Development Admin`，不制作虚假 Production Login；Production Admin
-OIDC/AuthN/AuthZ 仍为后续能力。
+Production Agent Service Identity 与 Admin SSO/Trusted Proxy 仍为后续能力。
+
+身份范围由 ADR-0019 进一步收敛：企业托管 Agent 以 Service Principal 调用 NexusMCP；员工身份、Agent
+会话用户和员工行为追踪属于上层 Agent 服务，不进入 NexusMCP。
 
 ## Rejected Alternatives
 

@@ -5,7 +5,7 @@
 
 ## Context
 
-NexusMCP 需要代表已授权 Principal 调用企业 Upstream，但 Tool Schema、Binding、数据库、日志、Audit 和
+NexusMCP 需要代表已授权 Agent Service Principal 调用企业 Upstream，但 Tool Schema、Binding、数据库、日志、Audit 和
 模型响应都不能保存真实 Secret。Inbound Credential、Internal Principal 和 Egress Credential 必须分离。
 
 ## Decision
@@ -26,10 +26,8 @@ NexusMCP 需要代表已授权 Principal 调用企业 Upstream，但 Tool Schema
 
 ```text
 Principal + Tool
-Role + Tool
 Tenant + Tool
 Principal + Upstream
-Role + Upstream
 Tenant + Upstream
 ```
 
@@ -54,7 +52,7 @@ Tenant + Upstream
 
 S3-3 已用 InMemory Resolver 和 Environment Provider 验证本 ADR：
 
-- `Principal > Role > Tenant`，同一 Subject 下 `Tool > Upstream Wildcard`；
+- `Agent Service Principal > Tenant`，同一 Subject 下 `Tool > Upstream Wildcard`；
 - 同特异性多条 Binding 直接返回 `credential_binding_conflict`；
 - Upstream `auth_scheme != none` 时必须成功解析 Credential，否则 Fail Closed；
 - Policy ALLOW 后才解析 Secret；DENY 不调用 Resolver/Provider；
@@ -63,3 +61,6 @@ S3-3 已用 InMemory Resolver 和 Environment Provider 验证本 ADR：
 
 Environment Provider 是本地开发 Adapter，不代表生产 Secret Store 决策；CredentialBinding
 PostgreSQL 持久化也不在本阶段范围内。
+
+ADR-0019 进一步冻结：员工个人 Token、员工 Role 和 On-Behalf-Of Credential 不进入当前主线；需要员工级
+授权的 Upstream 由上层 Agent 服务或原业务系统负责。

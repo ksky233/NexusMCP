@@ -1,5 +1,8 @@
 # S3-2｜Principal 与 ALLOW/DENY Policy 验收
 
+> 2026-08-30 边界修订：多 Principal/Role Case 证明 Policy 特异性和信任边界可运行；它不代表 NexusMCP
+> 建设员工 IAM。产品主线 Principal 是 Agent Service，见 ADR-0019。
+
 > 日期：2026-08-26  
 > 范围：Static Bearer Authentication、InternalPrincipal Roles、ActorContext 可信属性、ToolPolicy、
 > Rule-Based Policy Evaluator、调用阶段重新授权、多 Principal Modern MCP E2E
@@ -141,7 +144,7 @@ Evaluator。未来 JWT/OIDC 和 PostgreSQL Policy Adapter 替换实现时不修�
 ## 9. 当前有意不做
 
 - JWT Signature/Issuer/Audience/Expiry；
-- OIDC Discovery/JWKS Cache；
+- Production Agent Service Credential/Trusted Proxy Adapter；
 - Policy PostgreSQL 表和 Migration；
 - Policy Condition DSL；
 - Policy Admin API；

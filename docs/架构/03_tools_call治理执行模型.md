@@ -2,6 +2,7 @@
 
 > 状态：Accepted，作为 S3 实现输入  
 > 日期：2026-08-26  
+> 身份边界修订：2026-08-30，Principal 主线指 Agent Service Principal
 > 范围：Call、Identity、Policy、Credential、Approval、Execution、Audit 的模型、编排与事务边界
 
 ## 1. 结论
@@ -10,7 +11,7 @@ S3 将 NexusMCP 从“可发布、可发现的 Tool Catalog”扩展为“安全
 
 ```text
 MCP tools/call
-→ Authenticate / Internal Principal
+→ Authenticate / Agent Service Principal
 → Resolve Published Tool + Binding
 → Validate Arguments
 → Evaluate Policy
@@ -39,10 +40,11 @@ RequestContext
 = ActorContext + MCP protocol/agent/run context
 
 InternalPrincipal
-= 认证 Adapter 产生的可信 Principal Type、Roles 和白名单 Attributes
+= 认证 Adapter 产生的可信 Admin/Agent Service Principal 与白名单 Attributes
 ```
 
-InternalPrincipal 不保存原始 Token、Authorization Header 或完整 Claims。
+InternalPrincipal 不保存原始 Token、Authorization Header 或完整 Claims。当前 Data Plane 主线 Principal 是
+Agent Service，而不是 Agent 会话中的员工。现有 Roles 字段只作为通用实现兼容，不代表建设员工角色系统。
 
 ### 2.2 CallToolCommand
 
@@ -82,7 +84,7 @@ SecretReference
 
 CredentialBinding
 ├── Tenant
-├── Subject Scope：Principal / Role / Tenant
+├── Subject Scope：Agent Service Principal / Tenant
 ├── Tool Scope（可选）
 ├── Upstream Scope
 ├── SecretReference
@@ -104,13 +106,13 @@ pending → approved → consumed
 Approval 固定绑定：
 
 - Tenant；
-- Principal；
+- Agent Service Principal；
 - Tool ID / ToolVersion ID；
 - Arguments Digest；
 - Policy Version；
 - Expiry。
 
-消费时重新校验 Principal、Version、Arguments Digest，只能消费一次。
+消费时重新校验 Agent Service Principal、Version、Arguments Digest，只能消费一次。
 
 ### 2.6 ToolExecution
 
@@ -126,7 +128,7 @@ planned ─────────→ cancelled
 
 Execution 持久化：
 
-- Principal/Tool/Version/Binding ID；
+- Agent Service Principal/Tool/Version/Binding ID；
 - Arguments Digest；
 - Side Effect；
 - Idempotency Key；
@@ -158,7 +160,7 @@ Audit 不拥有授权决定，不保存 Secret、Token、完整 Arguments 或完
 顺序是安全不变量：
 
 ```text
-1. Resolve InternalPrincipal
+1. Resolve Agent Service Principal
 2. Resolve Active Tool + Published Version + Published Binding
 3. Validate Tenant/Visibility/Arguments
 4. Calculate Arguments Digest
@@ -289,7 +291,8 @@ Approval、真实 Credential 与写 Tool 不进入第一条执行切片。
 ## 10. 实现进度
 
 - S3-1 已完成 Modern MCP Read-Only HTTP `tools/call`；
-- S3-2 已完成 Static Bearer Principal 与 Rule-Based ALLOW/DENY；
+- S3-2 已完成 Static Bearer Principal 与 Rule-Based ALLOW/DENY；该机制是通用能力验证，ADR-0019 已将
+  产品主线收窄为 Agent Service Principal，不建设员工角色系统；
 - S3-3 已在 ALLOW 之后接入 CredentialBinding、Environment Secret Provider 与 Header/Query
   Injection；同特异性冲突 Fail Closed，DENY 不读取 Secret；
 - S3-4 已接入 PostgreSQL Approval、Modern MCP MRTR、Control Plane 异步决策、加密防篡改

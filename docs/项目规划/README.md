@@ -32,6 +32,7 @@ Enterprise HTTP / OpenAPI
 | 8 | [07｜质量、评测、可观测性与安全](./07_质量评测可观测性与安全.md) | 怎样证明项目可靠、安全、可解释，而不只是能运行 |
 | 9 | [08｜ADR 与待决策清单](./08_ADR与待决策清单.md) | 已确认决策、待实验决策以及如何记录取舍 |
 | 10 | [09｜S6 前置 Web Control Plane 与 Remote MCP 边界](./09_S6前置WebControlPlane与RemoteMCP边界.md) | Remote MCP 为什么延后、Web UI 做到哪里 |
+| 11 | [10｜小型知识 RAG 扩展规划](./10_小型知识RAG扩展规划.md) | 如何用朴素 RAG 补齐知识检索能力，以及为什么暂不采用 GraphRAG/KAG |
 
 ## 3. 决策层级
 
@@ -59,12 +60,15 @@ Enterprise HTTP / OpenAPI
 - Tool Catalog 先使用 PostgreSQL FTS，并在 S4 增加 Tool Embedding、pgvector 与 Hybrid Retrieval；
 - `nexus.search_tools` 是内建 Meta Tool，不属于 Catalog Managed Tool；Agent-facing 只暴露
   `lexical | hybrid`，Vector-only 仅供 Eval，Auto 延后；
-- 外部 `knowledge.search` RAG Demo 移出当前主线，RAG/Embedding 学习直接服务 Tool Semantic
-  Retrieval；
+- 外部 `knowledge.search` RAG Demo 不进入 S4 Core；它作为 W5 封版后唯一推荐的微型功能扩展，
+  不阻塞首次公开发布，也不改变 HTTP/OpenAPI Upstream 边界；
 - Evaluation、OpenTelemetry、安全、幂等和错误分类属于主线；
 - 不建设大而全管理后台，不追求支持所有 MCP Extension。
 - Remote MCP Federation/Proxy 延后；当前只承诺 HTTP/OpenAPI Upstream，不治理开发者个人 MCP；
-- S6 前置增加简易 Web Control Plane MVP，但不建设 Production Admin IAM 或复杂管理平台。
+- S6 前置增加简易 Web Control Plane MVP；Production Admin 认证优先委托 SSO/Trusted Proxy，不建设员工
+  IAM 或复杂管理平台。
+- ADR-0019 冻结 Service-Centric Identity：NexusMCP 只面向 Admin Operator 与 Agent Service，员工身份和
+  Agent 会话用户由上层系统负责，不进入 Principal、Policy 或 Audit。
 
 ## 5. 维护方式
 

@@ -5,7 +5,7 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
 const buttonVariants = cva(
-  "inline-flex min-h-10 cursor-pointer select-none items-center justify-center gap-2 rounded-[3px] border px-4 text-sm font-normal tracking-[0.02em] transition-[background-color,border-color,color,transform,box-shadow,opacity] duration-200 outline-none hover:-translate-y-px active:translate-y-0 focus-visible:ring-2 focus-visible:ring-slate/45 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:translate-y-0 disabled:border-line disabled:bg-mist/80 disabled:text-slate/40 disabled:shadow-none",
+  "inline-flex min-h-10 cursor-pointer select-none items-center justify-center gap-2 rounded-[4px] border px-4 text-sm font-normal tracking-[0.02em] transition-[background-color,border-color,color,transform,box-shadow,opacity] duration-200 outline-none hover:-translate-y-px active:translate-y-0 focus-visible:ring-2 focus-visible:ring-slate/45 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:translate-y-0 disabled:border-line disabled:bg-mist/80 disabled:text-slate/40 disabled:shadow-none",
   {
     variants: {
       variant: {

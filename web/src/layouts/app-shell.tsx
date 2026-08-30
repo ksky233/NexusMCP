@@ -58,7 +58,7 @@ export function AppShell() {
             <Dialog.Title className="sr-only">控制台导航</Dialog.Title>
             <Dialog.Close
               aria-label="关闭导航"
-              className="absolute top-5 right-4 grid size-9 cursor-pointer place-items-center rounded-[3px] border border-slate/20 bg-paper text-slate outline-none hover:bg-mist focus-visible:ring-2 focus-visible:ring-slate/45"
+              className="absolute top-5 right-4 grid size-9 cursor-pointer place-items-center rounded-[4px] border border-slate/20 bg-paper text-slate outline-none hover:bg-mist focus-visible:ring-2 focus-visible:ring-slate/45"
             >
               <X aria-hidden="true" className="size-4" />
             </Dialog.Close>
@@ -121,7 +121,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <NavLink
             className={({ isActive }) =>
               cn(
-                "flex min-h-10 items-center gap-3 rounded-[3px] px-3 py-2 text-sm font-normal tracking-[0.015em] text-slate transition-[background-color,color,box-shadow] duration-200 hover:bg-mist hover:text-ink",
+                "flex min-h-10 items-center gap-3 rounded-[4px] px-3 py-2 text-sm font-normal tracking-[0.015em] text-slate transition-[background-color,color,box-shadow] duration-200 hover:bg-mist hover:text-ink",
                 isActive && "bg-mist/95 text-ink shadow-[inset_2px_0_0_#393e46]",
               )
             }

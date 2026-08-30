@@ -5,7 +5,7 @@
 
 ## 1. 资产
 
-- Tenant、Principal、Role 与认证事实；
+- Tenant、Admin/Agent Service Principal 与机器认证事实；
 - Tool Schema、Binding、Upstream Endpoint；
 - SecretReference 与瞬时 SecretValue；
 - Tool Arguments、Result 与 Idempotency Key；
@@ -16,9 +16,9 @@
 ## 2. Trust Boundary
 
 ```text
-Untrusted Agent / MCP Client
+Untrusted MCP Client
 → Transport/Auth Boundary
-→ Internal Principal + Tenant
+→ Agent Service Principal + Tenant
 → Catalog / Policy / Approval
 → Credential Resolution
 → Egress Policy
@@ -38,7 +38,7 @@ NexusMCP
 
 | ID | Threat | Mitigation | Evidence | Residual Risk |
 |---|---|---|---|---|
-| T01 | Forged Tenant/Principal | Authenticator 创建 Internal Principal，不信任业务 Header | Principal Integration | 完整 OIDC/JWKS 未实现 |
+| T01 | Forged Tenant/Agent Service Principal | Authenticator 验证机器 Credential 或 Trusted Proxy，不信任业务 Header | Principal Integration | Service Identity 生产 Adapter 未实现 |
 | T02 | Cross-Tenant Read/Call/Search | Repository SQL Tenant Scope + Domain Guard + Policy | Security Manifest | DB Superuser 不在应用威胁模型内 |
 | T03 | SSRF/Internal Scan | Static Host/CIDR/Port Allowlist、Metadata Hard Deny、DNS 双检、Redirect Off | ADR-0016 + Egress E2E | 无严格 DNS Pinning/Egress Proxy |
 | T04 | Secret Leakage | SecretReference、瞬时 SecretValue、Log/Trace/Audit 白名单 | Secret/Telemetry Tests | Upstream 自身可能回显 Secret |
@@ -66,7 +66,7 @@ NexusMCP
 ## 5. 明确不声称
 
 - 不是零信任网络或完整 API Gateway/WAF；
-- 未完成 Production OIDC、KMS/Vault、Rate Limit、WORM Audit；
+- 未完成 Production Admin SSO、Agent Service Identity、KMS/Vault、Rate Limit、WORM Audit；
 - 未证明高并发、多 Worker、跨区容灾；
 - DNS 执行前复检不等于 Socket Pinning；
 - Search Candidate 不等于最终 Tool 正确性保证；
@@ -74,7 +74,7 @@ NexusMCP
 
 ## 6. 后续优先级
 
-1. Production OIDC/JWKS 与 Audience/Issuer Rotation；
+1. Production Agent Service Identity 与 Admin SSO/Trusted Proxy；
 2. Egress Proxy 或 DNS Pinning；
 3. Rate Limit/Quota/Load Shedding；
 4. Audit Retention/WORM Export；

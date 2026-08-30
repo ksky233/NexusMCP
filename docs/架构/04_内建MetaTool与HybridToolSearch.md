@@ -195,7 +195,7 @@ Vector-only Strategy 不出现在 Agent-facing Schema，但 Eval 可以直接调
 Search 不能成为 Catalog 侧信道：
 
 ```text
-Resolve Internal Principal
+Resolve Agent Service Principal
 → Tenant Scope
 → Published/Active Filter
 → Visibility Filter

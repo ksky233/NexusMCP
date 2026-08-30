@@ -1,7 +1,7 @@
 # Multi-stage Build、Unprivileged Nginx 与 Full-stack E2E
 
-> 日期：2026-08-28  
-> 场景：NexusMCP React Control Plane 作品集部署与端到端证据  
+> 日期：2026-08-28
+> 场景：NexusMCP React Control Plane 作品集部署与端到端证据
 > 当前状态：本地 Multi-stage Build、Unprivileged Nginx 与 Full-stack Playwright E2E 已通过
 
 ## 1. 这套实践要解决什么问题

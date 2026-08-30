@@ -155,8 +155,8 @@ HTTPX 使用 ASGI Transport 调用真实 Fake API Handler，不启动额外网�
 
 ## 10. 当前有意不做
 
-- JWT/OIDC Authentication；
-- Role/Principal Policy Case；
+- Agent Service Authentication；
+- Agent Service Principal Policy Case；
 - CredentialBinding/Secret Injection；
 - Approval；
 - Write Tool；

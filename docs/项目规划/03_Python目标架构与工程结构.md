@@ -184,8 +184,6 @@ class RequestContext:
     protocol_era: str
     tenant_id: str
     principal_id: str
-    agent_id: str | None
-    run_id: str | None
     authn_method: str
     policy_snapshot: str | None
 ```
@@ -193,8 +191,9 @@ class RequestContext:
 创建原则：
 
 - Protocol Adapter 解析协议字段；
-- Auth Middleware 创建可信 Principal；
-- 客户端 Header 不能覆盖 Token Claims；
+- Auth Adapter 创建可信 Admin/Agent Service Principal；
+- 客户端 Header 不能覆盖受信 Service Credential/Proxy Claims；
+- 员工身份、Agent 会话用户和 `end_user_reference` 不进入 Context；
 - Secret 不进入 Context；
 - Context 在 async 调用链中显式传递或通过受控 ContextVar 传播；
 - 后台任务必须复制必要字段，不能依赖已结束 Request 对象。

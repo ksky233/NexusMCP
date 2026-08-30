@@ -1,6 +1,6 @@
 # W4｜Search Lab、Evidence 与 Full-stack E2E
 
-> 日期：2026-08-28  
+> 日期：2026-08-28
 > 状态：完成（本地）；GitHub Actions 首次 Cloud Run 等待 Push
 
 ## 1. Search Lab

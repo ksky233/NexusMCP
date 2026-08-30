@@ -77,7 +77,7 @@
 ### D-011｜Internal Principal 与 Trust Boundary
 
 - 只有认证 Adapter 创建可信 Principal；
-- 不信任客户端 Tenant/User Header；
+- 不信任客户端 Tenant/User/Agent Header；
 - 不保存原始 Token/完整 Claims；
 - 无匹配 Policy 默认 DENY。
 
@@ -124,6 +124,16 @@
 - Same-Origin 使用相对 `/admin`，Production-like Demo 由 Nginx 提供静态资源和 Proxy。
 
 决策记录：[ADR-0018](../adr/0018-web-control-plane-engineering.md)。
+
+### D-016｜Service-Centric Identity Boundary
+
+- NexusMCP 只面向 Admin Operator 与 Agent Service Principal；
+- 员工身份、角色、会话和最终用户追踪属于 Agent/业务系统；
+- 单 Agent 部署使用 `static_service`，共享部署使用 Service Identity/Trusted Proxy；
+- Admin Auth 与 MCP Auth 是两个独立边界；
+- NexusMCP Audit 记录 Agent Service/Tool/Execution，不声称员工行为审计。
+
+决策记录：[ADR-0019](../adr/0019-service-centric-identity-boundary.md)。
 
 ## 2. 推荐但需在初始化时确认
 
@@ -175,7 +185,7 @@ Legacy Session 本身不构成新项目必须引入 Redis 的理由。
 以下问题暂不影响 S1/S2：
 
 - 管理 UI 技术栈；
-- 完整 OIDC Provider；
+- NexusMCP 自建完整 OIDC Provider 或员工 IAM；
 - Vault/KMS；
 - Federation；
 - A2A；

@@ -10,7 +10,8 @@
 在不改变 NexusMCP 当前 HTTP/OpenAPI Tool Governance 定位的前提下，用 Web Control Plane 把已经完成的
 接入、审核、发布、搜索、审批、执行和审计链路可视化，为 S6 作品集提供可操作 Demo。
 
-本计划不是新的大型管理平台，也不引入 Production Admin Authentication。
+本计划不是新的大型管理平台，也不引入员工 IAM。生产 Admin Authentication 作为少量管理员的独立边界，
+优先委托企业 SSO/Trusted Proxy。
 
 ## 2. Remote MCP 边界
 
@@ -48,7 +49,8 @@
 - Get/Approve/Reject Approval；
 - Swagger `/admin/docs`。
 
-当前 `/admin` 使用固定 Local Tenant/Principal，只适合 Development/Learning。
+当前 `/admin` 使用固定 Local Tenant/Admin Principal，只适合 Development/Learning。MCP Data Plane 的目标
+调用者是 Agent Service Principal，二者身份模式独立，见 ADR-0019。
 
 ## 4. Web UI 所需 Query API
 
@@ -70,7 +72,9 @@
 
 ### Deferred
 
-- Production Admin User/Role；
+- Production Admin SSO/Trusted Proxy；
+- Agent Service Identity 生产 Adapter；
+- 企业员工 User/Role（明确不进入 NexusMCP）；
 - Dynamic Policy Editor；
 - Credential Secret Value 输入；
 - Egress Policy 在线编辑；
@@ -185,7 +189,7 @@ web/
 └── vite.config.ts
 ```
 
-不预建 `admin-web/user-web`；只有未来出现独立 Employee Portal 后才根据真实用户、认证和部署边界拆分。
+不预建 `admin-web/user-web` 或 Employee Portal；员工门户属于业务系统或 Agent 产品，不进入 NexusMCP。
 
 Development：
 
@@ -281,7 +285,7 @@ Static Build
 
 完成记录：
 
-- 黑白灰 Semantic Token、3px/6px Radius、Hairline Border/Shadow 已冻结；
+- 黑白灰 Semantic Token、4px/8px Radius、Hairline Border/Shadow 已冻结；
 - White Sidebar、Sticky Header、Base UI Mobile Navigation 与 Dashboard 已替换；
 - Button、Status、Form、Table、Pagination、Dialog 和 Query State 已建立；
 - Dashboard Lazy Route 完成 Chunk 拆分，Desktop/Narrow Screenshot 与组件交互测试通过；
@@ -396,7 +400,8 @@ Execution/Audit 四条可视化主链。
 
 ## 11. 停止条件
 
-- 不做 Production Admin IAM；
+- 本阶段不做 Production Admin SSO/Trusted Proxy；
+- 不建设企业员工 IAM；
 - 不做复杂动态 Policy Builder；
 - 不做 Remote MCP；
 - 不做拖拽式 Tool Builder；

@@ -1,5 +1,8 @@
 # S3-0｜Call/Policy/Credential/Execution 模型与 ADR 验收
 
+> 2026-08-30 边界修订：本文 Principal/Role 模型保留为治理机制实验记录；ADR-0019 已将产品主线调用者
+> 收窄为 Agent Service Principal，不建设员工身份、角色或会话系统。
+
 > 日期：2026-08-26  
 > 范围：Identity、Call、Policy、Credential、Approval、Execution、Audit Domain/Port，
 > ADR-0005/0006/0007，S3 编排与事务边界

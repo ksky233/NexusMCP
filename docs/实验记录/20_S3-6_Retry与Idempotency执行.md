@@ -109,7 +109,7 @@ Migration `e4a7c9d21b35`：
 - Failed/Unknown Idempotency Key 默认 Fail Closed，需要查询/Reconciliation 后决定新业务意图；
 - 不开放 POST、DELETE 或 Non-Idempotent HTTP Write；
 - 不宣称 Exactly Once；
-- Production JWT/OIDC、外部 Secret Store 和通用写治理仍待后续阶段。
+- Production Agent Service Identity、Admin SSO/Trusted Proxy、外部 Secret Store 和通用写治理仍待后续阶段。
 
 ## 8. S3 收口
 

@@ -29,6 +29,10 @@ Modern MCP `2026-07-28` 提供 `InputRequiredResult`、`inputResponses` 与 `req
    Control Plane/外部审批系统。
 10. Legacy/不支持 MRTR 的客户端后续通过显式 Approval Resource 兼容，不复制长连接 Session。
 
+ADR-0019 修订：第 6 条 Principal 在产品主线中指 Agent Service Principal。MRTR Host 是否向某位员工确认、
+如何识别当前会话用户属于 Agent 服务责任；NexusMCP 不记录该员工。Control Plane Approver 属于 Admin
+Operator。
+
 ## Rejected Alternatives
 
 - 单次 `tools/call` 长时间阻塞直到人类决定；
@@ -42,7 +46,7 @@ Modern MCP `2026-07-28` 提供 `InputRequiredResult`、`inputResponses` 与 `req
 
 - Host 必须在异步路径中保存 opaque `requestState` 与 `approval_id`；
 - 开发/单进程可使用 Ephemeral Key，重启恢复和多实例必须配置共享 Key；
-- 本地 `/admin` 仅是学习阶段 Control Plane，生产前必须接入真实 Admin AuthN/AuthZ；
+- 本地 `/admin` 仅是学习阶段 Control Plane，生产前必须委托企业 SSO/Trusted Proxy 认证 Admin Operator；
 - Approval 页面当前只展示 Tool/Version/Arguments Digest，安全的参数预览需要单独设计；
 - S3-4 的 Approval Consume 与 InMemory Execution 尚非同一事务；进程在两者之间失败会安全停止但需
   新审批，S3-5 持久化 Execution 时合并该短事务；

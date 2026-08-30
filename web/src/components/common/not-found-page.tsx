@@ -10,7 +10,7 @@ export function NotFoundPage() {
           请通过左侧治理导航访问功能，不要手动拼接内部地址。
         </p>
         <Link
-          className="mt-7 inline-flex h-10 items-center rounded-[3px] border border-ink bg-ink px-4 text-sm font-normal text-mist transition-colors hover:border-slate hover:bg-slate focus-visible:ring-2 focus-visible:ring-slate/45 focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="mt-7 inline-flex h-10 items-center rounded-[4px] border border-ink bg-ink px-4 text-sm font-normal text-mist transition-colors hover:border-slate hover:bg-slate focus-visible:ring-2 focus-visible:ring-slate/45 focus-visible:ring-offset-2 focus-visible:outline-none"
           to="/"
         >
           返回系统概览

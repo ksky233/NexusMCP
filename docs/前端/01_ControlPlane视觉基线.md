@@ -40,8 +40,8 @@ NexusMCP 是企业 Tool Governance Control Plane，不是营销型 SaaS Landing 
 
 ## 3. Shape、Border 与 Shadow
 
-- Small Radius：`3px`；
-- Medium Radius：`6px`；
+- Small Radius：`4px`；
+- Medium Radius：`8px`；
 - Pill 只用于 Status、Tag 和 Compact Filter；
 - Card 默认 1px Slate Alpha Border；
 - 普通 Card 只使用 `0 1px 2px` 极轻阴影；

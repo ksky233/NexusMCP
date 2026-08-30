@@ -295,8 +295,8 @@ Modern 与 Legacy 可以有不同 Transport Context 和响应映射，但必须�
 | `ImportedOperation` | Method、Path、参数位置、Normalized Schema、冲突与审核状态 |
 | `ToolDefinition` | MCP 名称、描述、输入/输出 Schema、Version、Status、Visibility、Side Effect |
 | `ToolBinding` | Tool Version 到执行目标的绑定、Executor Type 和非敏感执行配置 |
-| `CredentialBinding` | Principal/Role/Tool/Upstream 与 `secret_ref` 的绑定关系 |
-| `ApprovalRequest` | Tool、Principal、参数摘要、Decision、Expiry、一次性消费状态 |
+| `CredentialBinding` | Agent Service Principal/Tenant/Tool/Upstream 与 `secret_ref` 的绑定关系 |
+| `ApprovalRequest` | Tool、Agent Service Principal、参数摘要、Decision、Expiry、一次性消费状态 |
 | `ToolExecution` | Request/Trace、Tool Version、Policy Decision、Idempotency、Outcome |
 | `AuditEvent` | 谁对什么执行了什么动作、结果和脱敏摘要 |
 

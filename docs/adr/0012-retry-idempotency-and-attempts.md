@@ -23,10 +23,13 @@ NexusMCP 当前不持久化完整 Result，因此不能假装能够对完成后�
    或 Arguments Digest；Key 只允许 1～128 位安全 ASCII Token 字符。
 8. Approval 同时绑定 Idempotency Key，恢复调用不能替换 Key。
 9. 数据库唯一 Scope 为 Tenant + Principal + ToolVersion + Idempotency Key。
+
 10. 同 Key 不同 Arguments Digest 返回 `idempotency_conflict`；Running、Succeeded、Unknown、Failed
     分别返回稳定状态错误和 Existing Execution ID，不再次调用 Upstream。
 11. Succeeded Duplicate 当前不回放业务 Result，因为 Result 不持久化；调用方获得原 Execution ID。
 12. 只开放 GET 与 SideEffect=`idempotent_write` 的 PUT；POST 和非幂等写继续拒绝。
+
+ADR-0019 修订：这里的 Principal 指 Agent Service Principal；幂等 Scope 不包含 Agent 会话中的员工身份。
 
 ## Rejected Alternatives
 

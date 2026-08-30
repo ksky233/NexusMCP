@@ -1,5 +1,8 @@
 # S3-4｜Approval Gate 与单次消费验收
 
+> 2026-08-30 边界修订：本文 Approval 绑定的 Principal 在产品主线中指 Agent Service Principal，不指
+> Agent 会话里的员工。员工侧审批或行为追踪属于上层 Agent/业务系统。
+
 > 日期：2026-08-26  
 > 状态：完成  
 > 范围：PostgreSQL Approval、Modern MCP MRTR、Control Plane 异步决策与原子单次消费

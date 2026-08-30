@@ -5,6 +5,10 @@
 NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry，当前负责将企业 HTTP/OpenAPI
 服务转化为受治理的 MCP Tool，并在接入、发现和调用链上执行身份、策略、凭据、审批、审计与可观测性。
 
+直接使用者只有 Admin Operator 与 Agent Service。普通员工通过业务系统或 Agent 助手使用能力；员工身份、
+会话和行为追踪不进入 NexusMCP。单 Agent 部署采用固定 Service Principal，多 Agent 共享部署使用机器
+Credential 或 Trusted Proxy 区分调用方。
+
 当前阶段：`W4.6｜Tool Search Index Management 已完成`；下一步进入 `W5｜S6 包装`。
 
 ## 当前边界
@@ -29,8 +33,8 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry
 - S2 已完成；S3 已冻结 Principal、Policy、Credential、Approval、Execution/Audit 与 Retry 边界；
 - Modern MCP `tools/call` 已跑通 Read-Only HTTP GET、Schema Validation、Static Policy 和 Execution；
 - Static Bearer Principal 与 Rule-Based ALLOW/DENY Policy 已接入调用阶段；
-- CredentialBinding 已支持 Principal/Role/Tenant 特异性解析、Environment Secret Provider 与
-  Header/Query Injection，DENY 不解析 Secret；
+- CredentialBinding 已验证 Principal/Role/Tenant 通用特异性机制；ADR-0019 将产品主线收窄为 Agent Service
+  Principal/Tenant Scope。Environment Secret Provider 与 Header/Query Injection 已接入，DENY 不解析 Secret；
 - Approval 已支持 PostgreSQL 持久化、Modern MCP MRTR、异步 Control Plane 决策、加密防篡改
   `requestState` 和行锁单次消费；
 - ToolExecution 与脱敏 Audit 已持久化；Approval Consume、Running Execution、ALLOWED Audit 在同一
@@ -82,8 +86,8 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry
   错误映射为 `upstream_conflict`；
 - S6 前置增强优先补齐 Admin Query API 与 Web Control Plane MVP，用可视化方式展示 Upstream、Import、
   Review、Publish、Catalog、Approval、Execution 与 Audit；
-- 真实 JWT/OIDC、生产 Secret Store、CredentialBinding 持久化、跨调用 Result Replay、通用写 Tool
-  与 Reconciliation 尚未实现。
+- Production Agent Service Identity、Admin SSO/Trusted Proxy、生产 Secret Store、CredentialBinding
+  持久化、跨调用 Result Replay、通用写 Tool 与 Reconciliation 尚未实现；员工 IAM 不属于规划范围。
 
 ## 代码语言约定
 
@@ -164,19 +168,14 @@ uv run python -m pytest tests/integration -q
 ## Local Control Plane
 
 当前 `/admin` 是开发/学习阶段的 Local Control Plane，使用 Settings 中固定 Tenant/Principal，不接受
-客户端 Tenant Header，且禁止在 `production` 启用。S3 Authentication 完成前不要将它暴露到非可信网络。
+客户端 Tenant Header，且禁止在 `production` 启用。生产 Admin 应由企业 SSO/Trusted Proxy 保护，不要将
+Local Admin 暴露到非可信网络。
 
 ```powershell
 Copy-Item .env.example .env
 docker compose up -d postgres
 
-$env:NEXUSMCP_DATABASE_URL = "postgresql+asyncpg://nexusmcp:nexusmcp_dev@127.0.0.1:55432/nexusmcp"
-uv run alembic upgrade head
-
-docker compose exec -T postgres psql -U nexusmcp -d nexusmcp -c `
-  "INSERT INTO tenant (id, name, status) VALUES ('00000000-0000-0000-0000-000000000001', 'Local Tenant', 'active') ON CONFLICT (id) DO NOTHING;"
-
-uv run uvicorn nexusmcp.main:app --reload
+uv run python run.py --reload
 ```
 
 打开 `http://127.0.0.1:8000/admin/docs` 可以按顺序执行：
@@ -269,6 +268,9 @@ docker compose stop postgres
 - [S4-0/1 Meta Tool 与 Lexical Search](./docs/实验记录/21_S4-0_MetaTool与LexicalSearch.md)
 - [S4-2a pgvector 与 Embedding API 基础设施](./docs/实验记录/22_S4-2_pgvector与Embedding基础设施.md)
 - [S4-2b Tool Embedding Reindex Pipeline](./docs/实验记录/23_S4-2b_ToolEmbeddingReindex.md)
+- [ADR-0019 Service-Centric Identity Boundary](./docs/adr/0019-service-centric-identity-boundary.md)
+- [Local Tenant Bootstrap 与 IntegrityError 误分类](./docs/学习笔记/10_LocalTenantBootstrap与IntegrityError误分类.md)
+- [Local Admin 与 Agent Service 身份模式](./docs/学习笔记/11_LocalAdmin与AgentService身份模式.md)
 - [S4-3 Query Embedding、Exact Vector Search 与 Hybrid RRF](./docs/实验记录/24_S4-3_QueryEmbedding与HybridRRF.md)
 - [S4-4 Retrieval Eval 与 S4 收口](./docs/实验记录/25_S4-4_RetrievalEval与S4收口.md)
 - [S5-0/1 OpenTelemetry 基线](./docs/实验记录/26_S5-0_1_OpenTelemetry基线.md)

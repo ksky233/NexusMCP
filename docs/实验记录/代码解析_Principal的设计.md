@@ -1,3 +1,8 @@
+# Principal 的设计与理解
+
+> 2026-08-30 边界修订：本文来源于早期协议实验。正式产品不建设员工 User/Role Identity；Principal 主线为
+> Admin Operator 或 Agent Service，见 ADR-0019。
+
 ## `_principal` 函数的理解
 
 ### 1. 命名拆解
