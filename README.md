@@ -9,7 +9,7 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry
 会话和行为追踪不进入 NexusMCP。单 Agent 部署采用固定 Service Principal，多 Agent 共享部署统一通过
 `AgentServiceAuthenticator` 区分调用方。
 
-当前阶段：`I-01｜Service-Centric Identity 代码收敛已完成（本地）`；下一步进入 `W5｜S6 包装`。
+当前阶段：`S6｜Portfolio 文档包装初版已完成`；待人工截图、最终 Push/CI 和 v0.1 Release/Tag。
 
 ## 当前边界
 

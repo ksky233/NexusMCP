@@ -1,6 +1,6 @@
 # 09｜S6 前置 Web Control Plane 与 Remote MCP 边界
 
-> 状态：产品与工程规划已冻结；W0～W4 已完成，W5 待开始
+> 状态：W0～W4.6、I-01 与 W5 文档包装初版已完成；截图/发布待人工完成
 > 日期：2026-08-27
 > 决策：Remote MCP Deferred；优先 Admin Query API 与 Web UI MVP
 > 工程基线：见 ADR-0018
@@ -358,6 +358,20 @@ Static Build
 - English Overview；
 - Limitations；
 - Clean Environment Reproduction。
+
+完成记录（2026-08-30）：
+
+- 最终项目总结；
+- 简历三条版、后端版、AI Infrastructure 版；
+- 30 秒/2 分钟/STAR 面试话术；
+- 5～8 分钟 Demo Script；
+- System Context、模块、Control/Data Plane、Search、Identity 时序图；
+- Quick Start 与干净环境复现清单；
+- English Overview；
+- Limitations 与触发式 Roadmap；
+- 多区域规划已同步 Service-Centric Identity；
+- 包装目录按个人要求不进入 Git；截图由用户自行补充；
+- 最终 GitHub Push/CI 与 v0.1 Release/Tag 待完成。
 
 ## 9. 验收 Demo
 
