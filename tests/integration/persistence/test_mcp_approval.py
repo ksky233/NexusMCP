@@ -18,8 +18,8 @@ from nexusmcp.modules.approval.adapters.sqlalchemy_models import ApprovalRequest
 from nexusmcp.modules.audit.domain import AuditAction, AuditOutcome
 from nexusmcp.modules.credentials.domain import SecretValue
 from nexusmcp.modules.identity.adapters.static_bearer import (
-    StaticBearerIdentity,
-    StaticBearerPrincipalAuthenticator,
+    StaticBearerAgentServiceAuthenticator,
+    StaticBearerAgentServiceMapping,
 )
 from nexusmcp.modules.identity.domain import InternalPrincipal, PrincipalType
 from nexusmcp.modules.policy.adapters.rule_based import RuleBasedPolicyEvaluator
@@ -39,10 +39,10 @@ APPROVAL_ID_META_KEY = "com.nexusmcp/approvalId"
 REQUEST_STATE_KEY = "nexusmcp-request-state-test-key-2026"
 
 
-def authenticator() -> StaticBearerPrincipalAuthenticator:
-    return StaticBearerPrincipalAuthenticator(
+def authenticator() -> StaticBearerAgentServiceAuthenticator:
+    return StaticBearerAgentServiceAuthenticator(
         [
-            StaticBearerIdentity(
+            StaticBearerAgentServiceMapping(
                 SecretValue(AGENT_SERVICE_TOKEN),
                 InternalPrincipal(
                     id="approval-agent-service",
@@ -84,6 +84,7 @@ def settings(database_url: str, *, control_plane: bool = False) -> Settings:
         control_plane_enabled=control_plane,
         local_admin_principal_id="admin-approver",
         request_state_key=SecretStr(REQUEST_STATE_KEY),
+        mcp_identity_mode="service_identity",
     )
 
 
@@ -123,7 +124,7 @@ async def test_modern_mrtr_elicitation_approves_and_resumes_tool_call(
         app = create_app(
             settings(migrated_database_url),
             tool_http_client=upstream_client,
-            principal_authenticator=authenticator(),
+            agent_service_authenticator=authenticator(),
             policy_evaluator=approval_policy(),
         )
         async with app.router.lifespan_context(app):
@@ -175,7 +176,7 @@ async def test_modern_mrtr_decline_rejects_without_creating_execution(
         app = create_app(
             settings(migrated_database_url),
             tool_http_client=upstream_client,
-            principal_authenticator=authenticator(),
+            agent_service_authenticator=authenticator(),
             policy_evaluator=approval_policy(),
         )
         async with app.router.lifespan_context(app):
@@ -226,7 +227,7 @@ async def test_control_plane_approval_resumes_later_and_replay_is_rejected(
         first_app = create_app(
             settings(migrated_database_url),
             tool_http_client=upstream_client,
-            principal_authenticator=authenticator(),
+            agent_service_authenticator=authenticator(),
             policy_evaluator=approval_policy(),
         )
         async with first_app.router.lifespan_context(first_app):
@@ -275,7 +276,7 @@ async def test_control_plane_approval_resumes_later_and_replay_is_rejected(
         resumed_app = create_app(
             settings(migrated_database_url, control_plane=True),
             tool_http_client=upstream_client,
-            principal_authenticator=authenticator(),
+            agent_service_authenticator=authenticator(),
             policy_evaluator=approval_policy(),
         )
         async with resumed_app.router.lifespan_context(resumed_app):

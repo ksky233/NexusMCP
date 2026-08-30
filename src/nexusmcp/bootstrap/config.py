@@ -45,6 +45,8 @@ class Settings(BaseSettings):
     embedding_timeout_seconds: float = 60.0
     embedding_batch_size: int = 16
     local_tenant_id: str = "local"
+    mcp_identity_mode: Literal["static_service", "service_identity"] = "static_service"
+    static_agent_principal_id: str = "local-agent-service"
     database_url: SecretStr | None = None
     database_echo: bool = False
     database_readiness_timeout_seconds: float = 1.0
@@ -94,6 +96,11 @@ class Settings(BaseSettings):
                 uuid.UUID(self.local_tenant_id)
             except ValueError:
                 raise ValueError("control_plane_enabled requires UUID local_tenant_id") from None
+        if (
+            self.mcp_identity_mode == "static_service"
+            and not self.static_agent_principal_id.strip()
+        ):
+            raise ValueError("static_service requires static_agent_principal_id")
         if self.database_readiness_timeout_seconds <= 0:
             raise ValueError("database_readiness_timeout_seconds must be positive")
         if self.telemetry_export_interval_ms <= 0:

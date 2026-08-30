@@ -10,7 +10,7 @@ class PrincipalResolver(Protocol):
     async def resolve(self, context: ActorContext) -> InternalPrincipal: ...
 
 
-class PrincipalAuthenticator(Protocol):
+class AgentServiceAuthenticator(Protocol):
     def authenticate(
         self,
         authorization_header: str | None,

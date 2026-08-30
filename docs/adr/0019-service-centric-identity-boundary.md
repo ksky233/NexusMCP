@@ -174,8 +174,9 @@ NEXUSMCP_MCP_IDENTITY_MODE=static_service
 NEXUSMCP_STATIC_AGENT_PRINCIPAL_ID=sales-assistant-service
 ```
 
-`service_identity` 统一依赖 `AgentServiceAuthenticator` Port。第一版只维护一个通用的 Static Bearer
-参考 Adapter，将 Opaque Bearer Token Digest 映射为 Agent Service Principal。其他企业认证机制只有在真实
-环境提出第二种 Adapter 需求后再设计，不进入当前模式枚举或配置。
+I01-3 已实现 `static_service | service_identity`。`service_identity` 统一依赖 `AgentServiceAuthenticator`
+Port；当前只维护一个通用的 `StaticBearerAgentServiceAuthenticator`，将 Opaque Bearer Token Digest 映射为
+Agent Service Principal。其他企业认证机制只有在真实环境提出第二种 Adapter 需求后再设计，不进入当前模式
+枚举或配置。
 
 Admin 继续保持独立 Local Boundary；生产 Admin Adapter 在真实环境出现后再按企业现状选择。

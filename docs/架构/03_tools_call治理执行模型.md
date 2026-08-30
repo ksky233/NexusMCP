@@ -293,6 +293,8 @@ Approval、真实 Credential 与写 Tool 不进入第一条执行切片。
 - S3-1 已完成 Modern MCP Read-Only HTTP `tools/call`；
 - S3-2 已完成 Static Bearer Principal 与 Rule-Based ALLOW/DENY；该机制是通用能力验证，ADR-0019 已将
   产品主线收窄为 Agent Service Principal，不建设员工角色系统；
+- I01-3 已将 MCP Identity 收敛为 `static_service | service_identity`，并将 Static Bearer 明确为 Agent
+  Service Authenticator；
 - S3-3 已在 ALLOW 之后接入 CredentialBinding、Environment Secret Provider 与 Header/Query
   Injection；同特异性冲突 Fail Closed，DENY 不读取 Secret；
 - S3-4 已接入 PostgreSQL Approval、Modern MCP MRTR、Control Plane 异步决策、加密防篡改

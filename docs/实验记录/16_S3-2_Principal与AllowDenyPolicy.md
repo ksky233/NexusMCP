@@ -2,6 +2,8 @@
 
 > 2026-08-30 边界修订：多 Principal/Role Case 证明 Policy 特异性和信任边界可运行；它不代表 NexusMCP
 > 建设员工 IAM。I01-2 已从当前 Core 删除 Role Subject，产品主线 Principal 是 Agent Service，见 ADR-0019。
+> I01-3 已将当前 Adapter 重命名为 `StaticBearerAgentServiceAuthenticator`，并禁止缺少 Credential 时降级
+> Anonymous。
 
 > 日期：2026-08-26  
 > 范围：Static Bearer Authentication、InternalPrincipal Roles、ActorContext 可信属性、ToolPolicy、

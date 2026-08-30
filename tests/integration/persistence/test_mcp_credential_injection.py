@@ -28,8 +28,8 @@ from nexusmcp.modules.credentials.domain import (
 )
 from nexusmcp.modules.execution.domain import ExecutionStatus
 from nexusmcp.modules.identity.adapters.static_bearer import (
-    StaticBearerIdentity,
-    StaticBearerPrincipalAuthenticator,
+    StaticBearerAgentServiceAuthenticator,
+    StaticBearerAgentServiceMapping,
 )
 from nexusmcp.modules.identity.domain import InternalPrincipal, PrincipalType
 from nexusmcp.modules.policy.adapters.rule_based import RuleBasedPolicyEvaluator
@@ -109,13 +109,13 @@ async def test_allow_injects_secret_while_deny_never_resolves_it(
 ) -> None:
     async with pg_session_factory() as seed_session:
         await seed_executable_tool(seed_session, auth_scheme="bearer")
-    authenticator = StaticBearerPrincipalAuthenticator(
+    authenticator = StaticBearerAgentServiceAuthenticator(
         [
-            StaticBearerIdentity(
+            StaticBearerAgentServiceMapping(
                 SecretValue(SALES_AGENT_TOKEN),
                 principal("sales-assistant-service"),
             ),
-            StaticBearerIdentity(
+            StaticBearerAgentServiceMapping(
                 SecretValue(INVENTORY_AGENT_TOKEN),
                 principal("inventory-assistant-service"),
             ),
@@ -176,9 +176,10 @@ async def test_allow_injects_secret_while_deny_never_resolves_it(
                 database_url=SecretStr(migrated_database_url),
                 local_tenant_id=TENANT_A_ID,
                 tool_execution_enabled=True,
+                mcp_identity_mode="service_identity",
             ),
             tool_http_client=upstream_client,
-            principal_authenticator=authenticator,
+            agent_service_authenticator=authenticator,
             policy_evaluator=policy,
             credential_binding_resolver=InMemoryCredentialBindingResolver([binding]),
             credential_provider=provider,

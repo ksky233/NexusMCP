@@ -32,7 +32,8 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry
 - Local Admin REST 已覆盖 Registry、Import、Review、Publish、Search，并与 `/mcp` 隔离；
 - S2 已完成；S3 已冻结 Principal、Policy、Credential、Approval、Execution/Audit 与 Retry 边界；
 - Modern MCP `tools/call` 已跑通 Read-Only HTTP GET、Schema Validation、Static Policy 和 Execution；
-- Static Bearer Principal 与 Rule-Based ALLOW/DENY Policy 已接入调用阶段；
+- MCP Identity 已支持默认 `static_service` 与可注入 `service_identity`；Static Bearer Agent Service
+  Authenticator 与 Rule-Based ALLOW/DENY Policy 已接入调用阶段；
 - CredentialBinding 已收敛为 Agent Service Principal/Tenant 特异性机制。Environment Secret Provider 与
   Header/Query Injection 已接入，DENY 不解析 Secret；
 - Approval 已支持 PostgreSQL 持久化、Modern MCP MRTR、异步 Control Plane 决策、加密防篡改

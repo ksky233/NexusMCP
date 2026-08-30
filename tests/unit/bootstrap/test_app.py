@@ -7,6 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from nexusmcp.bootstrap.app import create_app
 from nexusmcp.bootstrap.config import Settings
 from nexusmcp.modules.catalog.adapters.in_memory import InMemoryToolCatalogRepository
+from nexusmcp.modules.identity.adapters.static_bearer import (
+    StaticBearerAgentServiceAuthenticator,
+)
 from nexusmcp.shared.errors import NexusMcpError
 
 
@@ -52,6 +55,24 @@ def test_host_app_does_not_translate_mcp_errors_as_admin_http_json() -> None:
 
     # Admin Handler 要注册到未来独立 HTTP 边界，不能覆盖宿主中的 MCP Mount。
     assert NexusMcpError not in app.exception_handlers
+
+
+def test_mcp_identity_mode_rejects_missing_or_unused_authenticator() -> None:
+    authenticator = StaticBearerAgentServiceAuthenticator(())
+
+    with pytest.raises(RuntimeError, match="service_identity"):
+        create_app(
+            Settings(
+                environment="test",
+                catalog_backend="memory",
+                mcp_identity_mode="service_identity",
+            )
+        )
+    with pytest.raises(RuntimeError, match="static_service"):
+        create_app(
+            Settings(environment="test", catalog_backend="memory"),
+            agent_service_authenticator=authenticator,
+        )
 
 
 @pytest.mark.asyncio

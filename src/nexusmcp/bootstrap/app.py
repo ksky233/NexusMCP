@@ -67,7 +67,8 @@ from nexusmcp.modules.execution.call_tool import CallTool
 from nexusmcp.modules.execution.lifecycle import ExecutionLifecycle
 from nexusmcp.modules.execution.retrying_executor import ExecuteWithRetry
 from nexusmcp.modules.identity.adapters.context_principal import ContextPrincipalResolver
-from nexusmcp.modules.identity.ports import PrincipalAuthenticator
+from nexusmcp.modules.identity.domain import InternalPrincipal, PrincipalType
+from nexusmcp.modules.identity.ports import AgentServiceAuthenticator
 from nexusmcp.modules.openapi_import.adapters.local_document_reader import (
     LocalOpenApiDocumentReader,
 )
@@ -115,7 +116,7 @@ def create_app(
     tool_reader: PublishedToolReader | None = None,
     database_runtime: DatabaseRuntimePort | None = None,
     tool_http_client: httpx.AsyncClient | None = None,
-    principal_authenticator: PrincipalAuthenticator | None = None,
+    agent_service_authenticator: AgentServiceAuthenticator | None = None,
     policy_evaluator: PolicyEvaluator | None = None,
     credential_binding_resolver: CredentialBindingResolver | None = None,
     credential_provider: CredentialProvider | None = None,
@@ -128,6 +129,19 @@ def create_app(
     """创建完整组装的应用，不让业务代码依赖全局对象。"""
 
     resolved_settings = settings or get_settings()
+    if resolved_settings.mcp_identity_mode == "service_identity":
+        if agent_service_authenticator is None:
+            raise RuntimeError("service_identity requires AgentServiceAuthenticator")
+        static_agent_principal = None
+    else:
+        if agent_service_authenticator is not None:
+            raise RuntimeError("static_service does not accept AgentServiceAuthenticator")
+        static_agent_principal = InternalPrincipal(
+            id=resolved_settings.static_agent_principal_id,
+            tenant_id=resolved_settings.local_tenant_id,
+            principal_type=PrincipalType.AGENT_SERVICE,
+            authn_method="static_service",
+        )
     owned_telemetry_runtime = None
     resolved_telemetry = telemetry
     if resolved_telemetry is None:
@@ -290,9 +304,9 @@ def create_app(
         )
 
     def context_resolver(ctx: ServerRequestContext[Any, Any]) -> RequestContext:
-        principal = None
-        if principal_authenticator is not None:
-            principal = principal_authenticator.authenticate(
+        principal = static_agent_principal
+        if agent_service_authenticator is not None:
+            principal = agent_service_authenticator.authenticate(
                 request_headers(ctx).get("authorization"),
                 resolved_settings.local_tenant_id,
             )

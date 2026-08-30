@@ -148,6 +148,7 @@ async def test_modern_mcp_read_only_http_tool_call(
                 catalog_backend="postgresql",
                 database_url=SecretStr(migrated_database_url),
                 local_tenant_id=TENANT_A_ID,
+                static_agent_principal_id="employee-directory-agent-service",
                 tool_execution_enabled=True,
                 upstream_egress_policy_enabled=True,
                 upstream_allowed_ports=[9001],
@@ -193,6 +194,7 @@ async def test_modern_mcp_read_only_http_tool_call(
     assert missing.meta["com.nexusmcp/errorCode"] == "tool_not_found"
     assert len(executions) == 1
     assert executions[0].status is ExecutionStatus.SUCCEEDED
+    assert executions[0].principal_id == "employee-directory-agent-service"
     assert executions[0].request_id
     assert executions[0].trace_id
     assert [event.outcome for event in audits] == [

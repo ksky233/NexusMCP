@@ -20,8 +20,8 @@ from nexusmcp.modules.credentials.domain import SecretValue
 from nexusmcp.modules.execution.domain import ExecutionAttemptStatus, ExecutionStatus
 from nexusmcp.modules.identity.adapters.sqlalchemy_models import TenantModel
 from nexusmcp.modules.identity.adapters.static_bearer import (
-    StaticBearerIdentity,
-    StaticBearerPrincipalAuthenticator,
+    StaticBearerAgentServiceAuthenticator,
+    StaticBearerAgentServiceMapping,
 )
 from nexusmcp.modules.identity.domain import InternalPrincipal, PrincipalType
 from nexusmcp.modules.policy.adapters.rule_based import RuleBasedPolicyEvaluator
@@ -154,10 +154,10 @@ async def seed_idempotent_inventory_tool(session: AsyncSession) -> None:
     await session.commit()
 
 
-def authenticator() -> StaticBearerPrincipalAuthenticator:
-    return StaticBearerPrincipalAuthenticator(
+def authenticator() -> StaticBearerAgentServiceAuthenticator:
+    return StaticBearerAgentServiceAuthenticator(
         [
-            StaticBearerIdentity(
+            StaticBearerAgentServiceMapping(
                 SecretValue(AGENT_SERVICE_TOKEN),
                 InternalPrincipal(
                     id="inventory-agent-service",
@@ -229,11 +229,12 @@ async def test_idempotent_put_retries_then_rejects_duplicate_and_conflicting_key
                 database_url=SecretStr(migrated_database_url),
                 local_tenant_id=TENANT_A_ID,
                 tool_execution_enabled=True,
+                mcp_identity_mode="service_identity",
                 tool_retry_max_attempts=3,
                 tool_retry_initial_backoff_seconds=0,
             ),
             tool_http_client=upstream_client,
-            principal_authenticator=authenticator(),
+            agent_service_authenticator=authenticator(),
             policy_evaluator=policy(),
         )
         async with app.router.lifespan_context(app):

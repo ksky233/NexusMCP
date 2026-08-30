@@ -38,6 +38,19 @@ def test_control_plane_requires_postgresql_and_uuid_tenant() -> None:
         )
 
 
+def test_mcp_identity_mode_defaults_to_static_service_and_requires_principal_id() -> None:
+    settings = Settings(environment="test")
+
+    assert settings.mcp_identity_mode == "static_service"
+    assert settings.static_agent_principal_id == "local-agent-service"
+    with pytest.raises(ValidationError, match="static_agent_principal_id"):
+        Settings(
+            environment="test",
+            mcp_identity_mode="static_service",
+            static_agent_principal_id=" ",
+        )
+
+
 def test_local_control_plane_is_forbidden_in_production() -> None:
     with pytest.raises(ValidationError, match="disabled in production"):
         Settings(

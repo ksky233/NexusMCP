@@ -5,30 +5,26 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 
 from nexusmcp.modules.credentials.domain import SecretValue
-from nexusmcp.modules.identity.domain import InternalPrincipal, PrincipalType
+from nexusmcp.modules.identity.domain import InternalPrincipal
 from nexusmcp.shared.errors import AuthenticationError
-from nexusmcp.shared.request_context import ANONYMOUS_PRINCIPAL_ID
 
 
 @dataclass(frozen=True, slots=True)
-class StaticBearerIdentity:
+class StaticBearerAgentServiceMapping:
     token: SecretValue
     principal: InternalPrincipal
 
 
-class StaticBearerPrincipalAuthenticator:
-    """仅用于确定性 S3 测试；生产阶段由 JWT/OIDC Adapter 替换。"""
+class StaticBearerAgentServiceAuthenticator:
+    """Opaque Bearer Token Digest 到 Agent Service Principal 的参考 Adapter。"""
 
     def __init__(
         self,
-        identities: Iterable[StaticBearerIdentity],
-        *,
-        allow_anonymous: bool = True,
+        identities: Iterable[StaticBearerAgentServiceMapping],
     ) -> None:
         self._principals_by_digest = {
             _token_digest(identity.token.reveal()): identity.principal for identity in identities
         }
-        self._allow_anonymous = allow_anonymous
 
     def authenticate(
         self,
@@ -36,14 +32,7 @@ class StaticBearerPrincipalAuthenticator:
         tenant_id: str,
     ) -> InternalPrincipal:
         if authorization_header is None:
-            if not self._allow_anonymous:
-                raise AuthenticationError("authorization header was missing")
-            return InternalPrincipal(
-                id=ANONYMOUS_PRINCIPAL_ID,
-                tenant_id=tenant_id,
-                principal_type=PrincipalType.ANONYMOUS,
-                authn_method="anonymous",
-            )
+            raise AuthenticationError("authorization header was missing")
         scheme, separator, token = authorization_header.partition(" ")
         if separator != " " or scheme.lower() != "bearer" or not token:
             raise AuthenticationError("authorization header was not a valid bearer credential")

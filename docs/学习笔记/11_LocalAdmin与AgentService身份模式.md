@@ -245,8 +245,9 @@ NEXUSMCP_STATIC_AGENT_PRINCIPAL_ID=sales-assistant-service
 NEXUSMCP_MCP_IDENTITY_MODE=service_identity
 ```
 
-`service_identity` 不再增加 `SERVICE_AUTH_PROVIDER`。应用只要求组装一个 `AgentServiceAuthenticator`；当前
-参考 Adapter 使用 Static Bearer，第二种企业 Adapter 在真实环境出现后再设计。
+`service_identity` 不增加 `SERVICE_AUTH_PROVIDER`。应用只要求组装一个 `AgentServiceAuthenticator`；当前
+已实现的唯一参考 Adapter 是 `StaticBearerAgentServiceAuthenticator`，第二种企业 Adapter 在真实环境出现后
+再设计。缺少 Bearer Credential 时 Fail Fast，不会降级为 Anonymous。
 
 ## 12. 一句话总结
 

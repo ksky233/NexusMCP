@@ -15,8 +15,8 @@ from nexusmcp.bootstrap.config import Settings
 from nexusmcp.modules.audit.domain import AuditOutcome
 from nexusmcp.modules.credentials.domain import SecretValue
 from nexusmcp.modules.identity.adapters.static_bearer import (
-    StaticBearerIdentity,
-    StaticBearerPrincipalAuthenticator,
+    StaticBearerAgentServiceAuthenticator,
+    StaticBearerAgentServiceMapping,
 )
 from nexusmcp.modules.identity.domain import InternalPrincipal, PrincipalType
 from nexusmcp.modules.policy.adapters.rule_based import RuleBasedPolicyEvaluator
@@ -108,13 +108,13 @@ async def test_same_tool_is_allowed_denied_or_unauthenticated_by_principal(
 ) -> None:
     async with pg_session_factory() as seed_session:
         await seed_executable_tool(seed_session)
-    authenticator = StaticBearerPrincipalAuthenticator(
+    authenticator = StaticBearerAgentServiceAuthenticator(
         [
-            StaticBearerIdentity(
+            StaticBearerAgentServiceMapping(
                 SecretValue(SALES_AGENT_TOKEN),
                 internal_principal("sales-assistant-service"),
             ),
-            StaticBearerIdentity(
+            StaticBearerAgentServiceMapping(
                 SecretValue(INVENTORY_AGENT_TOKEN),
                 internal_principal("inventory-assistant-service"),
             ),
@@ -129,9 +129,10 @@ async def test_same_tool_is_allowed_denied_or_unauthenticated_by_principal(
                 database_url=SecretStr(migrated_database_url),
                 local_tenant_id=TENANT_A_ID,
                 tool_execution_enabled=True,
+                mcp_identity_mode="service_identity",
             ),
             tool_http_client=upstream_client,
-            principal_authenticator=authenticator,
+            agent_service_authenticator=authenticator,
             policy_evaluator=RuleBasedPolicyEvaluator(policies()),
         )
         async with app.router.lifespan_context(app):
@@ -175,12 +176,11 @@ async def test_same_tool_is_allowed_denied_or_unauthenticated_by_principal(
     assert unknown.meta["com.nexusmcp/errorCode"] == "authentication_failed"
     assert anonymous.is_error is True
     assert anonymous.meta is not None
-    assert anonymous.meta["com.nexusmcp/errorCode"] == "authorization_denied"
+    assert anonymous.meta["com.nexusmcp/errorCode"] == "authentication_failed"
     assert len(executions) == 1
     assert executions[0].principal_id == "sales-assistant-service"
     assert [event.outcome for event in audits] == [
         AuditOutcome.ALLOWED,
         AuditOutcome.SUCCEEDED,
-        AuditOutcome.DENIED,
         AuditOutcome.DENIED,
     ]

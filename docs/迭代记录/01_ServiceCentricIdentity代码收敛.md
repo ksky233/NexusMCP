@@ -12,7 +12,7 @@
 I01-0 代码级决策                  Completed
 I01-1A Principal Type/Context 收敛 Completed（本地，待提交）
 I01-2 Role Scope 原子删除           Completed（本地，待提交）
-I01-3 身份模式与 Adapter 接缝       Pending
+I01-3 身份模式与 Adapter 接缝       Completed（本地，待提交）
 I01-4 Evidence 与文档回填          Pending
 ```
 
@@ -40,6 +40,22 @@ I01-2 已完成：
 - 无数据库 Migration、MCP Tool Contract 或 Admin OpenAPI 变化。
 
 I01-2 完整后端回归：`297 passed / 2 paid external skipped`，Ruff 与 basedpyright 通过。
+
+I01-3 已完成：
+
+- 新增 `NEXUSMCP_MCP_IDENTITY_MODE=static_service | service_identity`；
+- 新增 `NEXUSMCP_STATIC_AGENT_PRINCIPAL_ID`；
+- `static_service` 成为默认模式，并在每个 MCP 请求中构造固定 Agent Service Principal；
+- `service_identity` 必须组装 `AgentServiceAuthenticator`，缺失时 Application Factory Fail Fast；
+- `PrincipalAuthenticator` 重命名为 `AgentServiceAuthenticator`；
+- `StaticBearerPrincipalAuthenticator` 重命名为 `StaticBearerAgentServiceAuthenticator`；
+- Token Mapping 重命名为 `StaticBearerAgentServiceMapping`；
+- Static Bearer 缺少 Authorization 时直接返回 `authentication_failed`，不再静默降级 Anonymous；
+- 未配置第二个 Auth Adapter，也没有 `SERVICE_AUTH_PROVIDER` 枚举；
+- `.env.example` 与 `run.py` 默认值已经同步。
+
+I01-3 完整后端回归：`299 passed / 2 paid external skipped`，Ruff 与 basedpyright 通过；无数据库 Migration、
+MCP Tool Contract 或 Admin OpenAPI 变化。
 
 ## 1. 迭代目标
 
