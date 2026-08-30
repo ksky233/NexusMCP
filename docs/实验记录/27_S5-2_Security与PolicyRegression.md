@@ -14,7 +14,7 @@
 - CallTool 在 Secret/Execution Plan 前校验；
 - Httpx Executor 在 Connect 前复检；
 - 10 条 Policy Golden Case；
-- 15 条 Security Evidence Manifest；
+- 16 条 Security Evidence Manifest（I01-4 增加 MCP Identity Mode 组装证据）；
 - Metadata Endpoint 正式 MCP E2E。
 
 ## 关键学习点

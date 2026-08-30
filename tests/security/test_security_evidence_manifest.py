@@ -10,7 +10,7 @@ PROJECT_ROOT = MANIFEST_PATH.parents[2]
 
 def test_security_manifest_references_existing_automated_evidence() -> None:
     payload: dict[str, Any] = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
-    assert payload["version"] == 1
+    assert payload["version"] == 2
     cases: list[dict[str, Any]] = payload["cases"]
     assert len(cases) >= 15
     assert len({str(case["id"]) for case in cases}) == len(cases)

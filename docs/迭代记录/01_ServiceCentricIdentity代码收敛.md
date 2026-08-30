@@ -1,6 +1,6 @@
 # I-01｜Service-Centric Identity 代码收敛
 
-> 状态：In Progress
+> 状态：Completed（本地，待最终提交）
 > 日期：2026-08-30
 > 触发：项目从通用 User/Role Identity 预留收敛为面向 Admin Operator 与 Agent Service 的 MCP Gateway
 > 决策依据：[ADR-0019｜面向管理员与 Agent Service 的身份边界](../adr/0019-service-centric-identity-boundary.md)
@@ -13,7 +13,7 @@ I01-0 代码级决策                  Completed
 I01-1A Principal Type/Context 收敛 Completed（本地，待提交）
 I01-2 Role Scope 原子删除           Completed（本地，待提交）
 I01-3 身份模式与 Adapter 接缝       Completed（本地，待提交）
-I01-4 Evidence 与文档回填          Pending
+I01-4 Evidence 与文档回填          Completed（本地，待提交）
 ```
 
 I01-1A 已完成：
@@ -548,16 +548,77 @@ Full-stack Playwright
 
 ## 14. 完成结果
 
-当前为空。实现完成后填写：
+```text
+状态：Completed（本地）
+完成日期：2026-08-30
+基线：334a02d
+迭代计划：19da364
+I01-1/2：f1303ba
+I01-3：c6b2af7
+I01-4：待最终提交
+```
+
+### 14.1 删除内容
+
+- `PrincipalType.USER/SERVICE/AGENT` 重复枚举；
+- `InternalPrincipal.roles/attributes`；
+- `ActorContext.roles/principal_attributes`；
+- `RequestContext.agent_id/run_id`；
+- Policy/Credential 的 Role Subject 与特异性分支；
+- 员工/Role Golden Case；
+- 缺少 Service Credential 时降级 Anonymous 的行为；
+- `PrincipalAuthenticator`、`StaticBearerPrincipalAuthenticator` 等泛化或旧身份命名。
+
+### 14.2 保留内容
+
+- `PrincipalType.AGENT_SERVICE | ANONYMOUS`；
+- `InternalPrincipal(id, tenant_id, principal_type, authn_method)`；
+- Agent Service Principal/Tenant Policy；
+- Agent Service Principal/Tenant CredentialBinding；
+- Approval、Idempotency、Execution、Audit 的 `principal_id/actor_id`；
+- `static_service | service_identity` 两种模式；
+- `AgentServiceAuthenticator` Port；
+- `StaticBearerAgentServiceAuthenticator` 唯一参考 Adapter；
+- Local Admin 独立固定 ActorContext。
+
+### 14.3 数据库与 Contract
+
+- Alembic：`No new upgrade operations detected`；
+- 数据库 Migration：无；
+- Approval/Execution/Audit 字段：无变化；
+- Admin OpenAPI：无变化；
+- MCP Tool/Meta Tool Contract：无变化；
+- Admin + MCP Contract：`16 passed`。
+
+### 14.4 Evidence
+
+- Policy Golden Matrix：v2，10 个 Agent Service/Tenant Case；
+- Security Evidence Manifest：v2，16 Case；
+- 新增 MCP Identity Mode 组装 Fail-Fast 证据；
+- Static Bearer 缺失/未知/Cross-Tenant Credential 均返回 `authentication_failed`；
+- Full-stack E2E 持久化 `principal_id=web-e2e-agent-service`。
+
+### 14.5 最终门禁
 
 ```text
-状态：
-完成日期：
-Commits：
-删除内容：
-保留内容：
-数据库影响：
-Contract 影响：
-测试结果：
-遗留项：
+Backend Pytest          299 passed / 2 paid external skipped
+Ruff Check              passed
+Ruff Format Check       passed
+basedpyright            0 errors / 0 warnings
+Python sdist/wheel      passed
+Alembic Check           no new operations
+Admin/MCP Contract      16 passed
+Frontend Vitest         21 passed
+Frontend Format/TS/Lint passed
+Frontend Build          passed
+Docker Multi-stage      passed
+Playwright Full-stack   2 passed / 9.6s
 ```
+
+### 14.6 遗留项
+
+- 第二种企业 Agent Service Auth Adapter：等待真实环境需求；
+- Service Group：等待 Agent 数量和管理成本证明；
+- Production AdminAuthenticator：等待真实企业管理认证边界；
+- `static_service` 的外部部署访问控制由部署方负责，NexusMCP 不伪装为已完成入口认证；
+- No-Match Confidence Gate、Secret Store 等与本迭代无关的既有 Deferred 保持不变。

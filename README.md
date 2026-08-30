@@ -9,7 +9,7 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry
 会话和行为追踪不进入 NexusMCP。单 Agent 部署采用固定 Service Principal，多 Agent 共享部署统一通过
 `AgentServiceAuthenticator` 区分调用方。
 
-当前阶段：`W4.6｜Tool Search Index Management 已完成`；下一步进入 `W5｜S6 包装`。
+当前阶段：`I-01｜Service-Centric Identity 代码收敛已完成（本地）`；下一步进入 `W5｜S6 包装`。
 
 ## 当前边界
 
@@ -59,7 +59,7 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry
   Console/OTLP HTTP Exporter 和敏感 Attribute 白名单；SDK Provider 由 Application Lifespan 管理；
 - Egress Policy 已支持静态 Host/CIDR/Port Allowlist、Metadata Hard Deny、全 A/AAAA 校验、Registry/
   Secret/Executor 三道检查、Production Fail-Closed 和显式 Local Demo；
-- Policy/Security 已建立 10 条 Golden Case 与 15 条 Evidence Manifest，覆盖 Tenant、Secret、Approval
+- Policy/Security 已建立 10 条 Golden Case 与 16 条 Evidence Manifest，覆盖 Agent Service Identity、Tenant、Secret、Approval
   Replay、Idempotency 与 SSRF；
 - Protocol 已建立 15 条 Modern/Legacy Matrix，覆盖 Raw JSON-RPC Error、Session、MRTR、Trace 与 Dynamic
   Activation；Failure Injection 已汇总 14 条 DB/Audit/Retry/Approval/Embedding/Egress 状态证据；

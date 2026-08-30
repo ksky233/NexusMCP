@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "cases": [
     {
       "id": "egress-approved-private-target",
@@ -26,10 +26,16 @@
       "evidence": "tests/security/test_egress_policy.py::test_loopback_requires_explicit_local_demo_mode"
     },
     {
-      "id": "principal-allow-deny-unauthenticated",
+      "id": "agent-service-allow-deny-unauthenticated",
       "category": "identity_policy",
-      "expected": "principal_specific_decision",
+      "expected": "agent_service_specific_decision",
       "evidence": "tests/integration/persistence/test_mcp_principal_policy.py::test_same_tool_is_allowed_denied_or_unauthenticated_by_principal"
+    },
+    {
+      "id": "mcp-identity-mode-composition",
+      "category": "identity_policy",
+      "expected": "missing_or_unused_authenticator_fails_fast",
+      "evidence": "tests/unit/bootstrap/test_app.py::test_mcp_identity_mode_rejects_missing_or_unused_authenticator"
     },
     {
       "id": "policy-golden-matrix",

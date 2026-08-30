@@ -56,9 +56,9 @@ def context(principal_id: str) -> ActorContext:
 
 def consume_command() -> ConsumeApprovalCommand:
     return ConsumeApprovalCommand(
-        context=context("user-a"),
+        context=context("agent-service-a"),
         approval_id=APPROVAL_ID,
-        principal_id="user-a",
+        principal_id="agent-service-a",
         tool_version_id=VERSION_ID,
         arguments_digest="1" * 64,
         policy_version="policy-v1",
@@ -75,8 +75,8 @@ async def test_postgresql_row_lock_allows_exactly_one_approval_consumer(
     clock = FixedClock()
     await RequestApproval(factory, clock, FixedIdentifierGenerator()).execute(
         RequestApprovalCommand(
-            context=context("user-a"),
-            principal_id="user-a",
+            context=context("agent-service-a"),
+            principal_id="agent-service-a",
             tool_id=TOOL_ID,
             tool_version_id=VERSION_ID,
             arguments_digest="1" * 64,
@@ -108,6 +108,6 @@ async def test_postgresql_row_lock_allows_exactly_one_approval_consumer(
     )
     assert sum(isinstance(result, ApprovalAlreadyConsumedError) for result in results) == 1
     persisted = await GetApproval(factory).execute(
-        GetApprovalQuery(context=context("user-a"), approval_id=APPROVAL_ID)
+        GetApprovalQuery(context=context("agent-service-a"), approval_id=APPROVAL_ID)
     )
     assert persisted.status is ApprovalStatus.CONSUMED

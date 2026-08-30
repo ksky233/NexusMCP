@@ -50,7 +50,7 @@ class SequentialIdentifierGenerator:
         return f"{self._prefix}-{self._value}"
 
 
-def context(principal_id: str = "user-a") -> ActorContext:
+def context(principal_id: str = "agent-service-a") -> ActorContext:
     return ActorContext(
         request_id="request-lifecycle",
         trace_id="a" * 32,
@@ -68,7 +68,7 @@ def plan_command(
 ) -> PlanExecutionCommand:
     return PlanExecutionCommand(
         context=context(),
-        principal_id="user-a",
+        principal_id="agent-service-a",
         tool_id="tool-1",
         tool_version_id="version-1",
         tool_binding_id="binding-1",
@@ -89,7 +89,7 @@ async def approved_request(factory: InMemoryExecutionUnitOfWorkFactory) -> str:
     ).execute(
         RequestApprovalCommand(
             context=context(),
-            principal_id="user-a",
+            principal_id="agent-service-a",
             tool_id="tool-1",
             tool_version_id="version-1",
             arguments_digest="1" * 64,

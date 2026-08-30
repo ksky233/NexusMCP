@@ -100,4 +100,4 @@ Cancelled
 
 | 编号 | 主题 | 状态 | 决策依据 |
 |---|---|---|---|
-| I-01 | [Service-Centric Identity 代码收敛](./01_ServiceCentricIdentity代码收敛.md) | In Progress | ADR-0019 |
+| I-01 | [Service-Centric Identity 代码收敛](./01_ServiceCentricIdentity代码收敛.md) | Completed（本地） | ADR-0019 |

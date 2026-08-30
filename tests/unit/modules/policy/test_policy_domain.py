@@ -14,7 +14,7 @@ from nexusmcp.modules.policy.domain import (
 
 def _principal(tenant_id: str = "tenant-a") -> InternalPrincipal:
     return InternalPrincipal(
-        id="user-a",
+        id="agent-service-a",
         tenant_id=tenant_id,
         principal_type=PrincipalType.AGENT_SERVICE,
         authn_method="test",

@@ -53,7 +53,7 @@ class DecisionAuditIdentifierGenerator:
         return "decision-audit-1"
 
 
-def context(principal_id: str = "user-a") -> ActorContext:
+def context(principal_id: str = "agent-service-a") -> ActorContext:
     return ActorContext(
         request_id="request-approval",
         trace_id="a" * 32,
@@ -66,7 +66,7 @@ def context(principal_id: str = "user-a") -> ActorContext:
 def request_command() -> RequestApprovalCommand:
     return RequestApprovalCommand(
         context=context(),
-        principal_id="user-a",
+        principal_id="agent-service-a",
         tool_id="tool-1",
         tool_version_id="version-1",
         arguments_digest="1" * 64,
@@ -77,7 +77,7 @@ def request_command() -> RequestApprovalCommand:
 def consume_command(**changes: str) -> ConsumeApprovalCommand:
     values = {
         "approval_id": "approval-1",
-        "principal_id": "user-a",
+        "principal_id": "agent-service-a",
         "tool_version_id": "version-1",
         "arguments_digest": "1" * 64,
         "policy_version": "policy-v1",

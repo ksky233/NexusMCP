@@ -74,7 +74,7 @@ def context() -> ActorContext:
         request_id="request-retry",
         trace_id="a" * 32,
         tenant_id="tenant-a",
-        principal_id="user-a",
+        principal_id="agent-service-a",
         authn_method="test",
     )
 
@@ -82,7 +82,7 @@ def context() -> ActorContext:
 def plan_command(side_effect: ToolSideEffect, idempotency_key: str | None) -> PlanExecutionCommand:
     return PlanExecutionCommand(
         context=context(),
-        principal_id="user-a",
+        principal_id="agent-service-a",
         tool_id="tool-1",
         tool_version_id="version-1",
         tool_binding_id="binding-1",

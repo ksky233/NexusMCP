@@ -23,7 +23,7 @@ def _context() -> ActorContext:
         request_id="request-call",
         trace_id="9" * 32,
         tenant_id="tenant-a",
-        principal_id="user-a",
+        principal_id="agent-service-a",
         authn_method="test",
     )
 
@@ -34,7 +34,7 @@ def _execution() -> ToolExecution:
         tenant_id="tenant-a",
         request_id="request-1",
         trace_id="a" * 32,
-        principal_id="user-a",
+        principal_id="agent-service-a",
         tool_id="tool-1",
         tool_version_id="version-1",
         tool_binding_id="binding-1",

@@ -14,7 +14,7 @@ def _pending() -> ApprovalRequest:
     return ApprovalRequest(
         id="approval-1",
         tenant_id="tenant-a",
-        principal_id="user-a",
+        principal_id="agent-service-a",
         tool_id="tool-1",
         tool_version_id="version-1",
         arguments_digest="1" * 64,
@@ -28,7 +28,7 @@ def _pending() -> ApprovalRequest:
 def test_approved_request_can_be_consumed_exactly_once() -> None:
     approved = _pending().approve("approver-a", NOW + timedelta(minutes=1))
     consumed = approved.consume(
-        principal_id="user-a",
+        principal_id="agent-service-a",
         tool_version_id="version-1",
         arguments_digest="1" * 64,
         policy_version="policy-v1",
@@ -39,7 +39,7 @@ def test_approved_request_can_be_consumed_exactly_once() -> None:
     assert consumed.status is ApprovalStatus.CONSUMED
     with pytest.raises(ValueError, match="only approved"):
         consumed.consume(
-            principal_id="user-a",
+            principal_id="agent-service-a",
             tool_version_id="version-1",
             arguments_digest="1" * 64,
             policy_version="policy-v1",
@@ -51,10 +51,10 @@ def test_approved_request_can_be_consumed_exactly_once() -> None:
 @pytest.mark.parametrize(
     ("principal_id", "version_id", "digest", "policy_version"),
     [
-        ("user-b", "version-1", "1" * 64, "policy-v1"),
-        ("user-a", "version-2", "1" * 64, "policy-v1"),
-        ("user-a", "version-1", "2" * 64, "policy-v1"),
-        ("user-a", "version-1", "1" * 64, "policy-v2"),
+        ("agent-service-b", "version-1", "1" * 64, "policy-v1"),
+        ("agent-service-a", "version-2", "1" * 64, "policy-v1"),
+        ("agent-service-a", "version-1", "2" * 64, "policy-v1"),
+        ("agent-service-a", "version-1", "1" * 64, "policy-v2"),
     ],
 )
 def test_approval_rejects_changed_call_snapshot(
@@ -92,7 +92,7 @@ def test_approval_rejects_changed_idempotency_key() -> None:
 
     with pytest.raises(ValueError, match="idempotency key"):
         approved.consume(
-            principal_id="user-a",
+            principal_id="agent-service-a",
             tool_version_id="version-1",
             arguments_digest="1" * 64,
             policy_version="policy-v1",
@@ -106,7 +106,7 @@ def test_approval_cannot_be_constructed_with_incomplete_decision_state() -> None
         ApprovalRequest(
             id="approval-invalid",
             tenant_id="tenant-a",
-            principal_id="user-a",
+            principal_id="agent-service-a",
             tool_id="tool-1",
             tool_version_id="version-1",
             arguments_digest="1" * 64,

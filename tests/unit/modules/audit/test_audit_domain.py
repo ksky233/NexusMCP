@@ -11,7 +11,7 @@ def test_audit_event_has_digest_but_no_raw_arguments_or_secret_fields() -> None:
     event = AuditEvent(
         id="audit-1",
         tenant_id="tenant-a",
-        actor_id="user-a",
+        actor_id="agent-service-a",
         action=AuditAction.TOOL_CALL,
         resource_type="tool_version",
         resource_id="version-1",
@@ -35,7 +35,7 @@ def test_audit_metadata_rejects_sensitive_keys() -> None:
         AuditEvent(
             id="audit-2",
             tenant_id="tenant-a",
-            actor_id="user-a",
+            actor_id="agent-service-a",
             action=AuditAction.TOOL_CALL,
             resource_type="tool_version",
             resource_id="version-1",

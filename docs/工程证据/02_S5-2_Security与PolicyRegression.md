@@ -41,7 +41,6 @@ Hard Deny：Cloud Metadata、IPv4/IPv6 Link-Local、Unspecified、Multicast、Re
 
 - Default DENY；
 - Tenant ALLOW；
-- Role > Tenant；
 - Agent Service Principal > Tenant；
 - Tool-specific > Global；
 - 同特异性按 Priority；
@@ -54,10 +53,11 @@ Expression。Side Effect 目前是 Policy Input 和 Tool Binding 事实，不是
 
 ## 3. Security Evidence Manifest
 
-`evals/security/security_cases.json` 汇总 15 条自动化证据，覆盖：
+`evals/security/security_cases.json` 汇总 16 条自动化证据，覆盖：
 
 - SSRF/Egress；
 - Identity/Policy；
+- `static_service | service_identity` 组装 Fail-Fast；
 - Tenant Boundary；
 - Secret/Log/Trace；
 - Approval Replay/Snapshot Tamper；

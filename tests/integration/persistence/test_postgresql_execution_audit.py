@@ -37,7 +37,7 @@ def context(request_id: str) -> ActorContext:
         request_id=request_id,
         trace_id="a" * 32,
         tenant_id=TENANT_A_ID,
-        principal_id="user-a",
+        principal_id="agent-service-a",
         authn_method="test",
     )
 
@@ -49,13 +49,13 @@ def plan_command(
 ) -> PlanExecutionCommand:
     return PlanExecutionCommand(
         context=context(request_id),
-        principal_id="user-a",
+        principal_id="agent-service-a",
         tool_id=TOOL_ID,
         tool_version_id=VERSION_ID,
         tool_binding_id=BINDING_ID,
         arguments_digest="1" * 64,
         policy_version="policy-v1",
-        policy_reason_code="employee_reader_allowed",
+        policy_reason_code="agent_service_allowed",
         side_effect=(
             ToolSideEffect.IDEMPOTENT_WRITE
             if idempotency_key is not None
