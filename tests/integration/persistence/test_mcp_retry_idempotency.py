@@ -40,7 +40,7 @@ TOOL_ID = "00000000-0000-0000-0000-000000000071"
 VERSION_ID = "00000000-0000-0000-0000-000000000072"
 BINDING_ID = "00000000-0000-0000-0000-000000000073"
 UPSTREAM_ID = "00000000-0000-0000-0000-000000000074"
-USER_TOKEN = "inventory-writer-token"
+AGENT_SERVICE_TOKEN = "inventory-agent-service-token"
 IDEMPOTENCY_META_KEY = "com.nexusmcp/idempotencyKey"
 
 
@@ -158,13 +158,12 @@ def authenticator() -> StaticBearerPrincipalAuthenticator:
     return StaticBearerPrincipalAuthenticator(
         [
             StaticBearerIdentity(
-                SecretValue(USER_TOKEN),
+                SecretValue(AGENT_SERVICE_TOKEN),
                 InternalPrincipal(
-                    id="inventory-writer",
+                    id="inventory-agent-service",
                     tenant_id=TENANT_A_ID,
-                    principal_type=PrincipalType.USER,
+                    principal_type=PrincipalType.AGENT_SERVICE,
                     authn_method="static_bearer",
-                    roles=frozenset({"inventory_writer"}),
                 ),
             )
         ]
@@ -177,8 +176,8 @@ def policy() -> RuleBasedPolicyEvaluator:
             ToolPolicy(
                 id="inventory-writer-allow",
                 tenant_id=TENANT_A_ID,
-                subject_type=PolicySubjectType.ROLE,
-                subject_id="inventory_writer",
+                subject_type=PolicySubjectType.PRINCIPAL,
+                subject_id="inventory-agent-service",
                 tool_id=TOOL_ID,
                 action=ToolAction.CALL,
                 effect=PolicyEffect.ALLOW,
@@ -242,7 +241,7 @@ async def test_idempotent_put_retries_then_rejects_duplicate_and_conflicting_key
             async with httpx2.AsyncClient(
                 transport=transport,
                 base_url="http://testserver",
-                headers={"Authorization": f"Bearer {USER_TOKEN}"},
+                headers={"Authorization": f"Bearer {AGENT_SERVICE_TOKEN}"},
             ) as http_client:
                 mcp_transport = streamable_http_client(
                     "http://testserver/mcp",

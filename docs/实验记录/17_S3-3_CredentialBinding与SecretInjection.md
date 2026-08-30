@@ -1,7 +1,7 @@
 # S3-3｜CredentialBinding 与 Secret Injection 验收
 
 > 2026-08-30 边界修订：Principal/Role/Tenant 特异性是通用机制证据；当前产品主线使用 Agent Service
-> Principal/Tenant，不处理员工个人 Credential 或员工角色。
+> Principal/Tenant；I01-2 已从当前 Core 删除 Role Binding，不处理员工个人 Credential 或员工角色。
 
 > 日期：2026-08-26  
 > 状态：完成  

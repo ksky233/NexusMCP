@@ -22,11 +22,10 @@ from nexusmcp.shared.errors import (
 
 def principal(*, tenant_id: str = "tenant-a") -> InternalPrincipal:
     return InternalPrincipal(
-        id="user-a",
+        id="sales-assistant-service",
         tenant_id=tenant_id,
-        principal_type=PrincipalType.USER,
+        principal_type=PrincipalType.AGENT_SERVICE,
         authn_method="test",
-        roles=frozenset({"employee_reader"}),
     )
 
 
@@ -57,12 +56,15 @@ def binding(
 
 
 @pytest.mark.asyncio
-async def test_principal_exact_tool_binding_outranks_role_and_tenant() -> None:
+async def test_agent_service_exact_tool_binding_outranks_tenant() -> None:
     resolver = InMemoryCredentialBindingResolver(
         [
             binding("tenant", CredentialSubjectType.TENANT, None),
-            binding("role", CredentialSubjectType.ROLE, "employee_reader"),
-            binding("principal", CredentialSubjectType.PRINCIPAL, "user-a"),
+            binding(
+                "principal",
+                CredentialSubjectType.PRINCIPAL,
+                "sales-assistant-service",
+            ),
         ]
     )
 
@@ -75,12 +77,17 @@ async def test_principal_exact_tool_binding_outranks_role_and_tenant() -> None:
 async def test_exact_tool_binding_outranks_subject_wildcard_and_disabled_is_ignored() -> None:
     resolver = InMemoryCredentialBindingResolver(
         [
-            binding("wildcard", CredentialSubjectType.ROLE, "employee_reader", tool_id=None),
-            binding("exact", CredentialSubjectType.ROLE, "employee_reader"),
+            binding(
+                "wildcard",
+                CredentialSubjectType.PRINCIPAL,
+                "sales-assistant-service",
+                tool_id=None,
+            ),
+            binding("exact", CredentialSubjectType.PRINCIPAL, "sales-assistant-service"),
             binding(
                 "disabled-principal",
                 CredentialSubjectType.PRINCIPAL,
-                "user-a",
+                "sales-assistant-service",
                 status=CredentialBindingStatus.DISABLED,
             ),
         ]
@@ -95,8 +102,8 @@ async def test_exact_tool_binding_outranks_subject_wildcard_and_disabled_is_igno
 async def test_same_specificity_bindings_fail_closed() -> None:
     resolver = InMemoryCredentialBindingResolver(
         [
-            binding("first", CredentialSubjectType.PRINCIPAL, "user-a"),
-            binding("second", CredentialSubjectType.PRINCIPAL, "user-a"),
+            binding("first", CredentialSubjectType.PRINCIPAL, "sales-assistant-service"),
+            binding("second", CredentialSubjectType.PRINCIPAL, "sales-assistant-service"),
         ]
     )
 

@@ -1,10 +1,45 @@
 # I-01｜Service-Centric Identity 代码收敛
 
-> 状态：Planned
+> 状态：In Progress
 > 日期：2026-08-30
 > 触发：项目从通用 User/Role Identity 预留收敛为面向 Admin Operator 与 Agent Service 的 MCP Gateway
 > 决策依据：[ADR-0019｜面向管理员与 Agent Service 的身份边界](../adr/0019-service-centric-identity-boundary.md)
 > 基线提交：`334a02d`
+
+## 0. 当前进度
+
+```text
+I01-0 代码级决策                  Completed
+I01-1A Principal Type/Context 收敛 Completed（本地，待提交）
+I01-2 Role Scope 原子删除           Completed（本地，待提交）
+I01-3 身份模式与 Adapter 接缝       Pending
+I01-4 Evidence 与文档回填          Pending
+```
+
+I01-1A 已完成：
+
+- `PrincipalType` 收敛为 `AGENT_SERVICE | ANONYMOUS`；
+- 删除 `InternalPrincipal.attributes`；
+- 删除 `ActorContext.principal_attributes`；
+- 删除 `RequestContext.agent_id/run_id`；
+- Context 默认非匿名身份改为 `agent_service`；
+- I01-1A 完成时曾暂时保留 `roles`，现已在 I01-2 中与两个 `ROLE` Subject 分支一起删除；
+- 无数据库、MCP Tool Contract 或 Admin OpenAPI 变化。
+
+本地验证：Identity/Policy/Credential/MCP/Security 相关测试 `33 passed`，PostgreSQL 相关纵向测试
+`6 passed`，Ruff 与 basedpyright 通过。
+
+I01-2 已完成：
+
+- 删除 `InternalPrincipal.roles` 与 `ActorContext.roles`；
+- 删除 `PolicySubjectType.ROLE` 和 Role 特异性分支；
+- 删除 `CredentialSubjectType.ROLE` 和 Role Binding 分支；
+- Policy/Credential 特异性统一为 `Agent Service Principal > Tenant`；
+- Golden Matrix 升级为 v2，以多个 Agent Service Principal 替代员工/Role Case；
+- Approval、Idempotency、Execution 与 Audit 继续绑定 Agent Service Principal ID；
+- 无数据库 Migration、MCP Tool Contract 或 Admin OpenAPI 变化。
+
+I01-2 完整后端回归：`297 passed / 2 paid external skipped`，Ruff 与 basedpyright 通过。
 
 ## 1. 迭代目标
 
@@ -32,7 +67,7 @@ Employee / Agent Session User
 本轮不实现：
 
 - Production Admin OIDC/SSO；
-- Production mTLS、OAuth2 Client Credentials 或 Trusted Proxy Adapter；
+- 任何企业特定的 Production Agent Service/Auth Adapter；
 - 员工注册登录、User ↔ Role ↔ Permission；
 - `end_user_reference`；
 - 员工个人 Credential 或 On-Behalf-Of Token；
@@ -43,7 +78,7 @@ Employee / Agent Session User
 
 生产 Adapter 属于后续迭代。本轮只把领域内核和当前开发 Adapter 收敛到正确方向，并保留清晰 Port。
 
-## 3. 当前实现盘点
+## 3. 基线实现盘点（改造前）
 
 ### 3.1 Identity Domain
 
@@ -159,24 +194,19 @@ principal_id / actor_id
 
 ### 4.1 MCP Principal
 
-建议目标：
+本轮冻结：
 
 ```text
-AgentServicePrincipal
+InternalPrincipal
 ├── id
 ├── tenant_id
+├── principal_type: agent_service | anonymous
 └── authn_method
 ```
 
-Anonymous 只用于缺少 Credential 时的协议拒绝或显式开放的开发场景。
-
-是否直接把 `InternalPrincipal` 重命名为 `AgentServicePrincipal`，需要比较：
-
-- 命名清晰度收益；
-- Port、Test、Telemetry 的机械修改量；
-- Admin ActorContext 是否共享该类型。
-
-推荐第一步先收窄字段与枚举，再决定是否重命名，避免一次提交同时改变语义和大量标识符。
+`PrincipalType` 只保留 `AGENT_SERVICE` 与 `ANONYMOUS`。`InternalPrincipal` 继续作为认证边界的通用可信
+类型名，本轮不做低收益全局重命名；其 Data Plane 语义固定为 Agent Service Principal。Anonymous 只用于
+缺少 Credential 时的协议拒绝或显式开放的开发场景。
 
 ### 4.2 Admin Actor
 
@@ -194,17 +224,11 @@ Future Production Admin
 
 ### 4.3 Policy Subject
 
-目标：
+目标保留通用 Subject 名称：
 
 ```text
-AGENT_SERVICE
+PRINCIPAL（固定表示 Agent Service Principal）
 TENANT
-```
-
-如果保留通用名称，则至少应明确：
-
-```text
-PRINCIPAL = Agent Service Principal
 ```
 
 删除 `ROLE` 后，规则顺序变为：
@@ -221,7 +245,7 @@ DENY Tie-Break
 目标：
 
 ```text
-AGENT_SERVICE
+PRINCIPAL（固定表示 Agent Service Principal）
 TENANT
 ```
 
@@ -264,31 +288,43 @@ run_id
 → 一个固定 Agent Service Principal
 ```
 
-适合单 Agent 独立部署。安全边界依赖私有网络、Ingress/mTLS/API Gateway 等外部部署控制，NexusMCP 不应把
+适合单 Agent 独立部署。安全边界依赖外部部署访问控制，NexusMCP 不应把
 “固定 Principal”描述为已经完成生产认证。
 
 ### 5.2 service_identity
 
 ```text
-Service Credential
+Opaque Service Credential
 → AgentServiceAuthenticator Port
 → Agent Service Principal
 ```
 
-适合多个 Agent 共用部署。生产 Adapter 可以是 mTLS、Client Credentials 或 Trusted Proxy；本轮保留 Port 与
-确定性 Test Adapter，不选供应商。
+适合多个 Agent 共用部署。Core 不预设企业认证方式；本轮保留统一 Port，并把现有 Static Bearer Digest
+Mapping 收敛为唯一参考 Adapter。
+
+当前实现范围固定为：
+
+```text
+static_service
+→ Fixed Agent Service Principal
+
+service_identity
+→ AgentServiceAuthenticator Port
+→ StaticBearerAgentServiceAuthenticator（唯一参考 Adapter）
+```
+
+只有出现真实第二个 Adapter 后，才讨论 Provider 选择配置；当前不增加 `SERVICE_AUTH_PROVIDER`。
 
 ### 5.3 Admin Auth
 
-Admin 身份模式独立：
+Admin 身份边界独立：
 
 ```text
-local
-trusted_proxy（Future）
-oidc（Future）
+Local Admin（当前）
+AdminAuthenticator（Future）
 ```
 
-不能使用一个全局 `IDENTITY_MODE` 同时控制 `/admin` 与 `/mcp`。
+`NEXUSMCP_MCP_IDENTITY_MODE` 只控制 `/mcp`，不能同时控制 `/admin`。
 
 ## 6. 预计删除与保留
 
@@ -334,7 +370,7 @@ oidc（Future）
 | `approval` | 字段不变，语义明确为 Agent Service Principal |
 | `execution/audit` | 字段与表结构不变，更新命名说明和测试数据 |
 | `telemetry` | Principal Type Label 收敛，更新证据快照 |
-| `bootstrap/config` | 评估 `MCP_AUTH_MODE` 与固定 Service Principal 设置，不与 Admin 配置混用 |
+| `bootstrap/config` | 增加 `MCP_IDENTITY_MODE` 与固定 Service Principal 设置，不与 Admin 配置混用 |
 | `evals/security` | 将 User/Role Case 改为多个 Agent Service/Tenant Case |
 | `docs` | 代码完成后回填最终字段、Commit 和验证结果 |
 
@@ -370,9 +406,11 @@ Security Golden Case 的名称、Manifest 和报告会变化。应保留“不�
 
 ### I01-0｜冻结代码级决策
 
-- 确认最终 Principal Type 命名；
-- 确认是否本轮引入 `MCP_AUTH_MODE`；
-- 确认 `StaticBearerPrincipalAuthenticator` 重命名策略；
+- `PrincipalType=AGENT_SERVICE | ANONYMOUS`；
+- 保留 `InternalPrincipal` 类型名，删除员工/Role 字段；
+- `MCP_IDENTITY_MODE=static_service | service_identity`；
+- `StaticBearerPrincipalAuthenticator` 重命名为 `StaticBearerAgentServiceAuthenticator`；
+- 不增加 `SERVICE_AUTH_PROVIDER`；
 - 记录删除字段的引用清单；
 - 冻结无数据库 Migration 结论。
 
@@ -394,9 +432,10 @@ Security Golden Case 的名称、Manifest 和报告会变化。应保留“不�
 ### I01-3｜Auth Adapter 与配置接缝
 
 - 把 Static Bearer 明确为 Agent Service Test Adapter；
-- 如本轮实现 `static_service`，增加受控固定 Principal Resolver/Authenticator；
+- 实现 `static_service` 的受控固定 Principal Resolver/Authenticator；
+- `service_identity` 统一依赖 `AgentServiceAuthenticator` Port；
 - 保持 Admin Auth 与 MCP Auth 配置独立；
-- 不实现生产 mTLS/OIDC/Trusted Proxy。
+- 不增加 Auth Provider 枚举，不实现企业特定生产 Adapter。
 
 ### I01-4｜Evidence 与文档回填
 
@@ -457,8 +496,8 @@ Full-stack Playwright
 
 ### 风险二：Static Service 被误解为无安全边界
 
-文档和配置必须明确：Static Principal 只表示 NexusMCP 内部身份固定，入口仍需私有网络、mTLS、Ingress 或
-API Gateway 保护。`/admin` 不能因此开放。
+文档和配置必须明确：Static Principal 只表示 NexusMCP 内部身份固定，入口仍需外部部署访问控制保护。
+`/admin` 不能因此开放。
 
 ### 风险三：机械重命名扩大 Diff
 

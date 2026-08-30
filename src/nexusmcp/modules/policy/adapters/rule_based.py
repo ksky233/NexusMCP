@@ -58,10 +58,6 @@ def _specificity(policy: ToolPolicy, policy_input: PolicyEvaluationInput) -> int
         if policy.subject_id != principal.id:
             return None
         subject_score = 30
-    elif policy.subject_type is PolicySubjectType.ROLE:
-        if policy.subject_id not in principal.roles:
-            return None
-        subject_score = 20
     else:
         subject_score = 10
     tool_score = 1 if policy.tool_id is not None else 0

@@ -13,23 +13,22 @@ from nexusmcp.shared.errors import AuthenticationError
 
 def _principal(tenant_id: str = "tenant-a") -> InternalPrincipal:
     return InternalPrincipal(
-        id="user-a",
+        id="sales-assistant-service",
         tenant_id=tenant_id,
-        principal_type=PrincipalType.USER,
+        principal_type=PrincipalType.AGENT_SERVICE,
         authn_method="static_bearer",
-        roles=frozenset({"employee_reader"}),
     )
 
 
-def test_valid_bearer_resolves_roles_without_retaining_raw_token() -> None:
-    raw_token = "user-a-super-secret-token"
+def test_valid_bearer_resolves_agent_service_without_retaining_raw_token() -> None:
+    raw_token = "sales-assistant-super-secret-token"
     authenticator = StaticBearerPrincipalAuthenticator(
         [StaticBearerIdentity(SecretValue(raw_token), _principal())]
     )
 
     principal = authenticator.authenticate(f"Bearer {raw_token}", "tenant-a")
 
-    assert principal.roles == frozenset({"employee_reader"})
+    assert principal.id == "sales-assistant-service"
     assert raw_token not in repr(authenticator.__dict__)
 
 

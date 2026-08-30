@@ -52,18 +52,18 @@ authn_method = local_admin
 ```text
 Admin Operator
 → 人类管理员
-→ Local Admin / 企业 SSO / Trusted Proxy
+→ Local Admin / 外部 AdminAuthenticator（Future）
 
 Agent Service
 → 机器调用方
-→ Static Identity / API Key / mTLS / Client Credentials / Trusted Proxy
+→ Fixed Principal / AgentServiceAuthenticator
 ```
 
 因此不应只有一个全局 `IDENTITY_MODE`。目标应拆成：
 
 ```text
-ADMIN_AUTH_MODE
-MCP_AUTH_MODE
+Admin Authentication Boundary
+MCP Identity Mode
 ```
 
 ## 4. Agent 模式一：static_service
@@ -78,7 +78,7 @@ Sales Assistant
 配置概念：
 
 ```ini
-NEXUSMCP_MCP_AUTH_MODE=static_service
+NEXUSMCP_MCP_IDENTITY_MODE=static_service
 NEXUSMCP_STATIC_AGENT_PRINCIPAL_ID=sales-assistant-service
 ```
 
@@ -92,7 +92,7 @@ NEXUSMCP_STATIC_AGENT_PRINCIPAL_ID=customer-service-agent
 
 这是一实例一 Agent 身份的简单隔离模式。
 
-## 5. Agent 模式二：service_identity / trusted_proxy
+## 5. Agent 模式二：service_identity
 
 适用拓扑：
 
@@ -110,14 +110,11 @@ Credential B → customer-service-agent
 Credential C → ticket-assistant-service
 ```
 
-Credential 可以来自：
+Core 只依赖统一的 `AgentServiceAuthenticator` Port，不预设企业使用哪种 Credential。当前唯一参考实现是
+Static Bearer Digest Mapping：只保存 Token Digest，并映射到固定 Agent Service Principal。
 
-- API Key；
-- mTLS Client Certificate；
-- OAuth2 Client Credentials；
-- 企业 API Gateway 验证后注入的签名身份。
-
-NexusMCP 只管理少量机器调用方，不管理企业员工。不能直接相信普通 HTTP Header 自报的 Principal/Tenant。
+未来企业可以按现状增加新的 Adapter，但在真实需求出现前不增加 Provider 枚举。NexusMCP 不能直接相信普通
+HTTP Header 自报的 Principal/Tenant。
 
 ## 6. Tenant 与 Principal
 
@@ -134,8 +131,8 @@ AdminPrincipal
 → 当前管理操作来自哪个管理员
 ```
 
-单企业内部部署可以固定一个 Tenant。多企业/SaaS 部署必须从受信 Service Credential 或 Trusted Proxy 解析
-Tenant，不能由 Agent 随意提交。
+单企业内部部署可以固定一个 Tenant。多企业/SaaS 部署必须由受信 `AgentServiceAuthenticator` 解析 Tenant，
+不能由 Agent 随意提交。
 
 ## 7. Policy 应该判断什么
 
@@ -162,7 +159,8 @@ customer-service-agent
 → REQUIRE_APPROVAL ticket.refund_order
 ```
 
-现有 Role 能力可以保留为通用实现，但不作为员工角色系统建设主线。
+I01-2 已删除没有真实消费方的 Role Subject。未来只有 Agent Service 数量和管理成本证明需要分组时，
+才重新设计 Service Group，而不是复用员工 Role。
 
 ## 8. Credential 应该绑定给谁
 
@@ -210,17 +208,17 @@ customer-service-agent
 
 Agent 使用机器身份，不代表 `/admin` 可以裸露。
 
-推荐：
+当前与未来边界：
 
 ```text
 Development
-→ ADMIN_AUTH_MODE=local
+→ Local Admin
 
 Production
-→ ADMIN_AUTH_MODE=trusted_proxy 或 oidc
+→ 外部 AdminAuthenticator（按企业环境选择）
 ```
 
-生产 Admin 最省事的方案是复用企业已有 SSO/API Gateway。NexusMCP 只消费可信管理员身份，不建设员工注册、
+生产 Admin 应复用企业已有认证设施。NexusMCP 只消费可信管理员身份，不建设员工注册、
 密码和通用角色中心。
 
 管理员数量很少时，第一版甚至可以只有：
@@ -232,24 +230,23 @@ auditor（可选）
 
 不需要为了理论完整性建设复杂多角色管理后台。
 
-## 11. 推荐的整体配置方向
+## 11. 推荐的最小配置方向
 
-独立 Agent 部署：
+固定 Agent Service：
 
 ```ini
-NEXUSMCP_ADMIN_AUTH_MODE=trusted_proxy
-NEXUSMCP_MCP_AUTH_MODE=static_service
+NEXUSMCP_MCP_IDENTITY_MODE=static_service
 NEXUSMCP_STATIC_AGENT_PRINCIPAL_ID=sales-assistant-service
 ```
 
-共享 Agent 部署：
+多个 Agent Service：
 
 ```ini
-NEXUSMCP_ADMIN_AUTH_MODE=trusted_proxy
-NEXUSMCP_MCP_AUTH_MODE=service_identity
+NEXUSMCP_MCP_IDENTITY_MODE=service_identity
 ```
 
-具体配置名仍需在代码实现 ADR 中冻结；这里冻结的是产品边界。
+`service_identity` 不再增加 `SERVICE_AUTH_PROVIDER`。应用只要求组装一个 `AgentServiceAuthenticator`；当前
+参考 Adapter 使用 Static Bearer，第二种企业 Adapter 在真实环境出现后再设计。
 
 ## 12. 一句话总结
 

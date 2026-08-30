@@ -42,7 +42,7 @@ def test_mcp_observation_propagates_trace_and_exports_allowlisted_evidence() -> 
             operation="tools.call",
             protocol_era="modern",
             tenant_id="tenant-a",
-            principal_type="service",
+            principal_type="agent_service",
             carrier={
                 "traceparent": "00-11111111111111111111111111111111-2222222222222222-01",
                 "authorization": "Bearer must-never-be-exported",
@@ -94,7 +94,7 @@ def test_unexpected_exception_does_not_export_exception_message_or_secret() -> N
                 operation="tools.list",
                 protocol_era="modern",
                 tenant_id="tenant-a",
-                principal_type="user",
+                principal_type="agent_service",
                 carrier={},
             ):
                 raise RuntimeError("password=should stay local")

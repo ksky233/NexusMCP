@@ -6,7 +6,6 @@ from enum import StrEnum
 
 class CredentialSubjectType(StrEnum):
     PRINCIPAL = "principal"
-    ROLE = "role"
     TENANT = "tenant"
 
 
@@ -80,7 +79,7 @@ class CredentialBinding:
         if self.subject_type is CredentialSubjectType.TENANT and self.subject_id is not None:
             raise ValueError("tenant credential subject must not declare subject id")
         if self.subject_type is not CredentialSubjectType.TENANT and not self.subject_id:
-            raise ValueError("principal or role credential subject must declare subject id")
+            raise ValueError("principal credential subject must declare subject id")
         if not self.injection_name.strip():
             raise ValueError("credential injection name must not be blank")
 

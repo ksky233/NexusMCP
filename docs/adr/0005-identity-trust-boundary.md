@@ -12,14 +12,14 @@ MCP、Admin HTTP、机器 Credential 和可信代理都可能携带 Principal/Te
 
 1. 只有 Authentication Adapter 可以创建 `InternalPrincipal`。
 2. Tenant/Principal 必须来自已验证 Credential 或受控本地配置，不能来自未验证 Header。
-3. `InternalPrincipal` 只保存 Principal Type 和白名单 Attributes，不保存 Token/原始 Claims；Roles 是实现兼容
-   字段，不代表员工角色系统。
+3. `InternalPrincipal` 只保存 Agent Service Principal ID、Tenant、Type 和 Auth Method，不保存 Token、原始
+   Claims、员工 Roles 或任意 Attributes。
 4. `ActorContext` 承载协议无关 Actor；MCP `RequestContext` 在其上扩展 Protocol Context。
 5. Anonymous Principal 不携带可信 Roles。
 6. Policy 无匹配规则时 Default DENY。
 7. Local Admin 使用固定 Settings Principal，禁止 Production 启用。
 8. Data Plane Principal 主线只包含 Agent Service；员工身份与 Agent 会话用户不进入 NexusMCP。
-9. 多 Agent 共用部署必须通过受信机器 Credential 或 Trusted Proxy 映射 Principal。
+9. 多 Agent 共用部署必须通过 `AgentServiceAuthenticator` 将受信机器 Credential 映射为 Principal。
 
 ## Rejected Alternatives
 

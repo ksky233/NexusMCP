@@ -6,8 +6,8 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry
 服务转化为受治理的 MCP Tool，并在接入、发现和调用链上执行身份、策略、凭据、审批、审计与可观测性。
 
 直接使用者只有 Admin Operator 与 Agent Service。普通员工通过业务系统或 Agent 助手使用能力；员工身份、
-会话和行为追踪不进入 NexusMCP。单 Agent 部署采用固定 Service Principal，多 Agent 共享部署使用机器
-Credential 或 Trusted Proxy 区分调用方。
+会话和行为追踪不进入 NexusMCP。单 Agent 部署采用固定 Service Principal，多 Agent 共享部署统一通过
+`AgentServiceAuthenticator` 区分调用方。
 
 当前阶段：`W4.6｜Tool Search Index Management 已完成`；下一步进入 `W5｜S6 包装`。
 
@@ -33,8 +33,8 @@ Credential 或 Trusted Proxy 区分调用方。
 - S2 已完成；S3 已冻结 Principal、Policy、Credential、Approval、Execution/Audit 与 Retry 边界；
 - Modern MCP `tools/call` 已跑通 Read-Only HTTP GET、Schema Validation、Static Policy 和 Execution；
 - Static Bearer Principal 与 Rule-Based ALLOW/DENY Policy 已接入调用阶段；
-- CredentialBinding 已验证 Principal/Role/Tenant 通用特异性机制；ADR-0019 将产品主线收窄为 Agent Service
-  Principal/Tenant Scope。Environment Secret Provider 与 Header/Query Injection 已接入，DENY 不解析 Secret；
+- CredentialBinding 已收敛为 Agent Service Principal/Tenant 特异性机制。Environment Secret Provider 与
+  Header/Query Injection 已接入，DENY 不解析 Secret；
 - Approval 已支持 PostgreSQL 持久化、Modern MCP MRTR、异步 Control Plane 决策、加密防篡改
   `requestState` 和行锁单次消费；
 - ToolExecution 与脱敏 Audit 已持久化；Approval Consume、Running Execution、ALLOWED Audit 在同一

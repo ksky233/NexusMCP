@@ -1,7 +1,7 @@
 # S3-2｜Principal 与 ALLOW/DENY Policy 验收
 
 > 2026-08-30 边界修订：多 Principal/Role Case 证明 Policy 特异性和信任边界可运行；它不代表 NexusMCP
-> 建设员工 IAM。产品主线 Principal 是 Agent Service，见 ADR-0019。
+> 建设员工 IAM。I01-2 已从当前 Core 删除 Role Subject，产品主线 Principal 是 Agent Service，见 ADR-0019。
 
 > 日期：2026-08-26  
 > 范围：Static Bearer Authentication、InternalPrincipal Roles、ActorContext 可信属性、ToolPolicy、

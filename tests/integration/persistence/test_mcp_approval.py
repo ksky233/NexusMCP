@@ -34,7 +34,7 @@ from tests.integration.persistence.test_mcp_read_only_http_call import seed_exec
 
 pytestmark = pytest.mark.integration
 
-USER_TOKEN = "approval-user-token"
+AGENT_SERVICE_TOKEN = "approval-agent-service-token"
 APPROVAL_ID_META_KEY = "com.nexusmcp/approvalId"
 REQUEST_STATE_KEY = "nexusmcp-request-state-test-key-2026"
 
@@ -43,13 +43,12 @@ def authenticator() -> StaticBearerPrincipalAuthenticator:
     return StaticBearerPrincipalAuthenticator(
         [
             StaticBearerIdentity(
-                SecretValue(USER_TOKEN),
+                SecretValue(AGENT_SERVICE_TOKEN),
                 InternalPrincipal(
-                    id="user-approval",
+                    id="approval-agent-service",
                     tenant_id=TENANT_A_ID,
-                    principal_type=PrincipalType.USER,
+                    principal_type=PrincipalType.AGENT_SERVICE,
                     authn_method="static_bearer",
-                    roles=frozenset({"approval_required"}),
                 ),
             )
         ]
@@ -62,8 +61,8 @@ def approval_policy() -> RuleBasedPolicyEvaluator:
             ToolPolicy(
                 id="employee-call-requires-approval",
                 tenant_id=TENANT_A_ID,
-                subject_type=PolicySubjectType.ROLE,
-                subject_id="approval_required",
+                subject_type=PolicySubjectType.PRINCIPAL,
+                subject_id="approval-agent-service",
                 tool_id=TOOL_ID,
                 action=ToolAction.CALL,
                 effect=PolicyEffect.REQUIRE_APPROVAL,
@@ -132,7 +131,7 @@ async def test_modern_mrtr_elicitation_approves_and_resumes_tool_call(
             async with httpx2.AsyncClient(
                 transport=transport,
                 base_url="http://testserver",
-                headers={"Authorization": f"Bearer {USER_TOKEN}"},
+                headers={"Authorization": f"Bearer {AGENT_SERVICE_TOKEN}"},
             ) as http_client:
                 mcp_transport = streamable_http_client(
                     "http://testserver/mcp",
@@ -153,7 +152,7 @@ async def test_modern_mrtr_elicitation_approves_and_resumes_tool_call(
     assert callback_calls == 1
     assert len(approvals) == 1
     assert approvals[0].status == "consumed"
-    assert approvals[0].decided_by == "user-approval"
+    assert approvals[0].decided_by == "approval-agent-service"
 
 
 @pytest.mark.asyncio
@@ -184,7 +183,7 @@ async def test_modern_mrtr_decline_rejects_without_creating_execution(
             async with httpx2.AsyncClient(
                 transport=transport,
                 base_url="http://testserver",
-                headers={"Authorization": f"Bearer {USER_TOKEN}"},
+                headers={"Authorization": f"Bearer {AGENT_SERVICE_TOKEN}"},
             ) as http_client:
                 mcp_transport = streamable_http_client(
                     "http://testserver/mcp",
@@ -235,7 +234,7 @@ async def test_control_plane_approval_resumes_later_and_replay_is_rejected(
             async with httpx2.AsyncClient(
                 transport=transport,
                 base_url="http://testserver",
-                headers={"Authorization": f"Bearer {USER_TOKEN}"},
+                headers={"Authorization": f"Bearer {AGENT_SERVICE_TOKEN}"},
             ) as http_client:
                 mcp_transport = streamable_http_client(
                     "http://testserver/mcp",
@@ -284,7 +283,7 @@ async def test_control_plane_approval_resumes_later_and_replay_is_rejected(
             async with httpx2.AsyncClient(
                 transport=transport,
                 base_url="http://testserver",
-                headers={"Authorization": f"Bearer {USER_TOKEN}"},
+                headers={"Authorization": f"Bearer {AGENT_SERVICE_TOKEN}"},
             ) as http_client:
                 pending = await http_client.get(f"/admin/approvals/{approval_id}")
                 approved = await http_client.post(f"/admin/approvals/{approval_id}/approve")

@@ -38,7 +38,7 @@ NexusMCP
 
 | ID | Threat | Mitigation | Evidence | Residual Risk |
 |---|---|---|---|---|
-| T01 | Forged Tenant/Agent Service Principal | Authenticator 验证机器 Credential 或 Trusted Proxy，不信任业务 Header | Principal Integration | Service Identity 生产 Adapter 未实现 |
+| T01 | Forged Tenant/Agent Service Principal | AgentServiceAuthenticator 验证机器 Credential，不信任业务 Header | Principal Integration | Service Identity 生产 Adapter 未实现 |
 | T02 | Cross-Tenant Read/Call/Search | Repository SQL Tenant Scope + Domain Guard + Policy | Security Manifest | DB Superuser 不在应用威胁模型内 |
 | T03 | SSRF/Internal Scan | Static Host/CIDR/Port Allowlist、Metadata Hard Deny、DNS 双检、Redirect Off | ADR-0016 + Egress E2E | 无严格 DNS Pinning/Egress Proxy |
 | T04 | Secret Leakage | SecretReference、瞬时 SecretValue、Log/Trace/Audit 白名单 | Secret/Telemetry Tests | Upstream 自身可能回显 Secret |

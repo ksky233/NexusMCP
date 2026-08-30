@@ -16,7 +16,7 @@ def _principal(tenant_id: str = "tenant-a") -> InternalPrincipal:
     return InternalPrincipal(
         id="user-a",
         tenant_id=tenant_id,
-        principal_type=PrincipalType.USER,
+        principal_type=PrincipalType.AGENT_SERVICE,
         authn_method="test",
     )
 

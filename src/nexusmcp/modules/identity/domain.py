@@ -1,18 +1,12 @@
 """认证边界输出的可信 Internal Principal。"""
 
-from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import StrEnum
 
 
 class PrincipalType(StrEnum):
-    USER = "user"
-    SERVICE = "service"
-    AGENT = "agent"
+    AGENT_SERVICE = "agent_service"
     ANONYMOUS = "anonymous"
-
-
-type PrincipalAttribute = str | int | bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,8 +17,6 @@ class InternalPrincipal:
     tenant_id: str
     principal_type: PrincipalType
     authn_method: str
-    roles: frozenset[str] = field(default_factory=frozenset)
-    attributes: Mapping[str, PrincipalAttribute] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.id.strip():
@@ -33,5 +25,3 @@ class InternalPrincipal:
             raise ValueError("principal tenant id must not be blank")
         if not self.authn_method.strip():
             raise ValueError("principal authentication method must not be blank")
-        if self.principal_type is PrincipalType.ANONYMOUS and self.roles:
-            raise ValueError("anonymous principal must not carry trusted roles")

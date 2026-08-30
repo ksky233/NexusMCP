@@ -44,7 +44,7 @@ InternalPrincipal
 ```
 
 InternalPrincipal 不保存原始 Token、Authorization Header 或完整 Claims。当前 Data Plane 主线 Principal 是
-Agent Service，而不是 Agent 会话中的员工。现有 Roles 字段只作为通用实现兼容，不代表建设员工角色系统。
+Agent Service，而不是 Agent 会话中的员工；I01-1/2 已删除没有真实消费场景的 Roles/Attributes。
 
 ### 2.2 CallToolCommand
 

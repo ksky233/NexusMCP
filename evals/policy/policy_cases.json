@@ -1,9 +1,10 @@
 {
-  "version": 1,
+  "version": 2,
+  "identity_model": "agent_service_principal",
   "cases": [
     {
       "id": "default-deny",
-      "principal": {"id": "user-a", "tenant_id": "tenant-a", "roles": []},
+      "principal": {"id": "sales-assistant-service", "tenant_id": "tenant-a"},
       "tool_id": "tool-read",
       "side_effect": "read_only",
       "policies": [],
@@ -11,7 +12,7 @@
     },
     {
       "id": "tenant-allow",
-      "principal": {"id": "user-a", "tenant_id": "tenant-a", "roles": []},
+      "principal": {"id": "sales-assistant-service", "tenant_id": "tenant-a"},
       "tool_id": "tool-read",
       "side_effect": "read_only",
       "policies": [
@@ -20,90 +21,89 @@
       "expected": {"effect": "allow", "version": "v1", "reason_code": "tenant_allowed"}
     },
     {
-      "id": "role-over-tenant",
-      "principal": {"id": "user-a", "tenant_id": "tenant-a", "roles": ["operator"]},
+      "id": "principal-over-tenant",
+      "principal": {"id": "sales-assistant-service", "tenant_id": "tenant-a"},
       "tool_id": "tool-read",
       "side_effect": "read_only",
       "policies": [
         {"id": "tenant-deny", "tenant_id": "tenant-a", "subject_type": "tenant", "subject_id": null, "tool_id": "tool-read", "effect": "deny", "priority": 100, "status": "active", "version": "v1", "reason_code": "tenant_denied"},
-        {"id": "role-allow", "tenant_id": "tenant-a", "subject_type": "role", "subject_id": "operator", "tool_id": "tool-read", "effect": "allow", "priority": 0, "status": "active", "version": "v2", "reason_code": "operator_allowed"}
+        {"id": "service-allow", "tenant_id": "tenant-a", "subject_type": "principal", "subject_id": "sales-assistant-service", "tool_id": "tool-read", "effect": "allow", "priority": 0, "status": "active", "version": "v2", "reason_code": "sales_service_allowed"}
       ],
-      "expected": {"effect": "allow", "version": "v2", "reason_code": "operator_allowed"}
+      "expected": {"effect": "allow", "version": "v2", "reason_code": "sales_service_allowed"}
     },
     {
-      "id": "principal-over-role",
-      "principal": {"id": "user-a", "tenant_id": "tenant-a", "roles": ["operator"]},
+      "id": "other-principal-ignored",
+      "principal": {"id": "sales-assistant-service", "tenant_id": "tenant-a"},
       "tool_id": "tool-read",
       "side_effect": "read_only",
       "policies": [
-        {"id": "role-deny", "tenant_id": "tenant-a", "subject_type": "role", "subject_id": "operator", "tool_id": "tool-read", "effect": "deny", "priority": 100, "status": "active", "version": "v1", "reason_code": "role_denied"},
-        {"id": "principal-allow", "tenant_id": "tenant-a", "subject_type": "principal", "subject_id": "user-a", "tool_id": "tool-read", "effect": "allow", "priority": 0, "status": "active", "version": "v2", "reason_code": "principal_allowed"}
+        {"id": "other-service-allow", "tenant_id": "tenant-a", "subject_type": "principal", "subject_id": "customer-service-agent", "tool_id": "tool-read", "effect": "allow", "priority": 100, "status": "active", "version": "v1", "reason_code": "other_service_allowed"}
       ],
-      "expected": {"effect": "allow", "version": "v2", "reason_code": "principal_allowed"}
+      "expected": {"effect": "deny", "version": "default", "reason_code": "default_deny"}
     },
     {
       "id": "tool-specific-over-global",
-      "principal": {"id": "user-a", "tenant_id": "tenant-a", "roles": ["operator"]},
+      "principal": {"id": "sales-assistant-service", "tenant_id": "tenant-a"},
       "tool_id": "tool-read",
       "side_effect": "read_only",
       "policies": [
-        {"id": "global-deny", "tenant_id": "tenant-a", "subject_type": "role", "subject_id": "operator", "tool_id": null, "effect": "deny", "priority": 100, "status": "active", "version": "v1", "reason_code": "global_denied"},
-        {"id": "tool-allow", "tenant_id": "tenant-a", "subject_type": "role", "subject_id": "operator", "tool_id": "tool-read", "effect": "allow", "priority": 0, "status": "active", "version": "v2", "reason_code": "tool_allowed"}
+        {"id": "global-deny", "tenant_id": "tenant-a", "subject_type": "principal", "subject_id": "sales-assistant-service", "tool_id": null, "effect": "deny", "priority": 100, "status": "active", "version": "v1", "reason_code": "global_denied"},
+        {"id": "tool-allow", "tenant_id": "tenant-a", "subject_type": "principal", "subject_id": "sales-assistant-service", "tool_id": "tool-read", "effect": "allow", "priority": 0, "status": "active", "version": "v2", "reason_code": "tool_allowed"}
       ],
       "expected": {"effect": "allow", "version": "v2", "reason_code": "tool_allowed"}
     },
     {
       "id": "priority-within-specificity",
-      "principal": {"id": "user-a", "tenant_id": "tenant-a", "roles": ["operator"]},
+      "principal": {"id": "sales-assistant-service", "tenant_id": "tenant-a"},
       "tool_id": "tool-read",
       "side_effect": "read_only",
       "policies": [
-        {"id": "low-deny", "tenant_id": "tenant-a", "subject_type": "role", "subject_id": "operator", "tool_id": "tool-read", "effect": "deny", "priority": 1, "status": "active", "version": "v1", "reason_code": "low_denied"},
-        {"id": "high-allow", "tenant_id": "tenant-a", "subject_type": "role", "subject_id": "operator", "tool_id": "tool-read", "effect": "allow", "priority": 10, "status": "active", "version": "v2", "reason_code": "high_allowed"}
+        {"id": "low-deny", "tenant_id": "tenant-a", "subject_type": "principal", "subject_id": "sales-assistant-service", "tool_id": "tool-read", "effect": "deny", "priority": 1, "status": "active", "version": "v1", "reason_code": "low_denied"},
+        {"id": "high-allow", "tenant_id": "tenant-a", "subject_type": "principal", "subject_id": "sales-assistant-service", "tool_id": "tool-read", "effect": "allow", "priority": 10, "status": "active", "version": "v2", "reason_code": "high_allowed"}
       ],
       "expected": {"effect": "allow", "version": "v2", "reason_code": "high_allowed"}
     },
     {
       "id": "deny-tie-break",
-      "principal": {"id": "user-a", "tenant_id": "tenant-a", "roles": ["operator"]},
+      "principal": {"id": "sales-assistant-service", "tenant_id": "tenant-a"},
       "tool_id": "tool-read",
       "side_effect": "read_only",
       "policies": [
-        {"id": "allow", "tenant_id": "tenant-a", "subject_type": "role", "subject_id": "operator", "tool_id": "tool-read", "effect": "allow", "priority": 5, "status": "active", "version": "v1", "reason_code": "allowed"},
-        {"id": "approval", "tenant_id": "tenant-a", "subject_type": "role", "subject_id": "operator", "tool_id": "tool-read", "effect": "require_approval", "priority": 5, "status": "active", "version": "v2", "reason_code": "approval_required"},
-        {"id": "deny", "tenant_id": "tenant-a", "subject_type": "role", "subject_id": "operator", "tool_id": "tool-read", "effect": "deny", "priority": 5, "status": "active", "version": "v3", "reason_code": "explicit_denied"}
+        {"id": "allow", "tenant_id": "tenant-a", "subject_type": "principal", "subject_id": "sales-assistant-service", "tool_id": "tool-read", "effect": "allow", "priority": 5, "status": "active", "version": "v1", "reason_code": "allowed"},
+        {"id": "approval", "tenant_id": "tenant-a", "subject_type": "principal", "subject_id": "sales-assistant-service", "tool_id": "tool-read", "effect": "require_approval", "priority": 5, "status": "active", "version": "v2", "reason_code": "approval_required"},
+        {"id": "deny", "tenant_id": "tenant-a", "subject_type": "principal", "subject_id": "sales-assistant-service", "tool_id": "tool-read", "effect": "deny", "priority": 5, "status": "active", "version": "v3", "reason_code": "explicit_denied"}
       ],
       "expected": {"effect": "deny", "version": "v3", "reason_code": "explicit_denied"}
     },
     {
       "id": "approval-over-allow",
-      "principal": {"id": "agent-a", "tenant_id": "tenant-a", "roles": ["writer"]},
+      "principal": {"id": "inventory-agent-service", "tenant_id": "tenant-a"},
       "tool_id": "tool-write",
       "side_effect": "idempotent_write",
       "policies": [
-        {"id": "allow", "tenant_id": "tenant-a", "subject_type": "role", "subject_id": "writer", "tool_id": "tool-write", "effect": "allow", "priority": 5, "status": "active", "version": "v1", "reason_code": "write_allowed"},
-        {"id": "approval", "tenant_id": "tenant-a", "subject_type": "role", "subject_id": "writer", "tool_id": "tool-write", "effect": "require_approval", "priority": 5, "status": "active", "version": "v2", "reason_code": "write_approval_required"}
+        {"id": "allow", "tenant_id": "tenant-a", "subject_type": "principal", "subject_id": "inventory-agent-service", "tool_id": "tool-write", "effect": "allow", "priority": 5, "status": "active", "version": "v1", "reason_code": "write_allowed"},
+        {"id": "approval", "tenant_id": "tenant-a", "subject_type": "principal", "subject_id": "inventory-agent-service", "tool_id": "tool-write", "effect": "require_approval", "priority": 5, "status": "active", "version": "v2", "reason_code": "write_approval_required"}
       ],
       "expected": {"effect": "require_approval", "version": "v2", "reason_code": "write_approval_required"}
     },
     {
       "id": "disabled-policy-ignored",
-      "principal": {"id": "user-a", "tenant_id": "tenant-a", "roles": ["operator"]},
+      "principal": {"id": "sales-assistant-service", "tenant_id": "tenant-a"},
       "tool_id": "tool-read",
       "side_effect": "read_only",
       "policies": [
-        {"id": "disabled-allow", "tenant_id": "tenant-a", "subject_type": "principal", "subject_id": "user-a", "tool_id": "tool-read", "effect": "allow", "priority": 100, "status": "disabled", "version": "v1", "reason_code": "disabled_allowed"},
+        {"id": "disabled-allow", "tenant_id": "tenant-a", "subject_type": "principal", "subject_id": "sales-assistant-service", "tool_id": "tool-read", "effect": "allow", "priority": 100, "status": "disabled", "version": "v1", "reason_code": "disabled_allowed"},
         {"id": "active-deny", "tenant_id": "tenant-a", "subject_type": "tenant", "subject_id": null, "tool_id": null, "effect": "deny", "priority": 0, "status": "active", "version": "v2", "reason_code": "active_denied"}
       ],
       "expected": {"effect": "deny", "version": "v2", "reason_code": "active_denied"}
     },
     {
       "id": "cross-tenant-policy-ignored",
-      "principal": {"id": "user-a", "tenant_id": "tenant-a", "roles": ["operator"]},
+      "principal": {"id": "sales-assistant-service", "tenant_id": "tenant-a"},
       "tool_id": "tool-read",
       "side_effect": "read_only",
       "policies": [
-        {"id": "other-tenant-allow", "tenant_id": "tenant-b", "subject_type": "principal", "subject_id": "user-a", "tool_id": "tool-read", "effect": "allow", "priority": 100, "status": "active", "version": "v1", "reason_code": "cross_tenant_allowed"}
+        {"id": "other-tenant-allow", "tenant_id": "tenant-b", "subject_type": "principal", "subject_id": "sales-assistant-service", "tool_id": "tool-read", "effect": "allow", "priority": 100, "status": "active", "version": "v1", "reason_code": "cross_tenant_allowed"}
       ],
       "expected": {"effect": "deny", "version": "default", "reason_code": "default_deny"}
     }

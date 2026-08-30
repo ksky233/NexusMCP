@@ -44,8 +44,8 @@ from tests.integration.persistence.test_mcp_read_only_http_call import seed_exec
 
 pytestmark = pytest.mark.integration
 
-USER_A_TOKEN = "user-a-token"
-USER_B_TOKEN = "user-b-token"
+SALES_AGENT_TOKEN = "sales-agent-token"
+INVENTORY_AGENT_TOKEN = "inventory-agent-token"
 UPSTREAM_SECRET = "employee-api-secret"
 
 protected_upstream = FastAPI()
@@ -71,13 +71,12 @@ class CountingEnvironmentCredentialProvider:
         return await self._provider.resolve(reference)
 
 
-def principal(principal_id: str, role: str) -> InternalPrincipal:
+def principal(principal_id: str) -> InternalPrincipal:
     return InternalPrincipal(
         id=principal_id,
         tenant_id=TENANT_A_ID,
-        principal_type=PrincipalType.USER,
+        principal_type=PrincipalType.AGENT_SERVICE,
         authn_method="static_bearer",
-        roles=frozenset({role}),
     )
 
 
@@ -113,48 +112,48 @@ async def test_allow_injects_secret_while_deny_never_resolves_it(
     authenticator = StaticBearerPrincipalAuthenticator(
         [
             StaticBearerIdentity(
-                SecretValue(USER_A_TOKEN),
-                principal("user-a", "employee_reader"),
+                SecretValue(SALES_AGENT_TOKEN),
+                principal("sales-assistant-service"),
             ),
             StaticBearerIdentity(
-                SecretValue(USER_B_TOKEN),
-                principal("user-b", "inventory_operator"),
+                SecretValue(INVENTORY_AGENT_TOKEN),
+                principal("inventory-assistant-service"),
             ),
         ]
     )
     policy = RuleBasedPolicyEvaluator(
         [
             ToolPolicy(
-                id="allow-user-a",
+                id="allow-sales-agent",
                 tenant_id=TENANT_A_ID,
                 subject_type=PolicySubjectType.PRINCIPAL,
-                subject_id="user-a",
+                subject_id="sales-assistant-service",
                 tool_id=TOOL_ID,
                 action=ToolAction.CALL,
                 effect=PolicyEffect.ALLOW,
                 priority=10,
                 version="policy-v1",
-                reason_code="employee_reader_allowed",
+                reason_code="sales_agent_allowed",
             ),
             ToolPolicy(
-                id="deny-user-b",
+                id="deny-inventory-agent",
                 tenant_id=TENANT_A_ID,
                 subject_type=PolicySubjectType.PRINCIPAL,
-                subject_id="user-b",
+                subject_id="inventory-assistant-service",
                 tool_id=TOOL_ID,
                 action=ToolAction.CALL,
                 effect=PolicyEffect.DENY,
                 priority=10,
                 version="policy-v1",
-                reason_code="inventory_operator_denied",
+                reason_code="inventory_agent_denied",
             ),
         ]
     )
     binding = CredentialBinding(
-        id="credential-binding-user-a",
+        id="credential-binding-sales-agent",
         tenant_id=TENANT_A_ID,
         subject_type=CredentialSubjectType.PRINCIPAL,
-        subject_id="user-a",
+        subject_id="sales-assistant-service",
         tool_id=TOOL_ID,
         upstream_service_id=UPSTREAM_ID,
         secret_reference=SecretReference(
@@ -185,8 +184,8 @@ async def test_allow_injects_secret_while_deny_never_resolves_it(
             credential_provider=provider,
         )
         async with app.router.lifespan_context(app):
-            allowed = await call_tool(app, f"Bearer {USER_A_TOKEN}")
-            denied = await call_tool(app, f"Bearer {USER_B_TOKEN}")
+            allowed = await call_tool(app, f"Bearer {SALES_AGENT_TOKEN}")
+            denied = await call_tool(app, f"Bearer {INVENTORY_AGENT_TOKEN}")
             execution_reader = app.state.execution_reader
             audit_reader = app.state.audit_reader
             executions = await execution_reader.list_by_tenant(TENANT_A_ID)
@@ -201,7 +200,7 @@ async def test_allow_injects_secret_while_deny_never_resolves_it(
     assert provider.calls == 1
     assert len(executions) == 1
     assert executions[0].status is ExecutionStatus.SUCCEEDED
-    assert executions[0].credential_binding_id == "credential-binding-user-a"
+    assert executions[0].credential_binding_id == "credential-binding-sales-agent"
     assert [event.outcome for event in audits] == [
         AuditOutcome.ALLOWED,
         AuditOutcome.SUCCEEDED,

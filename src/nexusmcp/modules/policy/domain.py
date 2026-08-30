@@ -21,7 +21,6 @@ class PolicyEffect(StrEnum):
 
 class PolicySubjectType(StrEnum):
     PRINCIPAL = "principal"
-    ROLE = "role"
     TENANT = "tenant"
 
 
@@ -48,7 +47,7 @@ class ToolPolicy:
         if self.subject_type is PolicySubjectType.TENANT and self.subject_id is not None:
             raise ValueError("tenant policy subject must not declare subject id")
         if self.subject_type is not PolicySubjectType.TENANT and not self.subject_id:
-            raise ValueError("principal or role policy subject must declare subject id")
+            raise ValueError("principal policy subject must declare subject id")
         if not self.version.strip() or not self.reason_code.strip():
             raise ValueError("policy version and reason code must not be blank")
 

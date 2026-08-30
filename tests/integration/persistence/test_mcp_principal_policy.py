@@ -31,48 +31,46 @@ from tests.integration.persistence.test_mcp_read_only_http_call import seed_exec
 
 pytestmark = pytest.mark.integration
 
-USER_A_TOKEN = "user-a-token"
-USER_B_TOKEN = "user-b-token"
+SALES_AGENT_TOKEN = "sales-agent-token"
+INVENTORY_AGENT_TOKEN = "inventory-agent-token"
 
 
 def internal_principal(
     principal_id: str,
-    role: str,
 ) -> InternalPrincipal:
     return InternalPrincipal(
         id=principal_id,
         tenant_id=TENANT_A_ID,
-        principal_type=PrincipalType.USER,
+        principal_type=PrincipalType.AGENT_SERVICE,
         authn_method="static_bearer",
-        roles=frozenset({role}),
     )
 
 
 def policies() -> tuple[ToolPolicy, ...]:
     return (
         ToolPolicy(
-            id="employee-reader-allow",
+            id="sales-agent-allow",
             tenant_id=TENANT_A_ID,
-            subject_type=PolicySubjectType.ROLE,
-            subject_id="employee_reader",
+            subject_type=PolicySubjectType.PRINCIPAL,
+            subject_id="sales-assistant-service",
             tool_id=TOOL_ID,
             action=ToolAction.CALL,
             effect=PolicyEffect.ALLOW,
             priority=10,
             version="policy-v1",
-            reason_code="employee_reader_allowed",
+            reason_code="sales_agent_allowed",
         ),
         ToolPolicy(
-            id="inventory-operator-deny",
+            id="inventory-agent-deny",
             tenant_id=TENANT_A_ID,
-            subject_type=PolicySubjectType.ROLE,
-            subject_id="inventory_operator",
+            subject_type=PolicySubjectType.PRINCIPAL,
+            subject_id="inventory-assistant-service",
             tool_id=TOOL_ID,
             action=ToolAction.CALL,
             effect=PolicyEffect.DENY,
             priority=10,
             version="policy-v1",
-            reason_code="inventory_operator_denied",
+            reason_code="inventory_agent_denied",
         ),
     )
 
@@ -113,12 +111,12 @@ async def test_same_tool_is_allowed_denied_or_unauthenticated_by_principal(
     authenticator = StaticBearerPrincipalAuthenticator(
         [
             StaticBearerIdentity(
-                SecretValue(USER_A_TOKEN),
-                internal_principal("user-a", "employee_reader"),
+                SecretValue(SALES_AGENT_TOKEN),
+                internal_principal("sales-assistant-service"),
             ),
             StaticBearerIdentity(
-                SecretValue(USER_B_TOKEN),
-                internal_principal("user-b", "inventory_operator"),
+                SecretValue(INVENTORY_AGENT_TOKEN),
+                internal_principal("inventory-assistant-service"),
             ),
         ]
     )
@@ -139,12 +137,12 @@ async def test_same_tool_is_allowed_denied_or_unauthenticated_by_principal(
         async with app.router.lifespan_context(app):
             user_a_list, user_a = await call_with_authorization(
                 app,
-                f"Bearer {USER_A_TOKEN}",
+                f"Bearer {SALES_AGENT_TOKEN}",
                 list_before_call=True,
             )
             user_b_list, user_b = await call_with_authorization(
                 app,
-                f"Bearer {USER_B_TOKEN}",
+                f"Bearer {INVENTORY_AGENT_TOKEN}",
                 list_before_call=True,
             )
             _unknown_list, unknown = await call_with_authorization(
@@ -179,7 +177,7 @@ async def test_same_tool_is_allowed_denied_or_unauthenticated_by_principal(
     assert anonymous.meta is not None
     assert anonymous.meta["com.nexusmcp/errorCode"] == "authorization_denied"
     assert len(executions) == 1
-    assert executions[0].principal_id == "user-a"
+    assert executions[0].principal_id == "sales-assistant-service"
     assert [event.outcome for event in audits] == [
         AuditOutcome.ALLOWED,
         AuditOutcome.SUCCEEDED,

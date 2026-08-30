@@ -24,7 +24,8 @@ CASES_PATH = Path(__file__).resolve().parents[2] / "evals" / "policy" / "policy_
 @pytest.mark.asyncio
 async def test_policy_golden_matrix_is_complete_and_deterministic() -> None:
     payload: dict[str, Any] = json.loads(CASES_PATH.read_text(encoding="utf-8"))
-    assert payload["version"] == 1
+    assert payload["version"] == 2
+    assert payload["identity_model"] == "agent_service_principal"
     cases: list[dict[str, Any]] = payload["cases"]
     assert len(cases) == 10
     assert len({case["id"] for case in cases}) == len(cases)
@@ -35,13 +36,8 @@ async def test_policy_golden_matrix_is_complete_and_deterministic() -> None:
         principal = InternalPrincipal(
             id=str(raw_principal["id"]),
             tenant_id=str(raw_principal["tenant_id"]),
-            principal_type=(
-                PrincipalType.AGENT
-                if str(raw_principal["id"]).startswith("agent-")
-                else PrincipalType.USER
-            ),
+            principal_type=PrincipalType.AGENT_SERVICE,
             authn_method="golden_matrix",
-            roles=frozenset(str(role) for role in raw_principal["roles"]),
         )
         policies = tuple(_policy(raw_policy) for raw_policy in case["policies"])
         decision = await RuleBasedPolicyEvaluator(policies).evaluate(

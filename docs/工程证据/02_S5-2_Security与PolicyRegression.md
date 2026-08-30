@@ -42,7 +42,7 @@ Hard Deny：Cloud Metadata、IPv4/IPv6 Link-Local、Unspecified、Multicast、Re
 - Default DENY；
 - Tenant ALLOW；
 - Role > Tenant；
-- Principal > Role（通用机制证据；ADR-0019 的产品主线使用 Agent Service Principal）；
+- Agent Service Principal > Tenant；
 - Tool-specific > Global；
 - 同特异性按 Priority；
 - 同 Priority：`DENY > REQUIRE_APPROVAL > ALLOW`；

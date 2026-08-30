@@ -12,13 +12,11 @@ class ContextPrincipalResolver:
             principal_type = (
                 PrincipalType.ANONYMOUS
                 if context.principal_id == ANONYMOUS_PRINCIPAL_ID
-                else PrincipalType.USER
+                else PrincipalType.AGENT_SERVICE
             )
         return InternalPrincipal(
             id=context.principal_id,
             tenant_id=context.tenant_id,
             principal_type=principal_type,
             authn_method=context.authn_method,
-            roles=context.roles,
-            attributes=context.principal_attributes,
         )

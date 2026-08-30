@@ -68,10 +68,6 @@ def _specificity(
         if binding.subject_id != principal.id:
             return None
         subject_score = 30
-    elif binding.subject_type is CredentialSubjectType.ROLE:
-        if binding.subject_id not in principal.roles:
-            return None
-        subject_score = 20
     else:
         subject_score = 10
     tool_score = 1 if binding.tool_id is not None else 0

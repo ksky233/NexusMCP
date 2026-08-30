@@ -786,8 +786,6 @@ def create_admin_app(
                     principal_id=context.principal_id,
                     authn_method=context.authn_method,
                     principal_type=context.principal_type,
-                    roles=context.roles,
-                    principal_attributes=context.principal_attributes,
                     protocol_version="2026-07-28",
                     protocol_era=ProtocolEra.MODERN,
                 ),

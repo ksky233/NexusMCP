@@ -45,9 +45,9 @@ MCP Data Plane 只规划两种 Service-Centric 模式：
 static_service
 → 一个 NexusMCP 部署对应一个固定 Agent Service Principal
 
-service_identity / trusted_proxy
+service_identity
 → 多个 Agent Service 共用 NexusMCP
-→ 由 API Key、mTLS、Client Credentials 或可信网关映射为不同 Service Principal
+→ 由 AgentServiceAuthenticator 将机器 Credential 映射为不同 Service Principal
 ```
 
 `static_service` 不根据请求动态切换 Principal。多个 Agent 需要不同 Policy/Audit 时，必须使用独立部署或
@@ -58,15 +58,15 @@ Service Identity，不信任客户端自报 Principal Header。
 Admin 和 Agent Service 的认证来源不同，不使用一个全局 Identity Mode：
 
 ```text
-Admin Auth Mode
-→ local（Development）/ trusted_proxy / oidc（Future）
+Admin Auth Boundary
+→ local（当前）/ AdminAuthenticator（Future）
 
-MCP Auth Mode
-→ static_service / service_identity / trusted_proxy
+MCP Identity Mode
+→ static_service / service_identity
 ```
 
 当前 Local Admin 继续使用固定 Settings Tenant/Principal，只允许 Development。生产管理面优先委托企业
-SSO/API Gateway，不要求 NexusMCP 自建员工账号或密码系统。
+认证设施，不要求 NexusMCP 自建员工账号或密码系统。
 
 ### 4. Principal 定义
 
@@ -78,13 +78,13 @@ AgentServicePrincipal
 Anonymous（仅协议拒绝或受限开发场景）
 ```
 
-现有 `InternalPrincipal.roles` 保留为实现兼容能力，但主线 Policy 不建设员工多角色模型。Agent Service
-授权优先使用稳定 Principal ID、Tenant、Tool、Side Effect 和显式 Grant/Rule。
+I01-1/2 已删除 `InternalPrincipal.roles/attributes` 和 Role Subject。Agent Service 授权只使用稳定 Principal ID、
+Tenant、Tool、Side Effect 和显式 Rule；未来只有出现真实 Service Group Case 后才重新设计分组能力。
 
 ### 5. Tenant 定义
 
 Tenant 继续作为数据、Tool、Credential、Policy 与 Audit 的最高隔离边界。企业内部单租户部署可以固定一个
-Tenant；共享/SaaS 部署必须由受信 Service Credential 或可信网关解析 Tenant。
+Tenant；共享/SaaS 部署必须由受信 AgentServiceAuthenticator 解析 Tenant。
 
 Tenant 不能来自未验证 Header，也不等同于员工所属部门或当前 Agent 会话。
 
@@ -130,7 +130,7 @@ NexusMCP 不记录“哪位员工发起了当前 Agent 会话”。Trace ID 用�
 ### 8. Control Plane 安全
 
 `/mcp` 采用 Service Principal 不意味着 `/admin` 可以匿名开放。生产环境必须关闭 Local Admin，或将 Admin
-入口置于可信管理边界，并通过企业 SSO/可信代理认证少量管理员。
+入口置于可信管理边界，并通过外部管理认证设施识别少量管理员。
 
 ## Rejected Alternatives
 
@@ -156,24 +156,26 @@ NexusMCP 不记录“哪位员工发起了当前 Agent 会话”。Trace ID 用�
 - NexusMCP 无法回答具体员工是否有权访问某条业务数据；
 - Agent Service 使用宽权限 Credential 时，员工级授权责任在 Agent 或 Upstream；
 - Service Principal Audit 不能替代员工行为审计；
-- 多 Agent 共享部署仍需 mTLS/API Key/Client Credentials/Trusted Proxy 中至少一种机器认证边界。
+- 多 Agent 共享部署必须配置一个可信 `AgentServiceAuthenticator`；具体企业认证方式不由 Core 预设。
 
 ## Implementation Direction
 
-后续代码与配置优先引入两个独立端口/模式：
+后续代码只冻结两个独立边界：
 
 ```text
 AdminAuthenticator
 AgentServiceAuthenticator
 ```
 
-建议配置方向：
+MCP 只提供两个模式：
 
 ```ini
-NEXUSMCP_ADMIN_AUTH_MODE=local
-NEXUSMCP_MCP_AUTH_MODE=static_service
+NEXUSMCP_MCP_IDENTITY_MODE=static_service
 NEXUSMCP_STATIC_AGENT_PRINCIPAL_ID=sales-assistant-service
 ```
 
-共享部署再增加 Service Credential → Principal 映射。配置名需在实现 ADR 中最终冻结，本 ADR 只冻结产品与
-信任边界。
+`service_identity` 统一依赖 `AgentServiceAuthenticator` Port。第一版只维护一个通用的 Static Bearer
+参考 Adapter，将 Opaque Bearer Token Digest 映射为 Agent Service Principal。其他企业认证机制只有在真实
+环境提出第二种 Adapter 需求后再设计，不进入当前模式枚举或配置。
+
+Admin 继续保持独立 Local Boundary；生产 Admin Adapter 在真实环境出现后再按企业现状选择。

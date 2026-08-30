@@ -129,7 +129,7 @@
 
 - NexusMCP 只面向 Admin Operator 与 Agent Service Principal；
 - 员工身份、角色、会话和最终用户追踪属于 Agent/业务系统；
-- 单 Agent 部署使用 `static_service`，共享部署使用 Service Identity/Trusted Proxy；
+- 单 Agent 部署使用 `static_service`，共享部署使用 `service_identity + AgentServiceAuthenticator`；
 - Admin Auth 与 MCP Auth 是两个独立边界；
 - NexusMCP Audit 记录 Agent Service/Tool/Execution，不声称员工行为审计。
 

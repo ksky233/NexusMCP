@@ -61,6 +61,4 @@ def resolve_request_context(
         principal_id=resolved_principal.id,
         authn_method=resolved_principal.authn_method,
         principal_type=resolved_principal.principal_type.value,
-        roles=resolved_principal.roles,
-        principal_attributes=resolved_principal.attributes,
     )

@@ -14,13 +14,12 @@ from nexusmcp.modules.policy.domain import (
 )
 
 
-def principal(*roles: str) -> InternalPrincipal:
+def principal(principal_id: str = "sales-assistant-service") -> InternalPrincipal:
     return InternalPrincipal(
-        id="user-a",
+        id=principal_id,
         tenant_id="tenant-a",
-        principal_type=PrincipalType.USER,
+        principal_type=PrincipalType.AGENT_SERVICE,
         authn_method="test",
-        roles=frozenset(roles),
     )
 
 
@@ -47,10 +46,10 @@ def policy(
     )
 
 
-def policy_input(*roles: str) -> PolicyEvaluationInput:
+def policy_input(principal_id: str = "sales-assistant-service") -> PolicyEvaluationInput:
     return PolicyEvaluationInput(
         tenant_id="tenant-a",
-        principal=principal(*roles),
+        principal=principal(principal_id),
         tool_id="tool-1",
         tool_version_id="version-1",
         action=ToolAction.CALL,
@@ -61,26 +60,26 @@ def policy_input(*roles: str) -> PolicyEvaluationInput:
 
 @pytest.mark.asyncio
 async def test_no_matching_policy_defaults_to_deny() -> None:
-    decision = await RuleBasedPolicyEvaluator(()).evaluate(policy_input("employee_reader"))
+    decision = await RuleBasedPolicyEvaluator(()).evaluate(policy_input())
 
     assert decision.effect is PolicyEffect.DENY
     assert decision.reason_code == "default_deny"
 
 
 @pytest.mark.asyncio
-async def test_role_policy_allows_matching_principal() -> None:
+async def test_exact_agent_service_policy_allows_matching_principal() -> None:
     evaluator = RuleBasedPolicyEvaluator(
         [
             policy(
                 "reader",
-                subject_type=PolicySubjectType.ROLE,
-                subject_id="employee_reader",
+                subject_type=PolicySubjectType.PRINCIPAL,
+                subject_id="sales-assistant-service",
                 effect=PolicyEffect.ALLOW,
             )
         ]
     )
 
-    decision = await evaluator.evaluate(policy_input("employee_reader"))
+    decision = await evaluator.evaluate(policy_input())
 
     assert decision.effect is PolicyEffect.ALLOW
 
@@ -91,44 +90,44 @@ async def test_same_specificity_and_priority_prefers_deny() -> None:
         [
             policy(
                 "allow-reader",
-                subject_type=PolicySubjectType.ROLE,
-                subject_id="employee_reader",
+                subject_type=PolicySubjectType.PRINCIPAL,
+                subject_id="sales-assistant-service",
                 effect=PolicyEffect.ALLOW,
             ),
             policy(
                 "deny-reader",
-                subject_type=PolicySubjectType.ROLE,
-                subject_id="employee_reader",
+                subject_type=PolicySubjectType.PRINCIPAL,
+                subject_id="sales-assistant-service",
                 effect=PolicyEffect.DENY,
             ),
         ]
     )
 
-    decision = await evaluator.evaluate(policy_input("employee_reader"))
+    decision = await evaluator.evaluate(policy_input())
 
     assert decision.effect is PolicyEffect.DENY
 
 
 @pytest.mark.asyncio
-async def test_exact_principal_policy_overrides_role_policy() -> None:
+async def test_exact_agent_service_policy_overrides_tenant_policy() -> None:
     evaluator = RuleBasedPolicyEvaluator(
         [
             policy(
-                "deny-role",
-                subject_type=PolicySubjectType.ROLE,
-                subject_id="employee_reader",
+                "deny-tenant",
+                subject_type=PolicySubjectType.TENANT,
+                subject_id=None,
                 effect=PolicyEffect.DENY,
                 priority=100,
             ),
             policy(
-                "allow-user",
+                "allow-agent-service",
                 subject_type=PolicySubjectType.PRINCIPAL,
-                subject_id="user-a",
+                subject_id="sales-assistant-service",
                 effect=PolicyEffect.ALLOW,
             ),
         ]
     )
 
-    decision = await evaluator.evaluate(policy_input("employee_reader"))
+    decision = await evaluator.evaluate(policy_input())
 
     assert decision.effect is PolicyEffect.ALLOW
