@@ -295,6 +295,7 @@ docker compose stop postgres
 - [I-01 Service-Centric Identity 代码收敛](./docs/迭代记录/01_ServiceCentricIdentity代码收敛.md)
 - [Local Tenant Bootstrap 与 IntegrityError 误分类](./docs/学习笔记/10_LocalTenantBootstrap与IntegrityError误分类.md)
 - [Local Admin 与 Agent Service 身份模式](./docs/学习笔记/11_LocalAdmin与AgentService身份模式.md)
+- [在现有服务中新增 Docker Compose 应用](./docs/学习笔记/12_在现有服务中新增DockerCompose应用.md)
 - [S4-3 Query Embedding、Exact Vector Search 与 Hybrid RRF](./docs/实验记录/24_S4-3_QueryEmbedding与HybridRRF.md)
 - [S4-4 Retrieval Eval 与 S4 收口](./docs/实验记录/25_S4-4_RetrievalEval与S4收口.md)
 - [S5-0/1 OpenTelemetry 基线](./docs/实验记录/26_S5-0_1_OpenTelemetry基线.md)

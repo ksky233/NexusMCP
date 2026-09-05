@@ -1,6 +1,6 @@
 # I-02｜Public Demo Production Packaging
 
-> 状态：Completed（本地，服务器 D0 检查已通过）
+> 状态：Completed（已部署）
 > 日期：2026-09-05  
 > 触发：需要把已完成的 Local Control Plane 作为公开求职 Demo 部署到现有腾讯云服务器  
 > 决策依据：[ADR-0019](../adr/0019-service-centric-identity-boundary.md)、
@@ -158,8 +158,10 @@ nexusmcp-web:local
 
 ## 9. 遗留项
 
-- 使用 Git SHA Tag 构建并导出正式 Release Bundle；
-- 创建/复用 `dearloom-edge` Network，并将现有 TLS Edge Container 接入；
-- 修改 `nexusmcp.dearloom.me` Host Route；
-- 完成公网 HTTPS、MCP Call、Reset 与重启持久化验收；
-- 建立 PostgreSQL 备份和 Image 回滚记录。
+- PostgreSQL 自动备份与恢复演练按长期运行需要再补；
+- 真实企业 Admin Authentication、Registry/CI/CD 和独立 Edge 不属于本次求职 Demo；
+- 完整 Import/Publish/Search/Call 业务演示可按既有手工流程随时复验。
+
+服务器最终结果：Git SHA Image 与 SHA256 Release 已加载；NexusMCP 四服务 Stack 健康；共享
+`dearloom-edge` 完成 `nexusmcp.dearloom.me` HTTPS Cutover；项目首页同步展示两个 ONLINE 项目与核心 Use
+Case 流程。
