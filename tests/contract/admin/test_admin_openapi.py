@@ -41,6 +41,7 @@ EXPECTED_OPERATION_IDS = {
     "registerUpstream",
     "createToolSearchReindexJob",
     "rejectApproval",
+    "resetDemoWorkspace",
     "reviewImportedOperation",
     "searchCatalog",
     "searchTools",

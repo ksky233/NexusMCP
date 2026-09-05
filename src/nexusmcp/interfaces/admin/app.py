@@ -29,6 +29,7 @@ from nexusmcp.modules.catalog.review import (
     SubmitToolVersionForReviewCommand,
 )
 from nexusmcp.modules.catalog.search import SearchPublishedTools, SearchPublishedToolsQuery
+from nexusmcp.modules.control_plane.demo_reset import ResetDemoWorkspace
 from nexusmcp.modules.control_plane.ports import ControlPlaneQueryPort
 from nexusmcp.modules.control_plane.read_models import UpstreamDetail
 from nexusmcp.modules.openapi_import.domain import ImportedOperation, OpenApiImportJob
@@ -88,6 +89,7 @@ class AdminServices:
     list_reindex_jobs: ListToolSearchReindexJobs
     decide_approval: DecideApproval
     get_approval: GetApproval
+    reset_demo_workspace: ResetDemoWorkspace | None = None
 
 
 class RegisterUpstreamRequest(BaseModel):
@@ -344,6 +346,11 @@ class ToolSearchReindexJobPageResponse(BaseModel):
     page: PageMetadata
 
 
+class DemoWorkspaceResetResponse(BaseModel):
+    status: Literal["reset"]
+    tenant_id: str
+
+
 class ApprovalResponse(BaseModel):
     id: str
     tenant_id: str
@@ -400,6 +407,7 @@ def create_admin_app(
     *,
     tenant_id: str,
     principal_id: str,
+    authn_method: str,
 ) -> FastAPI:
     app = AdminFastAPI(
         title="NexusMCP Admin API",
@@ -419,7 +427,7 @@ def create_admin_app(
             trace_id=uuid.uuid4().hex,
             tenant_id=tenant_id,
             principal_id=principal_id,
-            authn_method="local_admin",
+            authn_method=authn_method,
         )
         request.state.actor_context = context
         with bind_log_context(
@@ -904,6 +912,19 @@ def create_admin_app(
             )
         )
         return ApprovalResponse.from_domain(approval)
+
+    reset_demo_workspace_use_case = services.reset_demo_workspace
+    if reset_demo_workspace_use_case is not None:
+
+        @app.post(
+            "/demo/reset",
+            response_model=DemoWorkspaceResetResponse,
+            operation_id="resetDemoWorkspace",
+            responses=problem_responses(503),
+        )
+        async def reset_demo_workspace(context: AdminContext) -> DemoWorkspaceResetResponse:
+            result = await reset_demo_workspace_use_case.execute(context)
+            return DemoWorkspaceResetResponse(status="reset", tenant_id=result.tenant_id)
 
     app.include_router(create_admin_query_router(services.queries))
     return app

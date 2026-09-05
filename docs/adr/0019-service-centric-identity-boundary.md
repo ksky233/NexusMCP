@@ -2,7 +2,8 @@
 
 > 状态：Accepted
 > 日期：2026-08-30
-> 修订：收窄 ADR-0005 的产品身份范围；ADR-0005 的 Trust Boundary 原则继续有效
+> 修订：收窄 ADR-0005 的产品身份范围；2026-09-05 增加显式 Public Demo 身份；ADR-0005 的 Trust
+> Boundary 原则继续有效
 
 ## Context
 
@@ -59,14 +60,15 @@ Admin 和 Agent Service 的认证来源不同，不使用一个全局 Identity M
 
 ```text
 Admin Auth Boundary
-→ local（当前）/ AdminAuthenticator（Future）
+→ local / public_demo / AdminAuthenticator（Future）
 
 MCP Identity Mode
 → static_service / service_identity
 ```
 
-当前 Local Admin 继续使用固定 Settings Tenant/Principal，只允许 Development。生产管理面优先委托企业
-认证设施，不要求 NexusMCP 自建员工账号或密码系统。
+Local Admin 继续使用固定 Settings Tenant/Principal，只允许 Development。`public_demo` 只面向没有真实
+Upstream、Credential 和业务用户的公开求职环境，将所有访客映射为明确命名的共享 Demo Principal；它不声称
+完成真实 Admin 认证。真实生产管理面优先委托企业认证设施，不要求 NexusMCP 自建员工账号或密码系统。
 
 ### 4. Principal 定义
 
@@ -129,8 +131,9 @@ NexusMCP 不记录“哪位员工发起了当前 Agent 会话”。Trace ID 用�
 
 ### 8. Control Plane 安全
 
-`/mcp` 采用 Service Principal 不意味着 `/admin` 可以匿名开放。生产环境必须关闭 Local Admin，或将 Admin
-入口置于可信管理边界，并通过外部管理认证设施识别少量管理员。
+`/mcp` 采用 Service Principal 不意味着真实生产 `/admin` 可以匿名开放。生产环境必须关闭 Local Admin；
+只有显式隔离的作品集 Deployment 可以选择 `public_demo`。接入真实 Upstream/Credential 前，Admin 入口必须
+置于可信管理边界，并通过外部管理认证设施识别少量管理员。
 
 ## Rejected Alternatives
 
@@ -139,7 +142,7 @@ NexusMCP 不记录“哪位员工发起了当前 Agent 会话”。Trace ID 用�
 - 接收可选 `end_user_reference` 并将其纳入 Audit；
 - 信任 Agent 自报 `principal_id` 或 `tenant_id` Header；
 - 所有 Agent 共用一个固定 Principal，但又宣称可以区分 Agent 权限与审计；
-- 因为不接企业 IAM 就把 `/admin` 或 `/mcp` 裸露到不可信网络。
+- 在接入真实企业 Upstream、Credential 或数据时，因为不接企业 IAM 就把 `/admin` 裸露到不可信网络。
 
 ## Consequences
 
@@ -179,4 +182,6 @@ Port；当前只维护一个通用的 `StaticBearerAgentServiceAuthenticator`，
 Agent Service Principal。其他企业认证机制只有在真实环境提出第二种 Adapter 需求后再设计，不进入当前模式
 枚举或配置。
 
-Admin 继续保持独立 Local Boundary；生产 Admin Adapter 在真实环境出现后再按企业现状选择。
+Admin 保持独立边界：Development 使用 `local`；公开求职部署可以显式使用共享 `public_demo`；真实企业
+Production Admin Adapter 在出现实际认证设施后再选择。Public Demo Reset 只恢复独立单 Tenant Demo
+Database，不进入通用 Admin Domain。

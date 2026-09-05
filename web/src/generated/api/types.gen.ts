@@ -270,6 +270,20 @@ export type DashboardResponse = {
 };
 
 /**
+ * DemoWorkspaceResetResponse
+ */
+export type DemoWorkspaceResetResponse = {
+    /**
+     * Status
+     */
+    status: 'reset';
+    /**
+     * Tenant Id
+     */
+    tenant_id: string;
+};
+
+/**
  * ExecutionAttemptPageResponse
  */
 export type ExecutionAttemptPageResponse = {
@@ -1994,6 +2008,35 @@ export type GetDashboardResponses = {
 };
 
 export type GetDashboardResponse = GetDashboardResponses[keyof GetDashboardResponses];
+
+export type ResetDemoWorkspaceData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/demo/reset';
+};
+
+export type ResetDemoWorkspaceErrors = {
+    /**
+     * Unprocessable Entity
+     */
+    422: ProblemDetails;
+    /**
+     * Service Unavailable
+     */
+    503: ProblemDetails;
+};
+
+export type ResetDemoWorkspaceError = ResetDemoWorkspaceErrors[keyof ResetDemoWorkspaceErrors];
+
+export type ResetDemoWorkspaceResponses = {
+    /**
+     * Successful Response
+     */
+    200: DemoWorkspaceResetResponse;
+};
+
+export type ResetDemoWorkspaceResponse = ResetDemoWorkspaceResponses[keyof ResetDemoWorkspaceResponses];
 
 export type ListExecutionsData = {
     body?: never;

@@ -33,6 +33,7 @@ Enterprise HTTP / OpenAPI
 | 9 | [08｜ADR 与待决策清单](./08_ADR与待决策清单.md) | 已确认决策、待实验决策以及如何记录取舍 |
 | 10 | [09｜S6 前置 Web Control Plane 与 Remote MCP 边界](./09_S6前置WebControlPlane与RemoteMCP边界.md) | Remote MCP 为什么延后、Web UI 做到哪里 |
 | 11 | [10｜小型知识 RAG 扩展规划](./10_小型知识RAG扩展规划.md) | 如何用朴素 RAG 补齐知识检索能力，以及为什么暂不采用 GraphRAG/KAG |
+| 12 | [11｜单机生产部署规划](./11_单机生产部署规划.md) | 如何复用现有云服务器与 TLS，补齐 Production Packaging、身份边界、发布和运维 |
 
 ## 3. 决策层级
 
@@ -69,6 +70,8 @@ Enterprise HTTP / OpenAPI
   IAM 或复杂管理平台。
 - ADR-0019 冻结 Service-Centric Identity：NexusMCP 只面向 Admin Operator 与 Agent Service，员工身份和
   Agent 会话用户由上层系统负责，不进入 Principal、Policy 或 Audit。
+- 单机作品集部署使用独立 Compose Project，通过共享 Edge Network 复用现有 `dearloom.me` TLS 入口；公开
+  访客映射为固定 Demo Admin，MCP 映射为固定 Demo Agent Service，真实 Trusted Proxy/SSO 留待企业部署。
 
 ## 5. 维护方式
 

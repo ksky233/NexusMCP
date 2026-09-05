@@ -100,6 +100,14 @@ export const zCreateToolSearchReindexJobRequest = z.object({
 });
 
 /**
+ * DemoWorkspaceResetResponse
+ */
+export const zDemoWorkspaceResetResponse = z.object({
+    status: z.literal('reset'),
+    tenant_id: z.string()
+});
+
+/**
  * ExecutionAttemptResponse
  */
 export const zExecutionAttemptResponse = z.object({
@@ -803,6 +811,11 @@ export const zSearchCatalogResponse = z.array(zSearchToolResponse);
  * Successful Response
  */
 export const zGetDashboardResponse = zDashboardResponse;
+
+/**
+ * Successful Response
+ */
+export const zResetDemoWorkspaceResponse = zDemoWorkspaceResetResponse;
 
 /**
  * Successful Response

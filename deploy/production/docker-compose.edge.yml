@@ -1,0 +1,12 @@
+services:
+  web:
+    networks:
+      app:
+      edge:
+        aliases:
+          - nexusmcp-web
+
+networks:
+  edge:
+    external: true
+    name: ${NEXUSMCP_EDGE_NETWORK:-dearloom-edge}

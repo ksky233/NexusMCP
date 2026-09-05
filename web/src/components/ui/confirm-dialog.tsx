@@ -12,6 +12,8 @@ export function ConfirmDialog({
   confirmLabel,
   onConfirm,
   danger = false,
+  pending = false,
+  errorMessage,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -21,6 +23,8 @@ export function ConfirmDialog({
   confirmLabel: string;
   onConfirm: () => void;
   danger?: boolean;
+  pending?: boolean;
+  errorMessage?: string;
 }) {
   return (
     <Dialog.Root onOpenChange={onOpenChange} open={open}>
@@ -44,10 +48,21 @@ export function ConfirmDialog({
               <Dialog.Description className="mt-4 text-sm leading-7 text-slate/70">
                 {description}
               </Dialog.Description>
+              {errorMessage ? (
+                <p className="mt-4 text-sm leading-6 text-wine" role="alert">
+                  {errorMessage}
+                </p>
+              ) : null}
               <div className="mt-7 flex justify-end gap-3 border-t border-slate/20 pt-5">
-                <Dialog.Close render={<Button variant="secondary" />}>取消</Dialog.Close>
-                <Button onClick={onConfirm} variant={danger ? "danger" : "primary"}>
-                  {confirmLabel}
+                <Dialog.Close disabled={pending} render={<Button variant="secondary" />}>
+                  取消
+                </Dialog.Close>
+                <Button
+                  disabled={pending}
+                  onClick={onConfirm}
+                  variant={danger ? "danger" : "primary"}
+                >
+                  {pending ? "正在处理…" : confirmLabel}
                 </Button>
               </div>
             </div>

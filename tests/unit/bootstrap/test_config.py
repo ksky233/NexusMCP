@@ -52,13 +52,43 @@ def test_mcp_identity_mode_defaults_to_static_service_and_requires_principal_id(
 
 
 def test_local_control_plane_is_forbidden_in_production() -> None:
-    with pytest.raises(ValidationError, match="disabled in production"):
+    with pytest.raises(ValidationError, match="production Admin identity mode"):
         Settings(
             environment="production",
             catalog_backend="postgresql",
             database_url=SecretStr("postgresql+asyncpg://user:password@127.0.0.1/database"),
             local_tenant_id="00000000-0000-0000-0000-000000000001",
             control_plane_enabled=True,
+        )
+
+
+def test_public_demo_control_plane_is_explicit_and_allows_production() -> None:
+    settings = Settings(
+        environment="production",
+        catalog_backend="postgresql",
+        database_url=SecretStr("postgresql+asyncpg://user:password@127.0.0.1/database"),
+        local_tenant_id="00000000-0000-0000-0000-000000000001",
+        control_plane_enabled=True,
+        admin_identity_mode="public_demo",
+        demo_admin_principal_id="public-demo-admin",
+        upstream_egress_policy_enabled=True,
+        upstream_allowed_hosts=["demo-upstreams"],
+        upstream_allowed_ports=[9000],
+    )
+
+    assert settings.admin_identity_mode == "public_demo"
+    assert settings.demo_admin_principal_id == "public-demo-admin"
+
+    with pytest.raises(ValidationError, match="control_plane_enabled"):
+        Settings(environment="test", admin_identity_mode="public_demo")
+    with pytest.raises(ValidationError, match="test or production"):
+        Settings(
+            environment="development",
+            catalog_backend="postgresql",
+            database_url=SecretStr("postgresql+asyncpg://user:password@127.0.0.1/database"),
+            local_tenant_id="00000000-0000-0000-0000-000000000001",
+            control_plane_enabled=True,
+            admin_identity_mode="public_demo",
         )
 
 

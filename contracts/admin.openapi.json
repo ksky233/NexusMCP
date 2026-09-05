@@ -469,6 +469,25 @@
         "title": "DashboardResponse",
         "type": "object"
       },
+      "DemoWorkspaceResetResponse": {
+        "properties": {
+          "status": {
+            "const": "reset",
+            "title": "Status",
+            "type": "string"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "tenant_id"
+        ],
+        "title": "DemoWorkspaceResetResponse",
+        "type": "object"
+      },
       "ExecutionAttemptPageResponse": {
         "additionalProperties": false,
         "properties": {
@@ -3402,6 +3421,44 @@
           }
         },
         "summary": "Get Dashboard"
+      }
+    },
+    "/demo/reset": {
+      "post": {
+        "operationId": "resetDemoWorkspace",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoWorkspaceResetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Reset Demo Workspace"
       }
     },
     "/executions": {

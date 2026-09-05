@@ -1,0 +1,147 @@
+name: nexusmcp
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.6-pg18-trixie@sha256:78bf48b801e792f99e3ac62b5036fd3876e9be48afda16c1e331af1c75ceb2ff
+    environment:
+      POSTGRES_DB: nexusmcp
+      POSTGRES_USER: nexusmcp
+      POSTGRES_PASSWORD: ${NEXUSMCP_POSTGRES_PASSWORD:?NEXUSMCP_POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexusmcp -d nexusmcp"]
+      interval: 5s
+      timeout: 3s
+      start_period: 10s
+      retries: 20
+    restart: unless-stopped
+    mem_limit: 768m
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    networks:
+      - app
+
+  backend:
+    image: ${NEXUSMCP_BACKEND_IMAGE:-nexusmcp-backend:local}
+    env_file:
+      - ${NEXUSMCP_ENV_FILE:-.env}
+    environment:
+      NEXUSMCP_ENVIRONMENT: production
+      NEXUSMCP_CATALOG_BACKEND: postgresql
+      NEXUSMCP_DATABASE_URL: postgresql+asyncpg://nexusmcp:${NEXUSMCP_POSTGRES_PASSWORD}@postgres:5432/nexusmcp
+      NEXUSMCP_CONTROL_PLANE_ENABLED: "true"
+      NEXUSMCP_ADMIN_IDENTITY_MODE: public_demo
+      NEXUSMCP_MCP_IDENTITY_MODE: static_service
+      NEXUSMCP_UPSTREAM_EGRESS_POLICY_ENABLED: "true"
+      NEXUSMCP_UPSTREAM_ALLOWED_HOSTS: '["demo-upstreams"]'
+      NEXUSMCP_UPSTREAM_ALLOWED_PORTS: '[9000]'
+      NEXUSMCP_UPSTREAM_ALLOW_LOCAL_DEMO: "false"
+      NEXUSMCP_OPENAPI_FIXTURE_ROOT: /app/examples/upstream_apis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      demo-upstreams:
+        condition: service_healthy
+    expose:
+      - "8000"
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        alembic upgrade head &&
+        exec uvicorn nexusmcp.main:app
+        --host 0.0.0.0 --port 8000 --workers 1
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    restart: unless-stopped
+    init: true
+    mem_limit: 768m
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    networks:
+      - app
+
+  demo-upstreams:
+    image: ${NEXUSMCP_BACKEND_IMAGE:-nexusmcp-backend:local}
+    command:
+      - uvicorn
+      - examples.upstream_apis.app:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "9000"
+      - --workers
+      - "1"
+    expose:
+      - "9000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:9000/health/ready', timeout=3)
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 5
+    restart: unless-stopped
+    init: true
+    mem_limit: 256m
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    networks:
+      - app
+
+  web:
+    image: ${NEXUSMCP_WEB_IMAGE:-nexusmcp-web:local}
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${NEXUSMCP_HTTP_PORT:-18080}:8080"
+    restart: unless-stopped
+    init: true
+    mem_limit: 128m
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    networks:
+      - app
+
+volumes:
+  postgres_data:
+
+networks:
+  app:

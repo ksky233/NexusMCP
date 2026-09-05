@@ -9,15 +9,20 @@ import {
   Gauge,
   Menu,
   Network,
+  RotateCcw,
   Search,
   ShieldAlert,
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useResetDemoWorkspace } from "@/features/demo/hooks/use-reset-demo-workspace";
+import { asApiClientError } from "@/lib/api/api-error";
 import { cn } from "@/lib/cn";
+import { isPublicDemoMode } from "@/lib/runtime/public-demo";
 
 const navigation = [
   { to: "/", label: "系统概览", icon: Gauge, end: true },
@@ -40,6 +45,7 @@ function currentSection(pathname: string): string {
 export function AppShell() {
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const location = useLocation();
+  const publicDemo = isPublicDemoMode();
 
   useEffect(() => {
     setMobileNavigationOpen(false);
@@ -84,11 +90,7 @@ export function AppShell() {
                 {currentSection(location.pathname)}
               </span>
             </div>
-            <div className="flex items-center gap-2 text-right text-[11px] font-normal tracking-[0.04em] text-slate/60">
-              <ShieldAlert aria-hidden="true" className="size-3.5 shrink-0" />
-              <span className="hidden sm:inline">本地开发管理员 · 非生产级身份认证</span>
-              <span className="sm:hidden">本地管理员</span>
-            </div>
+            {publicDemo ? <PublicDemoControls /> : <LocalAdminStatus />}
           </div>
         </header>
 
@@ -141,9 +143,75 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           运行边界
         </p>
         <p className="mt-2 text-xs leading-5 text-slate/58">
-          固定本地租户与 Principal，后端始终是策略判定的唯一权威。
+          {isPublicDemoMode()
+            ? "公开访客共享 Demo Tenant 与 Principal，可随时恢复初始工作区。"
+            : "固定本地租户与 Principal，后端始终是策略判定的唯一权威。"}
         </p>
       </div>
     </div>
+  );
+}
+
+function LocalAdminStatus() {
+  return (
+    <div className="flex items-center gap-2 text-right text-[11px] font-normal tracking-[0.04em] text-slate/60">
+      <ShieldAlert aria-hidden="true" className="size-3.5 shrink-0" />
+      <span className="hidden sm:inline">本地开发管理员 · 非生产级身份认证</span>
+      <span className="sm:hidden">本地管理员</span>
+    </div>
+  );
+}
+
+function PublicDemoControls() {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const resetWorkspace = useResetDemoWorkspace();
+  const navigate = useNavigate();
+  const errorMessage = resetWorkspace.error
+    ? asApiClientError(resetWorkspace.error).message
+    : undefined;
+
+  async function handleReset() {
+    try {
+      await resetWorkspace.mutateAsync();
+    } catch {
+      return;
+    }
+    setConfirmOpen(false);
+    await navigate("/");
+  }
+
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <div className="hidden items-center gap-2 text-right text-[11px] font-normal tracking-[0.04em] text-slate/60 sm:flex">
+          <ShieldAlert aria-hidden="true" className="size-3.5 shrink-0" />
+          <span>公开演示身份 · public-demo-admin</span>
+        </div>
+        <Button
+          aria-label="重置演示工作区"
+          onClick={() => setConfirmOpen(true)}
+          size="small"
+          variant="secondary"
+        >
+          <RotateCcw aria-hidden="true" className="size-3.5" />
+          <span className="hidden sm:inline">重置演示工作区</span>
+          <span className="sm:hidden">重置</span>
+        </Button>
+      </div>
+      <ConfirmDialog
+        danger
+        description="这会清空当前 Demo Tenant 的 Upstream、Import、Tool、Search Index、Execution 与 Audit，并恢复可以重新演示的空白工作区。"
+        errorMessage={errorMessage}
+        confirmLabel="确认重置"
+        onConfirm={() => void handleReset()}
+        onOpenChange={(open) => {
+          setConfirmOpen(open);
+          if (open) resetWorkspace.reset();
+        }}
+        open={confirmOpen}
+        pending={resetWorkspace.isPending}
+        title="恢复演示初始状态？"
+      />
+    </>
   );
 }

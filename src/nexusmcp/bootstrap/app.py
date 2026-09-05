@@ -32,7 +32,11 @@ from nexusmcp.infrastructure.observability import (
     create_telemetry_runtime,
 )
 from nexusmcp.infrastructure.persistence.admin_queries import SqlAlchemyControlPlaneQueries
-from nexusmcp.infrastructure.persistence.local_tenant import ensure_local_development_tenant
+from nexusmcp.infrastructure.persistence.demo_workspace import SqlAlchemyDemoWorkspaceResetter
+from nexusmcp.infrastructure.persistence.local_tenant import (
+    ensure_configured_tenant,
+    ensure_local_development_tenant,
+)
 from nexusmcp.infrastructure.persistence.runtime import DatabaseRuntime, DatabaseRuntimePort
 from nexusmcp.interfaces.admin import AdminServices, create_admin_app
 from nexusmcp.interfaces.health.router import create_health_router
@@ -51,6 +55,7 @@ from nexusmcp.modules.catalog.publish import PublishTool
 from nexusmcp.modules.catalog.review import SubmitToolVersionForReview
 from nexusmcp.modules.catalog.search import SearchPublishedTools
 from nexusmcp.modules.catalog.use_cases import ListVisibleTools
+from nexusmcp.modules.control_plane.demo_reset import ResetDemoWorkspace
 from nexusmcp.modules.credentials.domain import SecretValue
 from nexusmcp.modules.credentials.ports import CredentialBindingResolver, CredentialProvider
 from nexusmcp.modules.execution.adapters.asyncio_sleeper import AsyncioRetrySleeper
@@ -348,6 +353,15 @@ def create_app(
                         resolved_runtime,
                         resolved_settings.local_tenant_id,
                     )
+                elif (
+                    resolved_settings.admin_identity_mode == "public_demo"
+                    and resolved_settings.control_plane_enabled
+                ):
+                    await ensure_configured_tenant(
+                        resolved_runtime,
+                        resolved_settings.local_tenant_id,
+                        name="NexusMCP Public Demo",
+                    )
                 if reindex_job_store is not None:
                     await reindex_job_store.recover_interrupted(
                         resolved_settings.local_tenant_id,
@@ -456,9 +470,23 @@ def create_app(
                 list_reindex_jobs=ListToolSearchReindexJobs(reindex_job_store),
                 decide_approval=decide_approval,
                 get_approval=get_approval,
+                reset_demo_workspace=(
+                    ResetDemoWorkspace(SqlAlchemyDemoWorkspaceResetter(resolved_runtime))
+                    if resolved_settings.admin_identity_mode == "public_demo"
+                    else None
+                ),
             ),
             tenant_id=resolved_settings.local_tenant_id,
-            principal_id=resolved_settings.local_admin_principal_id,
+            principal_id=(
+                resolved_settings.demo_admin_principal_id
+                if resolved_settings.admin_identity_mode == "public_demo"
+                else resolved_settings.local_admin_principal_id
+            ),
+            authn_method=(
+                "public_demo"
+                if resolved_settings.admin_identity_mode == "public_demo"
+                else "local_admin"
+            ),
         )
 
     app = FastAPI(

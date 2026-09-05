@@ -57,7 +57,9 @@ class Settings(BaseSettings):
     tool_retry_initial_backoff_seconds: float = 0.05
     approval_ttl_seconds: float = 600.0
     request_state_key: SecretStr | None = None
+    admin_identity_mode: Literal["local", "public_demo"] = "local"
     local_admin_principal_id: str = "local-admin"
+    demo_admin_principal_id: str = "public-demo-admin"
     openapi_fixture_root: Path = Path("examples/upstream_apis")
     transport_allowed_hosts: list[str] = Field(
         default_factory=lambda: [
@@ -83,9 +85,13 @@ class Settings(BaseSettings):
             raise ValueError("database_url is required when catalog_backend is postgresql")
         if self.environment == "production" and self.catalog_backend != "postgresql":
             raise ValueError("production environment requires postgresql catalog_backend")
-        if self.environment == "production" and self.control_plane_enabled:
+        if (
+            self.environment == "production"
+            and self.control_plane_enabled
+            and self.admin_identity_mode != "public_demo"
+        ):
             raise ValueError(
-                "local Control Plane must remain disabled in production before S3 authentication"
+                "production Control Plane requires an explicit production Admin identity mode"
             )
         if self.control_plane_enabled and self.catalog_backend != "postgresql":
             raise ValueError("control_plane_enabled requires postgresql catalog_backend")
@@ -96,6 +102,14 @@ class Settings(BaseSettings):
                 uuid.UUID(self.local_tenant_id)
             except ValueError:
                 raise ValueError("control_plane_enabled requires UUID local_tenant_id") from None
+        if self.admin_identity_mode == "public_demo" and not self.control_plane_enabled:
+            raise ValueError("public_demo Admin identity requires control_plane_enabled")
+        if self.admin_identity_mode == "public_demo" and self.environment == "development":
+            raise ValueError("public_demo Admin identity requires test or production environment")
+        if self.admin_identity_mode == "local" and not self.local_admin_principal_id.strip():
+            raise ValueError("local Admin identity requires local_admin_principal_id")
+        if self.admin_identity_mode == "public_demo" and not self.demo_admin_principal_id.strip():
+            raise ValueError("public_demo Admin identity requires demo_admin_principal_id")
         if (
             self.mcp_identity_mode == "static_service"
             and not self.static_agent_principal_id.strip()

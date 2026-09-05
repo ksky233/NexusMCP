@@ -18,6 +18,7 @@ htmlcov/
 build/
 dist/
 *.egg-info/
+/deploy/production/release/
 
 # Frontend dependencies and reports
 node_modules/

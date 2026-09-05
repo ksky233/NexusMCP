@@ -9,7 +9,8 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry
 会话和行为追踪不进入 NexusMCP。单 Agent 部署采用固定 Service Principal，多 Agent 共享部署统一通过
 `AgentServiceAuthenticator` 区分调用方。
 
-当前阶段：`S6｜Portfolio 文档包装初版已完成`；待人工截图、最终 Push/CI 和 v0.1 Release/Tag。
+当前阶段：v0.1 功能与作品集包装已完成；`I-02｜Public Demo Production Packaging` 已通过本地生产演练，
+等待服务器 D0 检查和 `nexusmcp.dearloom.me` 发布。
 
 ## 当前边界
 
@@ -69,7 +70,7 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry
   Capability；只有出现明确组织级 Remote MCP Upstream 场景后才重新评估；
 - Admin API 已冻结 13 个稳定 `operationId`、RFC 9457-compatible Problem Details、Offset Pagination
   Envelope 与确定性 OpenAPI Snapshot；公开 Upstream Contract 只允许 HTTP；
-- Admin Query API 已扩展至 34 个稳定 Operation，覆盖 Dashboard、Upstream/Import/Review、Tool/Version/
+- Admin Query API 已扩展至 35 个稳定 Operation，覆盖 Dashboard、Upstream/Import/Review、Tool/Version/
   Binding、Approval、Execution/Attempt、Audit 和 Search Projection，并具备数据库分页、过滤与租户隔离；
 - `web/` React Control Plane 已建立；Generated Hey API SDK、Zod Response Validation、TanStack Query、
   Problem Details Client、Vite Same-Origin Proxy 与真实 Dashboard Slice 已跑通；
@@ -85,10 +86,12 @@ NexusMCP 是一个使用 Python 实现的 Enterprise MCP Gateway & Tool Registry
   Job 去重、重启中断恢复和任务状态查询；Search Lab 展示 RRF/Vector/Cosine/Lexical 分项诊断；
 - Development Control Plane 会幂等初始化 Local Tenant，Upstream Repository 不再把 Foreign Key Error
   错误映射为 `upstream_conflict`；
+- Public Demo Deployment 已增加固定共享 Demo Admin/Agent 身份、工作区 Reset、单进程三场景 Fake
+  Upstream、非 Root Backend Image 与 PostgreSQL/Web/Backend Production Compose；
 - S6 前置增强优先补齐 Admin Query API 与 Web Control Plane MVP，用可视化方式展示 Upstream、Import、
   Review、Publish、Catalog、Approval、Execution 与 Audit；
-- Production Agent Service Identity、Admin SSO/Trusted Proxy、生产 Secret Store、CredentialBinding
-  持久化、跨调用 Result Replay、通用写 Tool 与 Reconciliation 尚未实现；员工 IAM 不属于规划范围。
+- 真实企业 Admin SSO/Trusted Proxy、生产 Secret Store、CredentialBinding 持久化、跨调用 Result Replay、
+  通用写 Tool 与 Reconciliation 尚未实现；员工 IAM 不属于规划范围。
 
 ## 代码语言约定
 
@@ -168,9 +171,9 @@ uv run python -m pytest tests/integration -q
 
 ## Local Control Plane
 
-当前 `/admin` 是开发/学习阶段的 Local Control Plane，使用 Settings 中固定 Tenant/Principal，不接受
-客户端 Tenant Header，且禁止在 `production` 启用。生产 Admin 应由企业 SSO/Trusted Proxy 保护，不要将
-Local Admin 暴露到非可信网络。
+当前本地 `/admin` 使用 Settings 中固定 Tenant/Principal，不接受客户端 Tenant Header；`local` Admin
+Identity 禁止在 `production` 启用。求职部署使用显式 `public_demo` 共享身份；真实企业部署仍应由
+SSO/Trusted Proxy 保护，不要将 Local Admin 暴露到非可信网络。
 
 ```powershell
 Copy-Item .env.example .env
@@ -203,6 +206,24 @@ curl.exe -X POST http://127.0.0.1:8000/admin/upstreams `
 ```
 
 `/admin` 负责 Control Plane，`/mcp` 保持 MCP Protocol 边界，`/health/live` 与 `/health/ready` 保持独立。
+
+## Production Demo 本地演练
+
+Production Demo 使用一个额外容器承载三个 Fake HTTP/OpenAPI Upstream，并将公开访问映射为固定 Demo
+Admin/Agent Principal：
+
+```powershell
+.\deploy\production\build-images.ps1 -Tag local
+Copy-Item .\deploy\production\.env.example .\deploy\production\.env
+
+docker compose `
+  --env-file .\deploy\production\.env `
+  -f .\deploy\production\docker-compose.yml `
+  up -d
+```
+
+详细环境变量、内部 Upstream Endpoint、Edge Network 与公网切换步骤见
+[Production Demo Deployment](./deploy/production/README.md)。
 
 ## Tool Embedding Reindex
 

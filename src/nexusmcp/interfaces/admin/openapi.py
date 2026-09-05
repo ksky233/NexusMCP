@@ -27,6 +27,7 @@ def build_admin_openapi_document() -> dict[str, Any]:
                 "database_url": _PLACEHOLDER_DATABASE_URL,
                 "local_tenant_id": _CONTRACT_TENANT_ID,
                 "control_plane_enabled": True,
+                "admin_identity_mode": "public_demo",
                 "tool_execution_enabled": False,
                 "embedding_api_key": None,
                 "telemetry_enabled": False,
