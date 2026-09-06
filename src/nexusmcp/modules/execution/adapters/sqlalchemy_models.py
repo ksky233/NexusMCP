@@ -27,9 +27,21 @@ class ToolExecutionModel(UUIDPrimaryKeyMixin, Base):
             "'upstream_5xx', 'cancelled', 'unknown')",
             name="error_category",
         ),
+        CheckConstraint(
+            "(mcp_scope_type = 'root' AND toolset_id IS NULL AND toolset_revision IS NULL) OR "
+            "(mcp_scope_type = 'toolset' AND toolset_id IS NOT NULL "
+            "AND toolset_revision > 0)",
+            name="mcp_scope",
+        ),
         Index("ix_tool_execution_tenant_status_planned", "tenant_id", "status", "planned_at"),
         Index("ix_tool_execution_tenant_request", "tenant_id", "request_id"),
         Index("ix_tool_execution_tenant_trace", "tenant_id", "trace_id"),
+        Index(
+            "ix_tool_execution_tenant_toolset",
+            "tenant_id",
+            "toolset_id",
+            "planned_at",
+        ),
         Index(
             "uq_tool_execution_idempotency_scope",
             "tenant_id",
@@ -60,6 +72,16 @@ class ToolExecutionModel(UUIDPrimaryKeyMixin, Base):
         ForeignKey("tool_binding.id", ondelete="RESTRICT"),
         nullable=False,
     )
+    mcp_scope_type: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default="root",
+        server_default="root",
+    )
+    toolset_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("toolset.id", ondelete="RESTRICT")
+    )
+    toolset_revision: Mapped[int | None] = mapped_column(Integer)
     approval_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("approval_request.id", ondelete="RESTRICT")
     )

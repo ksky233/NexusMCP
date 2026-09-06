@@ -18,6 +18,11 @@ from nexusmcp.modules.tool_search.adapters.sqlalchemy_models import (
     ToolSearchEmbeddingModel,
     ToolSearchReindexJobModel,
 )
+from nexusmcp.modules.toolsets.adapters.sqlalchemy_models import (
+    ToolsetAccessGrantModel,
+    ToolsetMemberModel,
+    ToolsetModel,
+)
 
 ALL_MODELS = (
     TenantModel,
@@ -29,6 +34,9 @@ ALL_MODELS = (
     ToolSearchEmbeddingModel,
     ToolSearchReindexJobModel,
     ToolBindingModel,
+    ToolsetModel,
+    ToolsetMemberModel,
+    ToolsetAccessGrantModel,
     ApprovalRequestModel,
     ToolExecutionModel,
     ExecutionAttemptModel,

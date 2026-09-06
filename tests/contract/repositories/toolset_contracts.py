@@ -10,6 +10,7 @@ from nexusmcp.modules.toolsets.ports import ToolsetRepository, ToolsetUnitOfWork
 
 TENANT_A_ID = "00000000-0000-0000-0000-00000000000a"
 TENANT_B_ID = "00000000-0000-0000-0000-00000000000b"
+MEMBER_TOOL_ID = "00000000-0000-0000-0000-000000000101"
 NOW = datetime(2026, 9, 6, tzinfo=UTC)
 
 
@@ -31,7 +32,7 @@ def make_toolset(
         created_at=NOW,
     ).replace_members(
         expected_revision=1,
-        tool_ids=(f"{toolset_id}-tool",),
+        tool_ids=(MEMBER_TOOL_ID,),
         actor_id="admin-a",
         occurred_at=NOW,
     )
@@ -71,7 +72,8 @@ class ToolsetRepositoryContract:
             updated_at=NOW,
         )
         await empty_toolsets.save(TENANT_A_ID, updated)
-        assert await empty_toolsets.get_by_id(TENANT_A_ID, toolset.id) == updated
+        persisted = await empty_toolsets.get_by_id(TENANT_A_ID, toolset.id)
+        assert persisted == updated, (persisted, updated)
 
         with pytest.raises(ValueError, match="stable identity"):
             await empty_toolsets.save(TENANT_A_ID, replace(updated, slug="renamed"))
@@ -104,12 +106,12 @@ class ToolsetRepositoryContract:
         assert await empty_toolsets.list_granted_active(TENANT_B_ID, "agent-a") == ()
 
     @pytest.mark.asyncio
-    async def test_rejects_duplicate_slug_system_kind_and_cross_tenant_entity(
+    async def test_rejects_duplicate_slug(
         self,
         empty_toolsets: ToolsetRepository,
     ) -> None:
         await empty_toolsets.add(TENANT_A_ID, make_toolset())
-        with pytest.raises(ValueError, match="slug"):
+        with pytest.raises(ValueError, match="slug|uniqueness"):
             await empty_toolsets.add(
                 TENANT_A_ID,
                 make_toolset(
@@ -117,6 +119,11 @@ class ToolsetRepositoryContract:
                 ),
             )
 
+    @pytest.mark.asyncio
+    async def test_rejects_duplicate_system_toolset(
+        self,
+        empty_toolsets: ToolsetRepository,
+    ) -> None:
         system = Toolset.create_all_published(
             toolset_id="00000000-0000-0000-0000-000000000510",
             tenant_id=TENANT_A_ID,
@@ -124,7 +131,7 @@ class ToolsetRepositoryContract:
             created_at=NOW,
         )
         await empty_toolsets.add(TENANT_A_ID, system)
-        with pytest.raises(ValueError, match="slug|all_published"):
+        with pytest.raises(ValueError, match="uniqueness|slug|all_published"):
             await empty_toolsets.add(
                 TENANT_A_ID,
                 Toolset.create_all_published(
@@ -134,6 +141,12 @@ class ToolsetRepositoryContract:
                     created_at=NOW,
                 ),
             )
+
+    @pytest.mark.asyncio
+    async def test_rejects_cross_tenant_entity(
+        self,
+        empty_toolsets: ToolsetRepository,
+    ) -> None:
         with pytest.raises(ValueError, match="tenant"):
             await empty_toolsets.add(TENANT_B_ID, make_toolset())
 

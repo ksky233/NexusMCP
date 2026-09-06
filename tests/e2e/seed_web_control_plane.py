@@ -12,6 +12,9 @@ from nexusmcp.modules.identity.adapters.sqlalchemy_models import TenantModel
 
 TENANT_ID = "00000000-0000-0000-0000-00000000000a"
 BUSINESS_TABLES = """
+    toolset_access_grant,
+    toolset_member,
+    toolset,
     tool_search_reindex_job,
     tool_search_embedding,
     audit_event,

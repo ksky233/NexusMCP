@@ -9,6 +9,9 @@ from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from nexusmcp.infrastructure.persistence.toolset_uow import (
+    SqlAlchemyToolsetUnitOfWorkFactory,
+)
 from nexusmcp.modules.catalog.adapters.sqlalchemy_mapping import (
     tool_to_model,
     tool_version_to_model,
@@ -31,6 +34,10 @@ from nexusmcp.modules.connectors.adapters.sqlalchemy_repository import (
 from nexusmcp.modules.connectors.ports import ToolBindingRepository
 from nexusmcp.modules.identity.adapters.sqlalchemy_models import TenantModel
 from nexusmcp.modules.registry.adapters.sqlalchemy_models import UpstreamServiceModel
+from nexusmcp.modules.toolsets.adapters.sqlalchemy_repository import (
+    SqlAlchemyToolsetRepository,
+)
+from nexusmcp.modules.toolsets.ports import ToolsetRepository, ToolsetUnitOfWork
 from tests.contract.repositories.contracts import (
     NOW,
     TENANT_A_ID,
@@ -42,6 +49,10 @@ from tests.contract.repositories.contracts import (
     make_binding,
     make_tool,
     make_version,
+)
+from tests.contract.repositories.toolset_contracts import (
+    ToolsetRepositoryContract,
+    ToolsetUnitOfWorkContract,
 )
 
 pytestmark = pytest.mark.integration
@@ -145,6 +156,37 @@ class TestSqlAlchemyCatalogUnitOfWork(CatalogUnitOfWorkContract):
                 SqlAlchemyCatalogUnitOfWorkFactory(pg_session_factory)(),
                 SqlAlchemyToolCatalogRepository(observer_session),
                 SqlAlchemyToolBindingRepository(observer_session),
+            )
+
+
+class TestSqlAlchemyToolsetRepository(ToolsetRepositoryContract):
+    @pytest_asyncio.fixture
+    async def empty_toolsets(
+        self,
+        pg_session_factory: async_sessionmaker[AsyncSession],
+    ) -> AsyncIterator[ToolsetRepository]:
+        async with pg_session_factory() as session:
+            await seed_tenant_and_upstream(session)
+            session.add(tool_to_model(make_tool()))
+            await session.commit()
+            yield SqlAlchemyToolsetRepository(session)
+
+
+class TestSqlAlchemyToolsetUnitOfWork(ToolsetUnitOfWorkContract):
+    @pytest_asyncio.fixture
+    async def unit_of_work_bundle(
+        self,
+        pg_session_factory: async_sessionmaker[AsyncSession],
+    ) -> AsyncIterator[tuple[ToolsetUnitOfWork, ToolsetRepository]]:
+        async with pg_session_factory() as seed_session:
+            await seed_tenant_and_upstream(seed_session)
+            seed_session.add(tool_to_model(make_tool()))
+            await seed_session.commit()
+
+        async with pg_session_factory() as observer_session:
+            yield (
+                SqlAlchemyToolsetUnitOfWorkFactory(pg_session_factory)(),
+                SqlAlchemyToolsetRepository(observer_session),
             )
 
 

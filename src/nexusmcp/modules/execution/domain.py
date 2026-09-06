@@ -27,6 +27,11 @@ class ExecutionStatus(StrEnum):
     CANCELLED = "cancelled"
 
 
+class McpScopeType(StrEnum):
+    ROOT = "root"
+    TOOLSET = "toolset"
+
+
 class ExecutionErrorCategory(StrEnum):
     VALIDATION = "validation"
     AUTHENTICATION = "authentication"
@@ -120,6 +125,9 @@ class ToolExecution:
     error_code: str | None = None
     error_category: ExecutionErrorCategory | None = None
     attempt_count: int = 0
+    mcp_scope_type: McpScopeType = McpScopeType.ROOT
+    toolset_id: str | None = None
+    toolset_revision: int | None = None
 
     def __post_init__(self) -> None:
         for field_name, value in (
@@ -170,6 +178,14 @@ class ToolExecution:
             raise ValueError("unsuccessful terminal execution must contain error state")
         if self.attempt_count < 0:
             raise ValueError("execution attempt count must not be negative")
+        if self.mcp_scope_type is McpScopeType.ROOT and (
+            self.toolset_id is not None or self.toolset_revision is not None
+        ):
+            raise ValueError("root MCP scope must not declare toolset context")
+        if self.mcp_scope_type is McpScopeType.TOOLSET and (
+            not self.toolset_id or self.toolset_revision is None or self.toolset_revision <= 0
+        ):
+            raise ValueError("toolset MCP scope requires toolset id and positive revision")
 
     def start(self, started_at: datetime) -> ToolExecution:
         if self.status is not ExecutionStatus.PLANNED:

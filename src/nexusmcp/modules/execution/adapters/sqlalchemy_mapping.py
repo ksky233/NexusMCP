@@ -11,6 +11,7 @@ from nexusmcp.modules.execution.domain import (
     ExecutionAttemptStatus,
     ExecutionErrorCategory,
     ExecutionStatus,
+    McpScopeType,
     ToolExecution,
 )
 
@@ -25,6 +26,13 @@ def execution_to_model(execution: ToolExecution) -> ToolExecutionModel:
         tool_id=as_uuid(execution.tool_id, field_name="tool id"),
         tool_version_id=as_uuid(execution.tool_version_id, field_name="tool version id"),
         tool_binding_id=as_uuid(execution.tool_binding_id, field_name="tool binding id"),
+        mcp_scope_type=execution.mcp_scope_type.value,
+        toolset_id=(
+            as_uuid(execution.toolset_id, field_name="toolset id")
+            if execution.toolset_id is not None
+            else None
+        ),
+        toolset_revision=execution.toolset_revision,
         approval_id=(
             as_uuid(execution.approval_id, field_name="approval id")
             if execution.approval_id is not None
@@ -58,6 +66,9 @@ def execution_from_model(model: ToolExecutionModel) -> ToolExecution:
         tool_id=str(model.tool_id),
         tool_version_id=str(model.tool_version_id),
         tool_binding_id=str(model.tool_binding_id),
+        mcp_scope_type=McpScopeType(model.mcp_scope_type),
+        toolset_id=str(model.toolset_id) if model.toolset_id is not None else None,
+        toolset_revision=model.toolset_revision,
         approval_id=str(model.approval_id) if model.approval_id is not None else None,
         credential_binding_id=model.credential_binding_id,
         arguments_digest=model.arguments_digest,

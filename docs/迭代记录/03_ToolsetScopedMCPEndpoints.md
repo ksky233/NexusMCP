@@ -12,7 +12,7 @@
 ```text
 I03-0 领域、协议与兼容性讨论      Completed
 I03-1A Domain/Port/InMemory         Completed
-I03-1B PostgreSQL Schema/Adapter    Planned
+I03-1B PostgreSQL Schema/Adapter    Completed
 I03-1C Persistence Contract Close  Planned
 I03-2 Admin API 与 Web UI          Planned
 I03-3 Scoped MCP Endpoint          Planned
@@ -916,6 +916,10 @@ Scoped Search 在 FTS/Vector Candidate Query 阶段限制 Toolset 成员；Scope
 I03-1A 已完成，证据见：
 
 - [I03-1A｜Toolset Domain、Port 与 InMemory Adapter](../实验记录/39_I03-1A_ToolsetDomain与Port.md)
+
+I03-1B 已完成，证据见：
+
+- [I03-1B｜Toolset PostgreSQL Schema 与 Adapter](../实验记录/40_I03-1B_PostgreSQLSchema与Adapter.md)
 
 ### I03-2｜Admin API 与 Web UI
 

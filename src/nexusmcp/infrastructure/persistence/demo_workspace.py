@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
 _TRUNCATE_DEMO_WORKSPACE = text(
     """
     TRUNCATE TABLE
+        toolset_access_grant,
+        toolset_member,
+        toolset,
         tool_search_reindex_job,
         tool_search_embedding,
         audit_event,

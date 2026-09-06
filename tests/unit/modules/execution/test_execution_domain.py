@@ -1,5 +1,6 @@
 """Call Digest、Execution 状态机与 Retry Matrix 测试。"""
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -9,6 +10,7 @@ from nexusmcp.modules.execution.domain import (
     CallToolCommand,
     ExecutionErrorCategory,
     ExecutionStatus,
+    McpScopeType,
     RetryDisposition,
     ToolExecution,
     retry_disposition,
@@ -89,6 +91,25 @@ def test_unknown_outcome_is_distinct_from_known_failure() -> None:
     assert unknown.status is ExecutionStatus.UNKNOWN
     with pytest.raises(ValueError, match="running"):
         failed.succeed(NOW + timedelta(seconds=3))
+
+
+def test_execution_scope_requires_consistent_root_or_toolset_context() -> None:
+    root = _execution()
+    assert root.mcp_scope_type is McpScopeType.ROOT
+    assert root.toolset_id is None
+
+    scoped = replace(
+        root,
+        mcp_scope_type=McpScopeType.TOOLSET,
+        toolset_id="toolset-1",
+        toolset_revision=3,
+    )
+    assert scoped.toolset_revision == 3
+
+    with pytest.raises(ValueError, match="root MCP scope"):
+        replace(root, toolset_id="toolset-1")
+    with pytest.raises(ValueError, match="requires toolset id"):
+        replace(root, mcp_scope_type=McpScopeType.TOOLSET)
 
 
 @pytest.mark.parametrize(
