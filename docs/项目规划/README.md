@@ -70,6 +70,8 @@ Enterprise HTTP / OpenAPI
   IAM 或复杂管理平台。
 - ADR-0019 冻结 Service-Centric Identity：NexusMCP 只面向 Admin Operator 与 Agent Service，员工身份和
   Agent 会话用户由上层系统负责，不进入 Principal、Policy 或 Audit。
+- ADR-0020 冻结 Toolset Scoped MCP Endpoint：管理员以显式 Toolset/Grant 为 Agent 组合发布 Tool，根
+  `/mcp` 返回 Granted Toolset Union，Scoped Endpoint 只支持 Modern MCP。
 - 单机作品集部署使用独立 Compose Project，通过共享 Edge Network 复用现有 `dearloom.me` TLS 入口；公开
   访客映射为固定 Demo Admin，MCP 映射为固定 Demo Agent Service，真实 Trusted Proxy/SSO 留待企业部署。
 

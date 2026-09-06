@@ -1,15 +1,16 @@
 # I-03｜Toolset Scoped MCP Endpoints
 
-> 状态：Planned
+> 状态：In Progress（I03-0 Completed）
 > 日期：2026-09-06
 > 触发：中央 MCP Endpoint 暴露完整 Catalog 时，单个 Agent 可能接收到与自身业务无关的大量 Tool
+> 决策依据：[ADR-0020](../adr/0020-toolset-scoped-mcp-endpoints.md)
 > 规划基线：`4fc1cd8`
 > 当前公网镜像：`961977f1a04d`
 
 ## 0. 当前进度
 
 ```text
-I03-0 领域、协议与兼容性讨论      In Discussion
+I03-0 领域、协议与兼容性讨论      Completed
 I03-1 Toolset Persistence          Planned
 I03-2 Admin API 与 Web UI          Planned
 I03-3 Scoped MCP Endpoint          Planned
@@ -525,6 +526,10 @@ Modern Stateless Request 每次独立解析 Toolset Slug；不为 Legacy Handsha
 跨 URL Session 校验或动态 SSE/DELETE Path。I-03 只验证 Modern Dynamic Path 正常工作、Legacy Scoped Path
 明确拒绝，以及现有 Legacy Root Contract 无回归。
 
+最小实验已经通过，结果见：
+
+- [I03-0｜Modern Dynamic Toolset Path 最小实验](../实验记录/38_I03-0_ModernDynamicToolsetPath.md)
+
 ### 9.1 Tool List Cache
 
 当前 NexusMCP 的 `tools/list` 返回：
@@ -895,7 +900,7 @@ Scoped Search 在 FTS/Vector Candidate Query 阶段限制 Toolset 成员；Scope
 ### I03-0｜领域、协议与 ADR
 
 - 所有领域决策已关闭，完成 ADR 与 Schema/API 冻结；
-- 做 Modern Dynamic Path 正向实验与 Legacy Scoped Path 显式拒绝实验；
+- Modern Dynamic Path 正向实验与 Legacy Scoped Path 显式拒绝实验已通过；
 - 冻结 Toolset、Membership、Discovery、Policy 与 Audit 边界；
 - 创建 ADR。
 
@@ -986,17 +991,14 @@ Tool 后续 Disabled/No Published Version
 
 ## 14. 风险与回滚
 
-- Modern Dynamic MCP Path 仍需验证 SDK Mount/Path Rewrite；Legacy Scoped Path 不进入实现；
+- Modern Dynamic MCP Path 已验证可行；正式 Adapter 仍需保持 Slug 来自可信 Path Context；
 - Toolset 与 Policy 如果边界不清，会形成两套授权事实；
 - Agent 当前 Turn 可能暂时持有旧 Tool List，但 `tools/call` 每次重新校验 Membership；
 - Search 只在结果阶段过滤会产生跨 Toolset 排名污染，必须在 FTS/Vector Candidate Query 阶段限制；
 - 公网数据库 Migration 必须向后兼容，旧 `/mcp` 在新 Image 健康前继续可用；
 - 新 Endpoint 默认不替换根 `/mcp`，出现问题可以关闭 Toolset Route 并回滚 Image。
 
-## 15. I03-0 剩余动作
+## 15. I03-0 完成结论
 
-为了避免先写表再补业务语义，按以下顺序讨论：
-
-1. 汇总已关闭决策并冻结 Schema、Admin API 与 UI；
-2. 编码前执行 Modern Dynamic Path 最小实验；
-3. 创建 ADR，完成 I03-0。
+领域决策、Schema/Admin API/UI 汇总、Modern Dynamic Path 实验与 ADR-0020 已完成。I03-0 结束；下一工作包是
+`I03-1｜Toolset Persistence`，在修改 Migration 前以 ADR 和本迭代文档第 11 节为实现基线。

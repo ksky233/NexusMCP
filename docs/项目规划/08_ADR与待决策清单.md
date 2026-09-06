@@ -135,6 +135,19 @@
 
 决策记录：[ADR-0019](../adr/0019-service-centric-identity-boundary.md)。
 
+### D-017｜Toolset Scoped MCP Endpoint
+
+- Toolset 是独立模块和 Agent-facing Tool 发布组合，不等同于 Namespace/Policy；
+- Agent Service 通过 ToolsetAccessGrant 获得一个或多个 Toolset；
+- 根 `/mcp` 返回当前 Principal 所有 Granted Active Toolset 的成员并集；
+- 系统 `all_published` Toolset 统一表达完整 Catalog，不增加特殊权限语义；
+- 普通 Toolset 默认 `direct`，`all_published` 默认 `search_first`，两种模式互斥且只手动切换；
+- `/mcp/toolsets/{slug}` 只支持 Modern MCP；Legacy 继续保留根 `/mcp`；
+- 第一版 `ttl_ms=0`，不增加 Tool List Cache/List Changed；
+- Scoped/Root Request Scope 写入 Execution/Audit，不把 Root 调用任意归因给某个 Grant。
+
+决策记录：[ADR-0020](../adr/0020-toolset-scoped-mcp-endpoints.md)。
+
 ## 2. 推荐但需在初始化时确认
 
 ### R-001｜Persistence 工程工具
@@ -168,6 +181,7 @@ Legacy Session 本身不构成新项目必须引入 Redis 的理由。
 | Q-006 | Audit 同步/异步写入 | 核心 Audit 同库同步；外部投递后续使用 Outbox | S3-5 故障注入/事务 E2E、ADR-0010 |
 | Q-010 | 是否增加 Semantic Tool Search | S4 增加内部 Tool Embedding/Hybrid Retrieval，替代外部 Knowledge RAG 主线 | Tool Selection 业务分析、ADR-0013 |
 | Q-013 | Agent-facing 暴露哪些检索模式 | 一个 `nexus.search_tools`，只暴露必填 `lexical | hybrid`；Vector-only 供 Eval，Auto 延后 | 成本/Agent 自主路由分析、ADR-0013 |
+| Q-014 | Modern Dynamic Toolset Path 是否可行 | SDK Dynamic Route 可读 Slug；Scoped Endpoint Modern-only，Legacy 明确拒绝 | I03-0 实验、ADR-0020 |
 
 ### 3.2 待实验
 
@@ -218,6 +232,8 @@ Legacy Session 本身不构成新项目必须引入 Redis 的理由。
 | [0016](../adr/0016-upstream-egress-and-ssrf-boundary.md) | Accepted | Upstream Egress 与 SSRF 防护边界 |
 | [0017](../adr/0017-defer-remote-mcp-and-focus-web-control-plane.md) | Accepted | 延后 Remote MCP，优先 Web Control Plane |
 | [0018](../adr/0018-web-control-plane-engineering.md) | Accepted | Web Control Plane 工程布局与技术栈 |
+| [0019](../adr/0019-service-centric-identity-boundary.md) | Accepted | 面向 Admin Operator 与 Agent Service 的身份边界 |
+| [0020](../adr/0020-toolset-scoped-mcp-endpoints.md) | Accepted | Toolset Scoped MCP Endpoint 与 Agent 暴露边界 |
 
 不是现在一次性写完。每个 ADR 在相关实现前后完成。
 
