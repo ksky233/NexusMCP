@@ -11,7 +11,9 @@
 
 ```text
 I03-0 领域、协议与兼容性讨论      Completed
-I03-1 Toolset Persistence          Planned
+I03-1A Domain/Port/InMemory         Completed
+I03-1B PostgreSQL Schema/Adapter    Planned
+I03-1C Persistence Contract Close  Planned
 I03-2 Admin API 与 Web UI          Planned
 I03-3 Scoped MCP Endpoint          Planned
 I03-4 Scoped Search 与 Audit       Planned
@@ -910,6 +912,10 @@ Scoped Search 在 FTS/Vector Candidate Query 阶段限制 Toolset 成员；Scope
 - ORM/Mapping；
 - Repository/UoW；
 - Toolset、Member 与 AccessGrant 的 Tenant/Unique/FK/Atomic Replace Integration Test。
+
+I03-1A 已完成，证据见：
+
+- [I03-1A｜Toolset Domain、Port 与 InMemory Adapter](../实验记录/39_I03-1A_ToolsetDomain与Port.md)
 
 ### I03-2｜Admin API 与 Web UI
 
