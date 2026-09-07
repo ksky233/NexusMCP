@@ -92,6 +92,13 @@ export const zAuditOutcome = z.enum([
 ]);
 
 /**
+ * ChangeToolsetStatusRequest
+ */
+export const zChangeToolsetStatusRequest = z.object({
+    expected_revision: z.int().gte(1)
+});
+
+/**
  * CreateToolSearchReindexJobRequest
  */
 export const zCreateToolSearchReindexJobRequest = z.object({
@@ -356,6 +363,22 @@ export const zRegisterUpstreamRequest = z.object({
     owner: z.string(),
     service_type: z.enum(['http']).optional().default('http'),
     transport_type: z.enum(['http']).optional().default('http')
+});
+
+/**
+ * ReplaceToolsetAccessGrantsRequest
+ */
+export const zReplaceToolsetAccessGrantsRequest = z.object({
+    expected_revision: z.int().gte(1),
+    principal_ids: z.array(z.string())
+});
+
+/**
+ * ReplaceToolsetMembersRequest
+ */
+export const zReplaceToolsetMembersRequest = z.object({
+    expected_revision: z.int().gte(1),
+    tool_ids: z.array(z.string())
 });
 
 /**
@@ -708,6 +731,110 @@ export const zSearchToolResponse = z.object({
 });
 
 /**
+ * ToolsetDiscoveryMode
+ */
+export const zToolsetDiscoveryMode = z.enum(['direct', 'search_first']);
+
+/**
+ * CreateToolsetRequest
+ */
+export const zCreateToolsetRequest = z.object({
+    description: z.string().nullish(),
+    discovery_mode: zToolsetDiscoveryMode.optional().default('direct'),
+    name: z.string().min(1).max(128),
+    slug: z.string().min(1).max(64).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+});
+
+/**
+ * ToolsetHealth
+ */
+export const zToolsetHealth = z.enum([
+    'healthy',
+    'degraded',
+    'unavailable'
+]);
+
+/**
+ * ToolsetKind
+ */
+export const zToolsetKind = z.enum(['explicit', 'all_published']);
+
+/**
+ * ToolsetMemberAvailability
+ */
+export const zToolsetMemberAvailability = z.enum([
+    'available',
+    'tool_disabled',
+    'no_published_version'
+]);
+
+/**
+ * ToolsetMemberResponse
+ */
+export const zToolsetMemberResponse = z.object({
+    availability: zToolsetMemberAvailability,
+    canonical_name: z.string().nullable(),
+    description: z.string().nullable(),
+    published_tool_version_id: z.string().nullable(),
+    serialized_schema_size: z.int(),
+    tool_id: z.string()
+});
+
+/**
+ * ToolsetStatus
+ */
+export const zToolsetStatus = z.enum([
+    'draft',
+    'active',
+    'disabled'
+]);
+
+/**
+ * ToolsetResponse
+ */
+export const zToolsetResponse = z.object({
+    available_tool_count: z.int(),
+    created_at: z.iso.datetime(),
+    created_by: z.string(),
+    description: z.string().nullable(),
+    discovery_mode: zToolsetDiscoveryMode,
+    endpoint_path: z.string(),
+    grant_count: z.int(),
+    health: zToolsetHealth,
+    id: z.string(),
+    kind: zToolsetKind,
+    members: z.array(zToolsetMemberResponse),
+    membership_digest: z.string(),
+    name: z.string(),
+    principal_ids: z.array(z.string()),
+    revision: z.int(),
+    serialized_schema_size: z.int(),
+    slug: z.string(),
+    status: zToolsetStatus,
+    tenant_id: z.string(),
+    tool_count: z.int(),
+    updated_at: z.iso.datetime()
+});
+
+/**
+ * ToolsetPageResponse
+ */
+export const zToolsetPageResponse = z.object({
+    items: z.array(zToolsetResponse),
+    page: zPageMetadata
+});
+
+/**
+ * UpdateToolsetRequest
+ */
+export const zUpdateToolsetRequest = z.object({
+    description: z.string().nullish(),
+    discovery_mode: zToolsetDiscoveryMode,
+    expected_revision: z.int().gte(1),
+    name: z.string().min(1).max(128)
+});
+
+/**
  * UpdateUpstreamRequest
  */
 export const zUpdateUpstreamRequest = z.object({
@@ -926,6 +1053,46 @@ export const zListToolVersionsResponse = zToolVersionPageResponse;
  * Successful Response
  */
 export const zPublishToolVersionResponse = zPublishToolResponse;
+
+/**
+ * Successful Response
+ */
+export const zListToolsetsResponse = zToolsetPageResponse;
+
+/**
+ * Successful Response
+ */
+export const zCreateToolsetResponse = zToolsetResponse;
+
+/**
+ * Successful Response
+ */
+export const zGetToolsetResponse = zToolsetResponse;
+
+/**
+ * Successful Response
+ */
+export const zUpdateToolsetResponse = zToolsetResponse;
+
+/**
+ * Successful Response
+ */
+export const zActivateToolsetResponse = zToolsetResponse;
+
+/**
+ * Successful Response
+ */
+export const zDisableToolsetResponse = zToolsetResponse;
+
+/**
+ * Successful Response
+ */
+export const zReplaceToolsetAccessGrantsResponse = zToolsetResponse;
+
+/**
+ * Successful Response
+ */
+export const zReplaceToolsetMembersResponse = zToolsetResponse;
 
 /**
  * Successful Response

@@ -408,6 +408,21 @@
         "title": "AuditOutcome",
         "type": "string"
       },
+      "ChangeToolsetStatusRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_revision": {
+            "minimum": 1.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expected_revision"
+        ],
+        "title": "ChangeToolsetStatusRequest",
+        "type": "object"
+      },
       "CreateToolSearchReindexJobRequest": {
         "properties": {
           "batch_size": {
@@ -424,6 +439,45 @@
           }
         },
         "title": "CreateToolSearchReindexJobRequest",
+        "type": "object"
+      },
+      "CreateToolsetRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "discovery_mode": {
+            "$ref": "#/components/schemas/ToolsetDiscoveryMode",
+            "default": "direct"
+          },
+          "name": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name"
+        ],
+        "title": "CreateToolsetRequest",
         "type": "object"
       },
       "DashboardResponse": {
@@ -1360,6 +1414,52 @@
           "endpoint"
         ],
         "title": "RegisterUpstreamRequest",
+        "type": "object"
+      },
+      "ReplaceToolsetAccessGrantsRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_revision": {
+            "minimum": 1.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "principal_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Principal Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "expected_revision",
+          "principal_ids"
+        ],
+        "title": "ReplaceToolsetAccessGrantsRequest",
+        "type": "object"
+      },
+      "ReplaceToolsetMembersRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_revision": {
+            "minimum": 1.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "tool_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tool Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "expected_revision",
+          "tool_ids"
+        ],
+        "title": "ReplaceToolsetMembersRequest",
         "type": "object"
       },
       "ReviewOperationPageResponse": {
@@ -2627,6 +2727,291 @@
         ],
         "title": "ToolVisibility",
         "type": "string"
+      },
+      "ToolsetDiscoveryMode": {
+        "enum": [
+          "direct",
+          "search_first"
+        ],
+        "title": "ToolsetDiscoveryMode",
+        "type": "string"
+      },
+      "ToolsetHealth": {
+        "enum": [
+          "healthy",
+          "degraded",
+          "unavailable"
+        ],
+        "title": "ToolsetHealth",
+        "type": "string"
+      },
+      "ToolsetKind": {
+        "enum": [
+          "explicit",
+          "all_published"
+        ],
+        "title": "ToolsetKind",
+        "type": "string"
+      },
+      "ToolsetMemberAvailability": {
+        "enum": [
+          "available",
+          "tool_disabled",
+          "no_published_version"
+        ],
+        "title": "ToolsetMemberAvailability",
+        "type": "string"
+      },
+      "ToolsetMemberResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "availability": {
+            "$ref": "#/components/schemas/ToolsetMemberAvailability"
+          },
+          "canonical_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canonical Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "published_tool_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published Tool Version Id"
+          },
+          "serialized_schema_size": {
+            "title": "Serialized Schema Size",
+            "type": "integer"
+          },
+          "tool_id": {
+            "title": "Tool Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_id",
+          "canonical_name",
+          "description",
+          "availability",
+          "published_tool_version_id",
+          "serialized_schema_size"
+        ],
+        "title": "ToolsetMemberResponse",
+        "type": "object"
+      },
+      "ToolsetPageResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ToolsetResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "$ref": "#/components/schemas/PageMetadata"
+          }
+        },
+        "required": [
+          "items",
+          "page"
+        ],
+        "title": "ToolsetPageResponse",
+        "type": "object"
+      },
+      "ToolsetResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "available_tool_count": {
+            "title": "Available Tool Count",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "title": "Created By",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "discovery_mode": {
+            "$ref": "#/components/schemas/ToolsetDiscoveryMode"
+          },
+          "endpoint_path": {
+            "title": "Endpoint Path",
+            "type": "string"
+          },
+          "grant_count": {
+            "title": "Grant Count",
+            "type": "integer"
+          },
+          "health": {
+            "$ref": "#/components/schemas/ToolsetHealth"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ToolsetKind"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/ToolsetMemberResponse"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "membership_digest": {
+            "title": "Membership Digest",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "principal_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Principal Ids",
+            "type": "array"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "serialized_schema_size": {
+            "title": "Serialized Schema Size",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ToolsetStatus"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "tool_count": {
+            "title": "Tool Count",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "slug",
+          "name",
+          "description",
+          "kind",
+          "discovery_mode",
+          "status",
+          "revision",
+          "membership_digest",
+          "endpoint_path",
+          "health",
+          "tool_count",
+          "available_tool_count",
+          "serialized_schema_size",
+          "grant_count",
+          "principal_ids",
+          "members",
+          "created_by",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ToolsetResponse",
+        "type": "object"
+      },
+      "ToolsetStatus": {
+        "enum": [
+          "draft",
+          "active",
+          "disabled"
+        ],
+        "title": "ToolsetStatus",
+        "type": "string"
+      },
+      "UpdateToolsetRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "discovery_mode": {
+            "$ref": "#/components/schemas/ToolsetDiscoveryMode"
+          },
+          "expected_revision": {
+            "minimum": 1.0,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected_revision",
+          "name",
+          "discovery_mode"
+        ],
+        "title": "UpdateToolsetRequest",
+        "type": "object"
       },
       "UpdateUpstreamRequest": {
         "properties": {
@@ -4981,6 +5366,647 @@
           }
         },
         "summary": "Publish Tool"
+      }
+    },
+    "/toolsets": {
+      "get": {
+        "operationId": "listToolsets",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ToolsetStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ToolsetKind"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "discovery_mode",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ToolsetDiscoveryMode"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Discovery Mode"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolsetPageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "List Toolsets",
+        "tags": [
+          "toolsets"
+        ]
+      },
+      "post": {
+        "operationId": "createToolset",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateToolsetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolsetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Create Toolset",
+        "tags": [
+          "toolsets"
+        ]
+      }
+    },
+    "/toolsets/{toolset_id}": {
+      "get": {
+        "operationId": "getToolset",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolset_id",
+            "required": true,
+            "schema": {
+              "title": "Toolset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolsetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Get Toolset",
+        "tags": [
+          "toolsets"
+        ]
+      },
+      "put": {
+        "operationId": "updateToolset",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolset_id",
+            "required": true,
+            "schema": {
+              "title": "Toolset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateToolsetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolsetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Update Toolset",
+        "tags": [
+          "toolsets"
+        ]
+      }
+    },
+    "/toolsets/{toolset_id}/activate": {
+      "post": {
+        "operationId": "activateToolset",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolset_id",
+            "required": true,
+            "schema": {
+              "title": "Toolset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeToolsetStatusRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolsetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Activate Toolset",
+        "tags": [
+          "toolsets"
+        ]
+      }
+    },
+    "/toolsets/{toolset_id}/disable": {
+      "post": {
+        "operationId": "disableToolset",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolset_id",
+            "required": true,
+            "schema": {
+              "title": "Toolset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeToolsetStatusRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolsetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Disable Toolset",
+        "tags": [
+          "toolsets"
+        ]
+      }
+    },
+    "/toolsets/{toolset_id}/grants": {
+      "put": {
+        "operationId": "replaceToolsetAccessGrants",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolset_id",
+            "required": true,
+            "schema": {
+              "title": "Toolset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceToolsetAccessGrantsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolsetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Replace Toolset Grants",
+        "tags": [
+          "toolsets"
+        ]
+      }
+    },
+    "/toolsets/{toolset_id}/members": {
+      "put": {
+        "operationId": "replaceToolsetMembers",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "toolset_id",
+            "required": true,
+            "schema": {
+              "title": "Toolset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceToolsetMembersRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolsetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Replace Toolset Members",
+        "tags": [
+          "toolsets"
+        ]
       }
     },
     "/upstreams": {

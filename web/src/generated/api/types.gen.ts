@@ -225,6 +225,16 @@ export type AuditEventResponse = {
 export type AuditOutcome = 'allowed' | 'denied' | 'approval_required' | 'succeeded' | 'failed' | 'unknown' | 'cancelled';
 
 /**
+ * ChangeToolsetStatusRequest
+ */
+export type ChangeToolsetStatusRequest = {
+    /**
+     * Expected Revision
+     */
+    expected_revision: number;
+};
+
+/**
  * CreateToolSearchReindexJobRequest
  */
 export type CreateToolSearchReindexJobRequest = {
@@ -236,6 +246,25 @@ export type CreateToolSearchReindexJobRequest = {
      * Force
      */
     force?: boolean;
+};
+
+/**
+ * CreateToolsetRequest
+ */
+export type CreateToolsetRequest = {
+    /**
+     * Description
+     */
+    description?: string | null;
+    discovery_mode?: ToolsetDiscoveryMode;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Slug
+     */
+    slug: string;
 };
 
 /**
@@ -783,6 +812,34 @@ export type RegisterUpstreamRequest = {
      * Transport Type
      */
     transport_type?: 'http';
+};
+
+/**
+ * ReplaceToolsetAccessGrantsRequest
+ */
+export type ReplaceToolsetAccessGrantsRequest = {
+    /**
+     * Expected Revision
+     */
+    expected_revision: number;
+    /**
+     * Principal Ids
+     */
+    principal_ids: Array<string>;
+};
+
+/**
+ * ReplaceToolsetMembersRequest
+ */
+export type ReplaceToolsetMembersRequest = {
+    /**
+     * Expected Revision
+     */
+    expected_revision: number;
+    /**
+     * Tool Ids
+     */
+    tool_ids: Array<string>;
 };
 
 /**
@@ -1560,6 +1617,166 @@ export type ToolVersionStatus = 'draft' | 'review' | 'published' | 'retired';
  * ToolVisibility
  */
 export type ToolVisibility = 'public' | 'authenticated' | 'restricted';
+
+/**
+ * ToolsetDiscoveryMode
+ */
+export type ToolsetDiscoveryMode = 'direct' | 'search_first';
+
+/**
+ * ToolsetHealth
+ */
+export type ToolsetHealth = 'healthy' | 'degraded' | 'unavailable';
+
+/**
+ * ToolsetKind
+ */
+export type ToolsetKind = 'explicit' | 'all_published';
+
+/**
+ * ToolsetMemberAvailability
+ */
+export type ToolsetMemberAvailability = 'available' | 'tool_disabled' | 'no_published_version';
+
+/**
+ * ToolsetMemberResponse
+ */
+export type ToolsetMemberResponse = {
+    availability: ToolsetMemberAvailability;
+    /**
+     * Canonical Name
+     */
+    canonical_name: string | null;
+    /**
+     * Description
+     */
+    description: string | null;
+    /**
+     * Published Tool Version Id
+     */
+    published_tool_version_id: string | null;
+    /**
+     * Serialized Schema Size
+     */
+    serialized_schema_size: number;
+    /**
+     * Tool Id
+     */
+    tool_id: string;
+};
+
+/**
+ * ToolsetPageResponse
+ */
+export type ToolsetPageResponse = {
+    /**
+     * Items
+     */
+    items: Array<ToolsetResponse>;
+    page: PageMetadata;
+};
+
+/**
+ * ToolsetResponse
+ */
+export type ToolsetResponse = {
+    /**
+     * Available Tool Count
+     */
+    available_tool_count: number;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Created By
+     */
+    created_by: string;
+    /**
+     * Description
+     */
+    description: string | null;
+    discovery_mode: ToolsetDiscoveryMode;
+    /**
+     * Endpoint Path
+     */
+    endpoint_path: string;
+    /**
+     * Grant Count
+     */
+    grant_count: number;
+    health: ToolsetHealth;
+    /**
+     * Id
+     */
+    id: string;
+    kind: ToolsetKind;
+    /**
+     * Members
+     */
+    members: Array<ToolsetMemberResponse>;
+    /**
+     * Membership Digest
+     */
+    membership_digest: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Principal Ids
+     */
+    principal_ids: Array<string>;
+    /**
+     * Revision
+     */
+    revision: number;
+    /**
+     * Serialized Schema Size
+     */
+    serialized_schema_size: number;
+    /**
+     * Slug
+     */
+    slug: string;
+    status: ToolsetStatus;
+    /**
+     * Tenant Id
+     */
+    tenant_id: string;
+    /**
+     * Tool Count
+     */
+    tool_count: number;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+};
+
+/**
+ * ToolsetStatus
+ */
+export type ToolsetStatus = 'draft' | 'active' | 'disabled';
+
+/**
+ * UpdateToolsetRequest
+ */
+export type UpdateToolsetRequest = {
+    /**
+     * Description
+     */
+    description?: string | null;
+    discovery_mode: ToolsetDiscoveryMode;
+    /**
+     * Expected Revision
+     */
+    expected_revision: number;
+    /**
+     * Name
+     */
+    name: string;
+};
 
 /**
  * UpdateUpstreamRequest
@@ -2893,6 +3110,333 @@ export type PublishToolVersionResponses = {
 };
 
 export type PublishToolVersionResponse = PublishToolVersionResponses[keyof PublishToolVersionResponses];
+
+export type ListToolsetsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Offset
+         */
+        offset?: number;
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Q
+         */
+        q?: string | null;
+        /**
+         * Status
+         */
+        status?: ToolsetStatus | null;
+        /**
+         * Kind
+         */
+        kind?: ToolsetKind | null;
+        /**
+         * Discovery Mode
+         */
+        discovery_mode?: ToolsetDiscoveryMode | null;
+    };
+    url: '/toolsets';
+};
+
+export type ListToolsetsErrors = {
+    /**
+     * Unprocessable Entity
+     */
+    422: ProblemDetails;
+};
+
+export type ListToolsetsError = ListToolsetsErrors[keyof ListToolsetsErrors];
+
+export type ListToolsetsResponses = {
+    /**
+     * Successful Response
+     */
+    200: ToolsetPageResponse;
+};
+
+export type ListToolsetsResponse = ListToolsetsResponses[keyof ListToolsetsResponses];
+
+export type CreateToolsetData = {
+    body: CreateToolsetRequest;
+    path?: never;
+    query?: never;
+    url: '/toolsets';
+};
+
+export type CreateToolsetErrors = {
+    /**
+     * Bad Request
+     */
+    400: ProblemDetails;
+    /**
+     * Conflict
+     */
+    409: ProblemDetails;
+    /**
+     * Unprocessable Entity
+     */
+    422: ProblemDetails;
+};
+
+export type CreateToolsetError = CreateToolsetErrors[keyof CreateToolsetErrors];
+
+export type CreateToolsetResponses = {
+    /**
+     * Successful Response
+     */
+    201: ToolsetResponse;
+};
+
+export type CreateToolsetResponse = CreateToolsetResponses[keyof CreateToolsetResponses];
+
+export type GetToolsetData = {
+    body?: never;
+    path: {
+        /**
+         * Toolset Id
+         */
+        toolset_id: string;
+    };
+    query?: never;
+    url: '/toolsets/{toolset_id}';
+};
+
+export type GetToolsetErrors = {
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+    /**
+     * Unprocessable Entity
+     */
+    422: ProblemDetails;
+};
+
+export type GetToolsetError = GetToolsetErrors[keyof GetToolsetErrors];
+
+export type GetToolsetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ToolsetResponse;
+};
+
+export type GetToolsetResponse = GetToolsetResponses[keyof GetToolsetResponses];
+
+export type UpdateToolsetData = {
+    body: UpdateToolsetRequest;
+    path: {
+        /**
+         * Toolset Id
+         */
+        toolset_id: string;
+    };
+    query?: never;
+    url: '/toolsets/{toolset_id}';
+};
+
+export type UpdateToolsetErrors = {
+    /**
+     * Bad Request
+     */
+    400: ProblemDetails;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+    /**
+     * Conflict
+     */
+    409: ProblemDetails;
+    /**
+     * Unprocessable Entity
+     */
+    422: ProblemDetails;
+};
+
+export type UpdateToolsetError = UpdateToolsetErrors[keyof UpdateToolsetErrors];
+
+export type UpdateToolsetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ToolsetResponse;
+};
+
+export type UpdateToolsetResponse = UpdateToolsetResponses[keyof UpdateToolsetResponses];
+
+export type ActivateToolsetData = {
+    body: ChangeToolsetStatusRequest;
+    path: {
+        /**
+         * Toolset Id
+         */
+        toolset_id: string;
+    };
+    query?: never;
+    url: '/toolsets/{toolset_id}/activate';
+};
+
+export type ActivateToolsetErrors = {
+    /**
+     * Bad Request
+     */
+    400: ProblemDetails;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+    /**
+     * Conflict
+     */
+    409: ProblemDetails;
+    /**
+     * Unprocessable Entity
+     */
+    422: ProblemDetails;
+};
+
+export type ActivateToolsetError = ActivateToolsetErrors[keyof ActivateToolsetErrors];
+
+export type ActivateToolsetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ToolsetResponse;
+};
+
+export type ActivateToolsetResponse = ActivateToolsetResponses[keyof ActivateToolsetResponses];
+
+export type DisableToolsetData = {
+    body: ChangeToolsetStatusRequest;
+    path: {
+        /**
+         * Toolset Id
+         */
+        toolset_id: string;
+    };
+    query?: never;
+    url: '/toolsets/{toolset_id}/disable';
+};
+
+export type DisableToolsetErrors = {
+    /**
+     * Bad Request
+     */
+    400: ProblemDetails;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+    /**
+     * Conflict
+     */
+    409: ProblemDetails;
+    /**
+     * Unprocessable Entity
+     */
+    422: ProblemDetails;
+};
+
+export type DisableToolsetError = DisableToolsetErrors[keyof DisableToolsetErrors];
+
+export type DisableToolsetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ToolsetResponse;
+};
+
+export type DisableToolsetResponse = DisableToolsetResponses[keyof DisableToolsetResponses];
+
+export type ReplaceToolsetAccessGrantsData = {
+    body: ReplaceToolsetAccessGrantsRequest;
+    path: {
+        /**
+         * Toolset Id
+         */
+        toolset_id: string;
+    };
+    query?: never;
+    url: '/toolsets/{toolset_id}/grants';
+};
+
+export type ReplaceToolsetAccessGrantsErrors = {
+    /**
+     * Bad Request
+     */
+    400: ProblemDetails;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+    /**
+     * Conflict
+     */
+    409: ProblemDetails;
+    /**
+     * Unprocessable Entity
+     */
+    422: ProblemDetails;
+};
+
+export type ReplaceToolsetAccessGrantsError = ReplaceToolsetAccessGrantsErrors[keyof ReplaceToolsetAccessGrantsErrors];
+
+export type ReplaceToolsetAccessGrantsResponses = {
+    /**
+     * Successful Response
+     */
+    200: ToolsetResponse;
+};
+
+export type ReplaceToolsetAccessGrantsResponse = ReplaceToolsetAccessGrantsResponses[keyof ReplaceToolsetAccessGrantsResponses];
+
+export type ReplaceToolsetMembersData = {
+    body: ReplaceToolsetMembersRequest;
+    path: {
+        /**
+         * Toolset Id
+         */
+        toolset_id: string;
+    };
+    query?: never;
+    url: '/toolsets/{toolset_id}/members';
+};
+
+export type ReplaceToolsetMembersErrors = {
+    /**
+     * Bad Request
+     */
+    400: ProblemDetails;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+    /**
+     * Conflict
+     */
+    409: ProblemDetails;
+    /**
+     * Unprocessable Entity
+     */
+    422: ProblemDetails;
+};
+
+export type ReplaceToolsetMembersError = ReplaceToolsetMembersErrors[keyof ReplaceToolsetMembersErrors];
+
+export type ReplaceToolsetMembersResponses = {
+    /**
+     * Successful Response
+     */
+    200: ToolsetResponse;
+};
+
+export type ReplaceToolsetMembersResponse = ReplaceToolsetMembersResponses[keyof ReplaceToolsetMembersResponses];
 
 export type ListUpstreamsData = {
     body?: never;

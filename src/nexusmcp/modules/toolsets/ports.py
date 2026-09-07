@@ -13,6 +13,9 @@ class ToolsetCatalogSnapshot:
     tenant_id: str
     availability: ToolsetMemberAvailability
     published_tool_version_id: str | None
+    canonical_name: str | None = None
+    description: str | None = None
+    serialized_schema_size: int = 0
 
     def __post_init__(self) -> None:
         if not self.tool_id.strip() or not self.tenant_id.strip():
@@ -27,6 +30,8 @@ class ToolsetCatalogSnapshot:
             and self.published_tool_version_id is not None
         ):
             raise ValueError("unavailable catalog snapshot must not expose published version id")
+        if self.serialized_schema_size < 0:
+            raise ValueError("catalog snapshot schema size must not be negative")
 
 
 class ToolsetCatalogReader(Protocol):
@@ -36,6 +41,11 @@ class ToolsetCatalogReader(Protocol):
         self,
         tenant_id: str,
         tool_ids: tuple[str, ...],
+    ) -> tuple[ToolsetCatalogSnapshot, ...]: ...
+
+    async def list_published_snapshots(
+        self,
+        tenant_id: str,
     ) -> tuple[ToolsetCatalogSnapshot, ...]: ...
 
 

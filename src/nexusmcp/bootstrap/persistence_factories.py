@@ -1,6 +1,7 @@
 """在 Use Case 执行时才从 DatabaseRuntime 获取 Session Factory。"""
 
 from nexusmcp.infrastructure.persistence.runtime import DatabaseRuntimePort
+from nexusmcp.infrastructure.persistence.toolset_uow import SqlAlchemyToolsetUnitOfWork
 from nexusmcp.modules.approval.adapters.sqlalchemy_uow import SqlAlchemyApprovalUnitOfWork
 from nexusmcp.modules.catalog.adapters.sqlalchemy_uow import SqlAlchemyCatalogUnitOfWork
 from nexusmcp.modules.execution.adapters.sqlalchemy_uow import SqlAlchemyExecutionUnitOfWork
@@ -70,3 +71,11 @@ class RuntimeRegistryUnitOfWorkFactory:
 
     def __call__(self) -> SqlAlchemyRegistryUnitOfWork:
         return SqlAlchemyRegistryUnitOfWork(self._database_runtime.require_session_factory())
+
+
+class RuntimeToolsetUnitOfWorkFactory:
+    def __init__(self, database_runtime: DatabaseRuntimePort) -> None:
+        self._database_runtime = database_runtime
+
+    def __call__(self) -> SqlAlchemyToolsetUnitOfWork:
+        return SqlAlchemyToolsetUnitOfWork(self._database_runtime.require_session_factory())

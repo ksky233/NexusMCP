@@ -33,6 +33,36 @@ class ToolNotVisibleError(NexusMcpError):
     safe_message = "The requested tool is not available to this principal."
 
 
+class ToolsetNotFoundError(NexusMcpError):
+    code = "toolset_not_found"
+    safe_message = "The requested toolset was not found."
+
+
+class ToolsetConflictError(NexusMcpError):
+    code = "toolset_conflict"
+    safe_message = "The toolset conflicts with existing state."
+
+
+class ToolsetRevisionConflictError(NexusMcpError):
+    code = "toolset_revision_conflict"
+    safe_message = "The toolset changed after it was loaded."
+
+
+class InvalidToolsetMembersError(NexusMcpError):
+    code = "invalid_toolset_members"
+    safe_message = "The toolset contains invalid members."
+
+
+class ToolsetMemberUnavailableError(NexusMcpError):
+    code = "toolset_member_unavailable"
+    safe_message = "One or more toolset members are unavailable."
+
+
+class SystemToolsetImmutableError(NexusMcpError):
+    code = "system_toolset_immutable"
+    safe_message = "The system-managed toolset cannot be changed this way."
+
+
 class InvalidToolStateError(NexusMcpError):
     code = "invalid_tool_state"
     safe_message = "The tool cannot be changed from its current state."

@@ -19,6 +19,7 @@ from nexusmcp.bootstrap.persistence_factories import (
     RuntimeRegistryUnitOfWorkFactory,
     RuntimeReviewUnitOfWorkFactory,
     RuntimeToolSearchUnitOfWorkFactory,
+    RuntimeToolsetUnitOfWorkFactory,
 )
 from nexusmcp.infrastructure.clock import SystemClock
 from nexusmcp.infrastructure.identifiers import UuidIdentifierGenerator
@@ -39,6 +40,7 @@ from nexusmcp.infrastructure.persistence.local_tenant import (
 )
 from nexusmcp.infrastructure.persistence.runtime import DatabaseRuntime, DatabaseRuntimePort
 from nexusmcp.interfaces.admin import AdminServices, create_admin_app
+from nexusmcp.interfaces.admin.toolset_routes import ToolsetAdminServices
 from nexusmcp.interfaces.health.router import create_health_router
 from nexusmcp.interfaces.mcp.context import request_headers, resolve_request_context
 from nexusmcp.interfaces.mcp.server import create_mcp_server
@@ -113,6 +115,16 @@ from nexusmcp.modules.tool_search.rank_fusion import ReciprocalRankFusion
 from nexusmcp.modules.tool_search.reindex_tools import ReindexTools
 from nexusmcp.modules.tool_search.search_tools import SearchTools
 from nexusmcp.modules.tool_search.vector_search import SearchVectorTools
+from nexusmcp.modules.toolsets.use_cases import (
+    ActivateToolset,
+    CreateToolset,
+    DisableToolset,
+    GetToolset,
+    ListToolsets,
+    ReplaceToolsetGrants,
+    ReplaceToolsetMembers,
+    UpdateToolset,
+)
 from nexusmcp.shared.request_context import RequestContext
 
 
@@ -395,6 +407,7 @@ def create_app(
         review_uow_factory = RuntimeReviewUnitOfWorkFactory(resolved_runtime)
         catalog_uow_factory = RuntimeCatalogUnitOfWorkFactory(resolved_runtime)
         tool_search_uow_factory = RuntimeToolSearchUnitOfWorkFactory(resolved_runtime)
+        toolset_uow_factory = RuntimeToolsetUnitOfWorkFactory(resolved_runtime)
         published_tool_reader = SqlAlchemyPublishedToolReader(resolved_runtime)
         document_builder = ToolSearchDocumentBuilder()
         reindex_job_store = SqlAlchemyToolSearchReindexJobStore(resolved_runtime)
@@ -470,6 +483,16 @@ def create_app(
                 list_reindex_jobs=ListToolSearchReindexJobs(reindex_job_store),
                 decide_approval=decide_approval,
                 get_approval=get_approval,
+                toolsets=ToolsetAdminServices(
+                    create=CreateToolset(toolset_uow_factory, identifier_generator, clock),
+                    list=ListToolsets(toolset_uow_factory),
+                    get=GetToolset(toolset_uow_factory),
+                    update=UpdateToolset(toolset_uow_factory, clock),
+                    replace_members=ReplaceToolsetMembers(toolset_uow_factory, clock),
+                    replace_grants=ReplaceToolsetGrants(toolset_uow_factory, clock),
+                    activate=ActivateToolset(toolset_uow_factory, clock),
+                    disable=DisableToolset(toolset_uow_factory, clock),
+                ),
                 reset_demo_workspace=(
                     ResetDemoWorkspace(SqlAlchemyDemoWorkspaceResetter(resolved_runtime))
                     if resolved_settings.admin_identity_mode == "public_demo"

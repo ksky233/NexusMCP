@@ -61,6 +61,21 @@ export const router = createBrowserRouter([
         },
       },
       {
+        path: "toolsets",
+        lazy: async () => {
+          const { ToolsetsPage } = await import("@/features/toolsets/pages/toolsets-page");
+          return { Component: ToolsetsPage };
+        },
+      },
+      {
+        path: "toolsets/:toolsetId",
+        lazy: async () => {
+          const { ToolsetDetailPage } =
+            await import("@/features/toolsets/pages/toolset-detail-page");
+          return { Component: ToolsetDetailPage };
+        },
+      },
+      {
         path: "approvals",
         lazy: async () => {
           const { ApprovalsPage } = await import("@/features/approvals/pages/approvals-page");

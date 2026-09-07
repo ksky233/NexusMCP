@@ -13,6 +13,7 @@ from nexusmcp.interfaces.admin.openapi import (
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 CONTRACT_PATH = PROJECT_ROOT / "contracts" / "admin.openapi.json"
 EXPECTED_OPERATION_IDS = {
+    "activateToolset",
     "approveApproval",
     "disableUpstream",
     "getApproval",
@@ -40,6 +41,12 @@ EXPECTED_OPERATION_IDS = {
     "publishToolVersion",
     "registerUpstream",
     "createToolSearchReindexJob",
+    "createToolset",
+    "disableToolset",
+    "getToolset",
+    "listToolsets",
+    "replaceToolsetAccessGrants",
+    "replaceToolsetMembers",
     "rejectApproval",
     "resetDemoWorkspace",
     "reviewImportedOperation",
@@ -48,6 +55,7 @@ EXPECTED_OPERATION_IDS = {
     "submitOpenApiImport",
     "submitToolVersionReview",
     "updateUpstream",
+    "updateToolset",
 }
 
 
@@ -103,6 +111,7 @@ def test_admin_query_contract_uses_page_envelopes_and_redacted_operational_field
         "ExecutionAttemptPageResponse",
         "AuditEventPageResponse",
         "ToolSearchReindexJobPageResponse",
+        "ToolsetPageResponse",
     ):
         assert schemas[schema_name]["required"] == ["items", "page"]
 

@@ -58,6 +58,10 @@ Namespace/Tag 只用于 Admin 筛选，不能作为自动包含未来 Tool 的�
 每个 Tenant 最多有一个系统 `all_published` Toolset。它动态解析全部当前 Published Tool，不写 Member Row，
 不允许改名、删除或编辑成员。
 
+这里选择动态投影而不是发布时同步 Member Row：`all_published` 表达的是“始终包含当前全部 Published Tool”这条
+规则，而不是某一时刻的成员快照。动态解析可避免每次 Publish/Retire 都更新系统 Toolset、减少写放大与漂移；
+代价是它不能表达版本冻结或历史成员回滚，首版接受该限制。
+
 ### 3. Member 引用逻辑 Tool
 
 `ToolsetMember` 引用 `tool_id`，不固定 `tool_version_id`：
@@ -72,6 +76,10 @@ Catalog 显式 Publish 新版本后，所有包含该 Tool 的 Toolset 自动使
 首版不建立不可变 `ToolsetRevision/RevisionMember` 历史实体。Toolset Aggregate 使用单调递增 `revision` 做
 Optimistic Concurrency；完整 Member/Grant Replace 在一个事务中生效，`membership_digest` 表达排序去重后的
 Member Set。需要历史回滚、灰度或环境 Promotion 时再引入 Revision Entity。
+
+Admin API 选择整体 Replace，而不是 Member/Grant 逐行 CRUD：二者属于 Toolset Aggregate 内部集合，集合去重、
+Digest、Revision 与 Active 状态约束必须在同一个事务中共同成立。整体 Replace 让一次请求只有一个并发版本和
+一个提交结果，不会暴露短暂的半更新状态；代价是集合很大时写入量更高，但当前 Toolset 规模与修改频率足以接受。
 
 ### 4. ToolsetAccessGrant 是基础访问事实
 

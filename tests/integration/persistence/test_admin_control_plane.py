@@ -188,6 +188,72 @@ async def test_admin_rest_drives_import_review_publish_search_and_mcp(
             assert search.status_code == 200
             assert [item["canonical_name"] for item in search.json()] == ["directory.get_employee"]
 
+            created_toolset = await client.post(
+                "/admin/toolsets",
+                json={
+                    "slug": "people-operations",
+                    "name": "People Operations",
+                    "description": "Employee directory tools for operations agents.",
+                    "discovery_mode": "direct",
+                },
+            )
+            assert created_toolset.status_code == 201
+            toolset = created_toolset.json()
+            assert toolset["endpoint_path"] == "/mcp/toolsets/people-operations"
+            assert toolset["health"] == "unavailable"
+
+            replaced_members = await client.put(
+                f"/admin/toolsets/{toolset['id']}/members",
+                json={
+                    "expected_revision": toolset["revision"],
+                    "tool_ids": [review_data["tool_id"]],
+                },
+            )
+            assert replaced_members.status_code == 200
+            toolset = replaced_members.json()
+            assert toolset["health"] == "healthy"
+            assert toolset["available_tool_count"] == 1
+            assert toolset["members"][0]["canonical_name"] == "directory.get_employee"
+            assert toolset["members"][0]["serialized_schema_size"] > 0
+
+            replaced_grants = await client.put(
+                f"/admin/toolsets/{toolset['id']}/grants",
+                json={
+                    "expected_revision": toolset["revision"],
+                    "principal_ids": ["people-agent"],
+                },
+            )
+            toolset = replaced_grants.json()
+            assert toolset["principal_ids"] == ["people-agent"]
+
+            activated = await client.post(
+                f"/admin/toolsets/{toolset['id']}/activate",
+                json={"expected_revision": toolset["revision"]},
+            )
+            assert activated.status_code == 200
+            toolset = activated.json()
+            assert toolset["status"] == "active"
+
+            listed_toolsets = await client.get(
+                "/admin/toolsets",
+                params={"q": "people", "status": "active"},
+            )
+            assert listed_toolsets.status_code == 200
+            assert listed_toolsets.json()["page"]["total"] == 1
+            assert listed_toolsets.json()["items"][0]["id"] == toolset["id"]
+
+            stale_update = await client.put(
+                f"/admin/toolsets/{toolset['id']}",
+                json={
+                    "expected_revision": toolset["revision"] - 1,
+                    "name": "Stale Update",
+                    "description": None,
+                    "discovery_mode": "direct",
+                },
+            )
+            assert stale_update.status_code == 409
+            assert stale_update.json()["code"] == "toolset_revision_conflict"
+
             search_lab = await client.get(
                 "/admin/search/tools",
                 params={"q": "employee", "retrieval_mode": "lexical"},

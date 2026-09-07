@@ -14,6 +14,10 @@ from starlette.responses import Response
 
 from nexusmcp.interfaces.admin.query_models import PageMetadata
 from nexusmcp.interfaces.admin.query_routes import create_admin_query_router
+from nexusmcp.interfaces.admin.toolset_routes import (
+    ToolsetAdminServices,
+    create_toolset_router,
+)
 from nexusmcp.interfaces.http.errors import problem_responses, register_http_exception_handlers
 from nexusmcp.modules.approval.domain import ApprovalRequest
 from nexusmcp.modules.approval.use_cases import (
@@ -89,6 +93,7 @@ class AdminServices:
     list_reindex_jobs: ListToolSearchReindexJobs
     decide_approval: DecideApproval
     get_approval: GetApproval
+    toolsets: ToolsetAdminServices
     reset_demo_workspace: ResetDemoWorkspace | None = None
 
 
@@ -927,6 +932,7 @@ def create_admin_app(
             return DemoWorkspaceResetResponse(status="reset", tenant_id=result.tenant_id)
 
     app.include_router(create_admin_query_router(services.queries))
+    app.include_router(create_toolset_router(services.toolsets))
     return app
 
 

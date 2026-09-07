@@ -1,6 +1,6 @@
 # I-03｜Toolset Scoped MCP Endpoints
 
-> 状态：In Progress（I03-1 Completed）
+> 状态：In Progress（I03-2 Completed）
 > 日期：2026-09-06
 > 触发：中央 MCP Endpoint 暴露完整 Catalog 时，单个 Agent 可能接收到与自身业务无关的大量 Tool
 > 决策依据：[ADR-0020](../adr/0020-toolset-scoped-mcp-endpoints.md)
@@ -14,7 +14,7 @@ I03-0 领域、协议与兼容性讨论      Completed
 I03-1A Domain/Port/InMemory         Completed
 I03-1B PostgreSQL Schema/Adapter    Completed
 I03-1C Persistence Contract Close  Completed
-I03-2 Admin API 与 Web UI          Planned
+I03-2 Admin API 与 Web UI          Completed
 I03-3 Scoped MCP Endpoint          Planned
 I03-4 Scoped Search 与 Audit       Planned
 I03-5 E2E、Evidence 与部署         Planned
@@ -931,6 +931,10 @@ I03-1C 已完成，I03-1 Persistence 正式收口，证据见：
 - OpenAPI Contract 与 Generated Client；
 - Toolset List/Create/Detail/Member Selection；
 - Endpoint Copy 与状态诊断。
+
+I03-2 已完成，证据见：
+
+- [I03-2｜Toolset Admin API 与 Web UI](../实验记录/42_I03-2_AdminAPI与WebUI.md)
 
 ### I03-3｜Scoped MCP Endpoint
 

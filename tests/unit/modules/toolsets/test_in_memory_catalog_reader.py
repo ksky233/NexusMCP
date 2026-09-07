@@ -28,6 +28,7 @@ async def test_catalog_reader_preserves_requested_order_and_tenant_scope() -> No
         ("tool-b", "missing", "tool-a"),
     ) == (tool_b, tool_a)
     assert await reader.list_member_snapshots("tenant-b", ("tool-a",)) == ()
+    assert await reader.list_published_snapshots("tenant-a") == (tool_a,)
 
 
 def test_catalog_snapshot_requires_version_only_when_available() -> None:

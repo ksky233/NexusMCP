@@ -7,7 +7,12 @@ from collections.abc import Iterable
 from nexusmcp.modules.toolsets.adapters._repository_rules import (
     requires_persistence_update,
 )
-from nexusmcp.modules.toolsets.domain import Toolset, ToolsetKind, ToolsetStatus
+from nexusmcp.modules.toolsets.domain import (
+    Toolset,
+    ToolsetKind,
+    ToolsetMemberAvailability,
+    ToolsetStatus,
+)
 from nexusmcp.modules.toolsets.ports import ToolsetCatalogSnapshot
 
 
@@ -137,6 +142,22 @@ class InMemoryToolsetCatalogReader:
             snapshot
             for tool_id in tool_ids
             if (snapshot := self._snapshots.get((tenant_id, tool_id))) is not None
+        )
+
+    async def list_published_snapshots(
+        self,
+        tenant_id: str,
+    ) -> tuple[ToolsetCatalogSnapshot, ...]:
+        return tuple(
+            sorted(
+                (
+                    snapshot
+                    for snapshot in self._snapshots.values()
+                    if snapshot.tenant_id == tenant_id
+                    and snapshot.availability is ToolsetMemberAvailability.AVAILABLE
+                ),
+                key=lambda snapshot: (snapshot.canonical_name or "", snapshot.tool_id),
+            )
         )
 
 

@@ -63,6 +63,15 @@ export function humanize(value: string): string {
     missing: "未索引",
     stale: "等待更新",
     current: "已索引",
+    explicit: "显式工具集",
+    all_published: "全部已发布工具",
+    direct: "直接暴露",
+    search_first: "检索优先",
+    healthy: "健康",
+    degraded: "部分降级",
+    unavailable: "不可用",
+    tool_disabled: "Tool 已停用",
+    no_published_version: "无 Published Version",
   };
   if (localized[value]) return localized[value];
   return value

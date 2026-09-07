@@ -72,6 +72,7 @@ async def test_catalog_reader_and_repository_share_one_uow_session_and_classify_
             TENANT_A_ID,
             (NO_VERSION_TOOL_ID, TOOL_ID, DISABLED_TOOL_ID, str(uuid.uuid4())),
         )
+        published = await unit_of_work.catalog.list_published_snapshots(TENANT_A_ID)
 
     assert [snapshot.tool_id for snapshot in snapshots] == [
         NO_VERSION_TOOL_ID,
@@ -84,6 +85,10 @@ async def test_catalog_reader_and_repository_share_one_uow_session_and_classify_
         ToolsetMemberAvailability.TOOL_DISABLED,
     ]
     assert snapshots[1].published_tool_version_id == VERSION_ID
+    assert snapshots[1].canonical_name == "directory.get_employee"
+    assert snapshots[1].description == "Get one employee by id."
+    assert snapshots[1].serialized_schema_size > 0
+    assert [snapshot.tool_id for snapshot in published] == [TOOL_ID]
 
 
 @pytest.mark.asyncio
