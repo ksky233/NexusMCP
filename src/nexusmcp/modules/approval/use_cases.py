@@ -30,6 +30,9 @@ class RequestApprovalCommand:
     policy_version: str
     idempotency_key: str | None = None
     policy_reason_code: str = "approval_required"
+    mcp_scope_type: str = "root"
+    toolset_id: str | None = None
+    toolset_revision: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,6 +107,7 @@ class RequestApproval:
                     arguments_digest=command.arguments_digest,
                     policy_version=command.policy_version,
                     reason_code=command.policy_reason_code,
+                    metadata=_scope_metadata(command),
                 )
             )
             await unit_of_work.commit()
@@ -196,6 +200,22 @@ class GetApproval:
         if approval is None:
             raise ApprovalNotFoundError("approval did not exist in tenant")
         return approval
+
+
+def _scope_metadata(command: RequestApprovalCommand) -> dict[str, str | int]:
+    metadata: dict[str, str | int] = {
+        "mcp_scope_type": command.mcp_scope_type,
+        "scope_reason_code": (
+            "active_toolset_grant"
+            if command.mcp_scope_type == "toolset"
+            else "granted_toolset_union"
+        ),
+    }
+    if command.toolset_id is not None:
+        metadata["toolset_id"] = command.toolset_id
+    if command.toolset_revision is not None:
+        metadata["toolset_revision"] = command.toolset_revision
+    return metadata
 
 
 def _require_pending_decision(approval: ApprovalRequest) -> None:

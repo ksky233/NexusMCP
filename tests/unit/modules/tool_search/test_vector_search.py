@@ -46,6 +46,7 @@ class CapturingVectorSearch:
         self.visibilities: tuple[ToolVisibility, ...] = ()
         self.namespace: str | None = None
         self.side_effect: ToolSideEffect | None = None
+        self.eligible_tool_ids: tuple[str, ...] | None = None
         self.limit = 0
 
     async def search_published_by_vector(
@@ -54,6 +55,7 @@ class CapturingVectorSearch:
         query_vector: EmbeddingVector,
         *,
         visibilities: tuple[ToolVisibility, ...],
+        eligible_tool_ids: tuple[str, ...] | None,
         namespace: str | None,
         side_effect: ToolSideEffect | None,
         limit: int,
@@ -61,6 +63,7 @@ class CapturingVectorSearch:
         self.tenant_id = tenant_id
         self.query_vector = query_vector
         self.visibilities = visibilities
+        self.eligible_tool_ids = eligible_tool_ids
         self.namespace = namespace
         self.side_effect = side_effect
         self.limit = limit
@@ -114,6 +117,7 @@ async def test_query_embedding_is_ephemeral_and_static_scope_is_forwarded() -> N
             namespace="inventory",
             side_effect=ToolSideEffect.READ_ONLY,
             limit=8,
+            eligible_tool_ids=("tool-get",),
         )
     )
 
@@ -126,6 +130,28 @@ async def test_query_embedding_is_ephemeral_and_static_scope_is_forwarded() -> N
     assert adapter.namespace == "inventory"
     assert adapter.side_effect is ToolSideEffect.READ_ONLY
     assert adapter.limit == 8
+    assert adapter.eligible_tool_ids == ("tool-get",)
+
+
+@pytest.mark.asyncio
+async def test_empty_toolset_scope_skips_paid_query_embedding() -> None:
+    provider = FakeEmbeddingProvider()
+    adapter = CapturingVectorSearch(VectorSearchResult(hits=(), eligible_count=0, indexed_count=0))
+
+    result = await SearchVectorTools(
+        embedding_provider=provider,
+        vector_search=adapter,
+    ).execute(
+        SearchPublishedToolsQuery(
+            context=context(),
+            text="anything",
+            eligible_tool_ids=(),
+        )
+    )
+
+    assert result == VectorSearchResult(hits=(), eligible_count=0, indexed_count=0)
+    assert provider.texts is None
+    assert adapter.query_vector is None
 
 
 @pytest.mark.asyncio

@@ -68,6 +68,9 @@ class CallToolCommand:
     arguments: Mapping[str, Any]
     idempotency_key: str | None = None
     approval_id: str | None = None
+    mcp_scope_type: McpScopeType = McpScopeType.ROOT
+    toolset_id: str | None = None
+    toolset_revision: int | None = None
 
     def __post_init__(self) -> None:
         if not self.tool_name.strip():
@@ -76,6 +79,7 @@ class CallToolCommand:
             key = self.idempotency_key
             if not is_valid_idempotency_key(key):
                 raise ValueError("idempotency key must be 1-128 safe ASCII token characters")
+        _validate_mcp_scope(self.mcp_scope_type, self.toolset_id, self.toolset_revision)
 
     @property
     def arguments_digest(self) -> str:
@@ -178,14 +182,7 @@ class ToolExecution:
             raise ValueError("unsuccessful terminal execution must contain error state")
         if self.attempt_count < 0:
             raise ValueError("execution attempt count must not be negative")
-        if self.mcp_scope_type is McpScopeType.ROOT and (
-            self.toolset_id is not None or self.toolset_revision is not None
-        ):
-            raise ValueError("root MCP scope must not declare toolset context")
-        if self.mcp_scope_type is McpScopeType.TOOLSET and (
-            not self.toolset_id or self.toolset_revision is None or self.toolset_revision <= 0
-        ):
-            raise ValueError("toolset MCP scope requires toolset id and positive revision")
+        _validate_mcp_scope(self.mcp_scope_type, self.toolset_id, self.toolset_revision)
 
     def start(self, started_at: datetime) -> ToolExecution:
         if self.status is not ExecutionStatus.PLANNED:
@@ -415,6 +412,19 @@ def retry_disposition(
     if side_effect is ToolSideEffect.IDEMPOTENT_WRITE and has_idempotency_key:
         return RetryDisposition.RETRY
     return RetryDisposition.DO_NOT_RETRY
+
+
+def _validate_mcp_scope(
+    scope_type: McpScopeType,
+    toolset_id: str | None,
+    toolset_revision: int | None,
+) -> None:
+    if scope_type is McpScopeType.ROOT and (toolset_id is not None or toolset_revision is not None):
+        raise ValueError("root MCP scope must not declare toolset context")
+    if scope_type is McpScopeType.TOOLSET and (
+        not toolset_id or toolset_revision is None or toolset_revision <= 0
+    ):
+        raise ValueError("toolset MCP scope requires toolset id and positive revision")
 
 
 def is_valid_idempotency_key(value: str) -> bool:

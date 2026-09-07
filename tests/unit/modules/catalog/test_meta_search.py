@@ -60,11 +60,20 @@ class ReserveFirstVectorSearch:
         query_vector: EmbeddingVector,
         *,
         visibilities: tuple[ToolVisibility, ...],
+        eligible_tool_ids: tuple[str, ...] | None,
         namespace: str | None,
         side_effect: ToolSideEffect | None,
         limit: int,
     ) -> VectorSearchResult:
-        _ = (tenant_id, query_vector, visibilities, namespace, side_effect, limit)
+        _ = (
+            tenant_id,
+            query_vector,
+            visibilities,
+            eligible_tool_ids,
+            namespace,
+            side_effect,
+            limit,
+        )
         return VectorSearchResult(
             hits=(PublishedToolSearchHit(tool=self._reserve_tool, rank=0.99),),
             eligible_count=2,

@@ -29,6 +29,10 @@ from nexusmcp.modules.tool_search.domain import (
     ToolSearchEmbedding,
 )
 from nexusmcp.modules.tool_search.vector_search import SearchVectorTools
+from nexusmcp.modules.toolsets.adapters.sqlalchemy_repository import (
+    SqlAlchemyToolsetRepository,
+)
+from nexusmcp.modules.toolsets.domain import Toolset, ToolsetDiscoveryMode
 from nexusmcp.shared.errors import ToolSearchModeUnavailableError
 from tests.contract.repositories.contracts import TENANT_A_ID
 from tests.integration.persistence.test_postgresql_fts_search import (
@@ -226,3 +230,86 @@ async def test_hybrid_search_is_exposed_through_built_in_meta_tool(
     assert result.meta is not None
     assert result.meta["com.nexusmcp/indexVersion"] == f"{MODEL}@{TOOL_EMBEDDING_DIMENSIONS}"
     assert provider.calls == [("things that are almost sold out",)]
+
+
+@pytest.mark.asyncio
+async def test_scoped_hybrid_filters_fts_and_vector_candidates_before_rrf(
+    pg_session_factory: async_sessionmaker[AsyncSession],
+    migrated_database_url: str,
+) -> None:
+    async with pg_session_factory() as seed_session:
+        await seed_search_catalog(seed_session)
+        await seed_vector_projection(seed_session)
+        reserve_tool_id = str(
+            await seed_session.scalar(
+                select(ToolModel.id).where(ToolModel.canonical_name == "inventory.reserve_stock")
+            )
+        )
+        toolset = (
+            Toolset.create_explicit(
+                toolset_id="00000000-0000-0000-0000-000000000560",
+                tenant_id=TENANT_A_ID,
+                slug="inventory-writes",
+                name="Inventory Writes",
+                description=None,
+                created_by="admin-a",
+                created_at=NOW,
+                discovery_mode=ToolsetDiscoveryMode.SEARCH_FIRST,
+            )
+            .replace_members(
+                expected_revision=1,
+                tool_ids=(reserve_tool_id,),
+                actor_id="admin-a",
+                occurred_at=NOW,
+            )
+            .replace_grants(
+                expected_revision=2,
+                principal_ids=("local-agent-service",),
+                actor_id="admin-a",
+                occurred_at=NOW,
+            )
+            .activate(expected_revision=3, activated_at=NOW)
+        )
+        await SqlAlchemyToolsetRepository(seed_session).add(TENANT_A_ID, toolset)
+        await seed_session.commit()
+
+    provider = FixedQueryEmbeddingProvider(vector(1.0, 0.0))
+    app = create_app(
+        Settings(
+            environment="test",
+            catalog_backend="postgresql",
+            database_url=SecretStr(migrated_database_url),
+            local_tenant_id=TENANT_A_ID,
+            embedding_api_key=None,
+        ),
+        embedding_provider=provider,
+    )
+
+    async with app.router.lifespan_context(app):
+        async with httpx2.AsyncClient(
+            transport=httpx2.ASGITransport(app=app),
+            base_url="http://testserver",
+        ) as http_client:
+            transport = streamable_http_client(
+                "http://testserver/mcp/toolsets/inventory-writes",
+                http_client=http_client,
+            )
+            async with Client(transport) as client:
+                listed = await client.list_tools(cache_mode="refresh")
+                result = await client.call_tool(
+                    "nexus.search_tools",
+                    {
+                        "query": "inventory",
+                        "retrieval_mode": "hybrid",
+                        "limit": 3,
+                    },
+                )
+
+    assert [tool.name for tool in listed.tools] == ["nexus.search_tools"]
+    assert result.is_error is False
+    assert [item["name"] for item in result.structured_content["tools"]] == [
+        "inventory.reserve_stock"
+    ]
+    assert result.meta is not None
+    assert result.meta["com.nexusmcp/candidateCount"] == 1
+    assert provider.calls == [("inventory",)]

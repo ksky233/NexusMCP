@@ -29,11 +29,12 @@ class SqlAlchemyExactVectorToolSearch:
         query_vector: EmbeddingVector,
         *,
         visibilities: tuple[ToolVisibility, ...],
+        eligible_tool_ids: tuple[str, ...] | None,
         namespace: str | None,
         side_effect: ToolSideEffect | None,
         limit: int,
     ) -> VectorSearchResult:
-        if not visibilities:
+        if not visibilities or eligible_tool_ids == ():
             return VectorSearchResult(hits=(), eligible_count=0, indexed_count=0)
         tenant_uuid = as_uuid(tenant_id, field_name="tenant id")
         scope_filters = (
@@ -77,6 +78,12 @@ class SqlAlchemyExactVectorToolSearch:
         if namespace is not None:
             coverage_statement = coverage_statement.where(ToolModel.namespace == namespace)
             candidate_statement = candidate_statement.where(ToolModel.namespace == namespace)
+        if eligible_tool_ids is not None:
+            eligible_ids = tuple(
+                as_uuid(tool_id, field_name="eligible tool id") for tool_id in eligible_tool_ids
+            )
+            coverage_statement = coverage_statement.where(ToolModel.id.in_(eligible_ids))
+            candidate_statement = candidate_statement.where(ToolModel.id.in_(eligible_ids))
         if side_effect is not None:
             coverage_statement = coverage_statement.where(
                 ToolVersionModel.side_effect == side_effect.value

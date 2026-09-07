@@ -110,6 +110,13 @@ def test_execution_scope_requires_consistent_root_or_toolset_context() -> None:
         replace(root, toolset_id="toolset-1")
     with pytest.raises(ValueError, match="requires toolset id"):
         replace(root, mcp_scope_type=McpScopeType.TOOLSET)
+    with pytest.raises(ValueError, match="requires toolset id"):
+        CallToolCommand(
+            context=_context(),
+            tool_name="inventory.reserve_stock",
+            arguments={},
+            mcp_scope_type=McpScopeType.TOOLSET,
+        )
 
 
 @pytest.mark.parametrize(

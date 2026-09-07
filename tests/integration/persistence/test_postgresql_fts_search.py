@@ -4,9 +4,11 @@ import uuid
 from datetime import UTC, datetime
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from nexusmcp.infrastructure.persistence.runtime import DatabaseRuntime
+from nexusmcp.modules.catalog.adapters.sqlalchemy_models import ToolModel
 from nexusmcp.modules.catalog.adapters.sqlalchemy_repository import (
     SqlAlchemyToolCatalogRepository,
 )
@@ -221,6 +223,11 @@ async def test_fts_ranking_and_governance_filters(
 ) -> None:
     async with pg_session_factory() as seed_session:
         await seed_search_catalog(seed_session)
+        scoped_tool_id = str(
+            await seed_session.scalar(
+                select(ToolModel.id).where(ToolModel.canonical_name == "inventory.get_status")
+            )
+        )
     runtime = DatabaseRuntime(migrated_database_url)
     await runtime.start()
     try:
@@ -256,6 +263,20 @@ async def test_fts_ranking_and_governance_filters(
                 limit=1,
             )
         )
+        scoped = await use_case.execute(
+            SearchPublishedToolsQuery(
+                context=context(TENANT_A_ID, "operator"),
+                text="inventory",
+                eligible_tool_ids=(scoped_tool_id,),
+            )
+        )
+        empty_scope = await use_case.execute(
+            SearchPublishedToolsQuery(
+                context=context(TENANT_A_ID, "operator"),
+                text="inventory",
+                eligible_tool_ids=(),
+            )
+        )
     finally:
         await runtime.stop()
 
@@ -270,3 +291,5 @@ async def test_fts_ranking_and_governance_filters(
     assert anonymous_internal == ()
     assert [hit.tool.canonical_name for hit in tenant_b] == ["inventory.cross_tenant_stock"]
     assert len(limited) == 1
+    assert [hit.tool.canonical_name for hit in scoped] == ["inventory.get_status"]
+    assert empty_scope == ()

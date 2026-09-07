@@ -157,14 +157,18 @@ class InMemoryToolCatalogRepository:
         query_text: str,
         *,
         visibilities: tuple[ToolVisibility, ...],
+        eligible_tool_ids: tuple[str, ...] | None,
         namespace: str | None,
         side_effect: ToolSideEffect | None,
         limit: int,
     ) -> tuple[PublishedToolSearchHit, ...]:
+        eligible = set(eligible_tool_ids) if eligible_tool_ids is not None else None
         tokens = tuple(token for token in query_text.lower().split() if token)
         hits: list[PublishedToolSearchHit] = []
         for tool in self._published_tools.values():
             if tool.tenant_id != tenant_id or tool.visibility not in visibilities:
+                continue
+            if eligible is not None and tool.tool_id not in eligible:
                 continue
             if namespace is not None and tool.namespace != namespace:
                 continue

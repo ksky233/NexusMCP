@@ -19,6 +19,7 @@ class SearchPublishedToolsQuery:
     limit: int = 10
     namespace: str | None = None
     side_effect: ToolSideEffect | None = None
+    eligible_tool_ids: tuple[str, ...] | None = None
 
 
 class SearchPublishedTools:
@@ -49,6 +50,7 @@ class SearchPublishedTools:
             query.context.tenant_id,
             query_text,
             visibilities=visibilities,
+            eligible_tool_ids=query.eligible_tool_ids,
             namespace=namespace,
             side_effect=query.side_effect,
             limit=query.limit,

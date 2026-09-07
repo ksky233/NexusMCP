@@ -14,6 +14,7 @@ from nexusmcp.modules.execution.domain import (
     ExecutionAttemptStatus,
     ExecutionErrorCategory,
     ExecutionStatus,
+    McpScopeType,
     ToolExecution,
 )
 from nexusmcp.modules.execution.ports import ExecutionUnitOfWorkFactory
@@ -47,6 +48,9 @@ class PlanExecutionCommand:
     approval_id: str | None = None
     credential_binding_id: str | None = None
     idempotency_key: str | None = None
+    mcp_scope_type: McpScopeType = McpScopeType.ROOT
+    toolset_id: str | None = None
+    toolset_revision: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,6 +62,21 @@ class RecordCallDecisionCommand:
     policy_version: str
     reason_code: str
     outcome: AuditOutcome
+    mcp_scope_type: McpScopeType = McpScopeType.ROOT
+    toolset_id: str | None = None
+    toolset_revision: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class RecordMcpScopeDenialCommand:
+    context: ActorContext
+    tool_name: str
+    arguments_digest: str
+    reason_code: str
+    mcp_scope_type: McpScopeType
+    toolset_slug: str | None = None
+    toolset_id: str | None = None
+    toolset_revision: int | None = None
 
 
 class ExecutionLifecycle:
@@ -91,6 +110,9 @@ class ExecutionLifecycle:
             status=ExecutionStatus.PLANNED,
             planned_at=now,
             idempotency_key=command.idempotency_key,
+            mcp_scope_type=command.mcp_scope_type,
+            toolset_id=command.toolset_id,
+            toolset_revision=command.toolset_revision,
         ).start(now)
         async with self._unit_of_work_factory() as unit_of_work:
             if command.idempotency_key is not None:
@@ -211,6 +233,39 @@ class ExecutionLifecycle:
             arguments_digest=command.arguments_digest,
             policy_version=command.policy_version,
             reason_code=command.reason_code,
+            metadata=_scope_metadata(
+                command.mcp_scope_type,
+                command.toolset_id,
+                command.toolset_revision,
+            ),
+        )
+        async with self._unit_of_work_factory() as unit_of_work:
+            await unit_of_work.audits.append(event)
+            await unit_of_work.commit()
+
+    async def record_scope_denial(self, command: RecordMcpScopeDenialCommand) -> None:
+        metadata = _scope_metadata(
+            command.mcp_scope_type,
+            command.toolset_id,
+            command.toolset_revision,
+            reason_code=command.reason_code,
+        )
+        if command.toolset_slug is not None:
+            metadata["toolset_slug"] = command.toolset_slug
+        event = AuditEvent(
+            id=self._identifier_generator.new_id(),
+            tenant_id=command.context.tenant_id,
+            actor_id=command.context.principal_id,
+            action=AuditAction.TOOL_CALL,
+            resource_type="tool_name",
+            resource_id=command.tool_name,
+            outcome=AuditOutcome.DENIED,
+            request_id=command.context.request_id,
+            trace_id=command.context.trace_id,
+            occurred_at=self._clock.now(),
+            arguments_digest=command.arguments_digest,
+            reason_code=command.reason_code,
+            metadata=metadata,
         )
         async with self._unit_of_work_factory() as unit_of_work:
             await unit_of_work.audits.append(event)
@@ -352,8 +407,36 @@ class ExecutionLifecycle:
                 "side_effect": execution.side_effect.value,
                 "execution_status": execution.status.value,
                 "attempt_count": execution.attempt_count,
+                **_scope_metadata(
+                    execution.mcp_scope_type,
+                    execution.toolset_id,
+                    execution.toolset_revision,
+                ),
             },
         )
+
+
+def _scope_metadata(
+    scope_type: McpScopeType,
+    toolset_id: str | None,
+    toolset_revision: int | None,
+    *,
+    reason_code: str | None = None,
+) -> dict[str, str | int]:
+    metadata: dict[str, str | int] = {
+        "mcp_scope_type": scope_type.value,
+        "scope_reason_code": reason_code
+        or (
+            "active_toolset_grant"
+            if scope_type is McpScopeType.TOOLSET
+            else "granted_toolset_union"
+        ),
+    }
+    if toolset_id is not None:
+        metadata["toolset_id"] = toolset_id
+    if toolset_revision is not None:
+        metadata["toolset_revision"] = toolset_revision
+    return metadata
 
 
 def _raise_idempotency_reuse(

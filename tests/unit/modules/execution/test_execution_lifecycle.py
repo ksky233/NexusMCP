@@ -1,6 +1,6 @@
 """Execution/Approval/Audit 短事务与回滚测试。"""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from types import TracebackType
 
@@ -22,8 +22,12 @@ from nexusmcp.modules.execution.adapters.in_memory_uow import (
     InMemoryExecutionUnitOfWork,
     InMemoryExecutionUnitOfWorkFactory,
 )
-from nexusmcp.modules.execution.domain import ExecutionStatus
-from nexusmcp.modules.execution.lifecycle import ExecutionLifecycle, PlanExecutionCommand
+from nexusmcp.modules.execution.domain import ExecutionStatus, McpScopeType
+from nexusmcp.modules.execution.lifecycle import (
+    ExecutionLifecycle,
+    PlanExecutionCommand,
+    RecordMcpScopeDenialCommand,
+)
 from nexusmcp.shared.errors import (
     IdempotencyAlreadyCompletedError,
     IdempotencyConflictError,
@@ -136,6 +140,75 @@ async def test_plan_atomically_consumes_approval_and_records_allowed_audit() -> 
     ]
     assert all(event.arguments_digest == "1" * 64 for event in audits)
     assert all("arguments" not in (event.metadata or {}) for event in audits)
+
+
+@pytest.mark.asyncio
+async def test_scoped_execution_and_pre_execution_denial_preserve_scope_evidence() -> None:
+    factory = InMemoryExecutionUnitOfWorkFactory()
+    lifecycle = ExecutionLifecycle(
+        factory,
+        FixedClock(),
+        SequentialIdentifierGenerator("scope"),
+    )
+    scoped_command = replace(
+        plan_command(),
+        mcp_scope_type=McpScopeType.TOOLSET,
+        toolset_id="toolset-operations",
+        toolset_revision=7,
+    )
+
+    running = await lifecycle.plan(scoped_command)
+    await lifecycle.succeed("tenant-a", running.id)
+    await lifecycle.record_scope_denial(
+        RecordMcpScopeDenialCommand(
+            context=context(),
+            tool_name="inventory.get_sku",
+            arguments_digest="2" * 64,
+            reason_code="toolset_access_denied",
+            mcp_scope_type=McpScopeType.TOOLSET,
+            toolset_slug="operations",
+            toolset_id="toolset-operations",
+            toolset_revision=7,
+        )
+    )
+
+    execution = await factory.execution_reader.get_by_id("tenant-a", running.id)
+    audits = await factory.audit_reader.list_by_tenant("tenant-a")
+    assert execution is not None
+    assert execution.mcp_scope_type is McpScopeType.TOOLSET
+    assert execution.toolset_id == "toolset-operations"
+    assert execution.toolset_revision == 7
+    execution_audits = [event for event in audits if event.execution_id == running.id]
+    assert [event.metadata for event in execution_audits] == [
+        {
+            "side_effect": "read_only",
+            "execution_status": "running",
+            "attempt_count": 0,
+            "mcp_scope_type": "toolset",
+            "scope_reason_code": "active_toolset_grant",
+            "toolset_id": "toolset-operations",
+            "toolset_revision": 7,
+        },
+        {
+            "side_effect": "read_only",
+            "execution_status": "succeeded",
+            "attempt_count": 0,
+            "mcp_scope_type": "toolset",
+            "scope_reason_code": "active_toolset_grant",
+            "toolset_id": "toolset-operations",
+            "toolset_revision": 7,
+        },
+    ]
+    denial = next(event for event in audits if event.execution_id is None)
+    assert denial.reason_code == "toolset_access_denied"
+    assert denial.resource_type == "tool_name"
+    assert denial.metadata == {
+        "mcp_scope_type": "toolset",
+        "scope_reason_code": "toolset_access_denied",
+        "toolset_id": "toolset-operations",
+        "toolset_revision": 7,
+        "toolset_slug": "operations",
+    }
 
 
 class FailingAuditRepository:

@@ -28,14 +28,24 @@ from nexusmcp.interfaces.mcp.meta_tools import (
 from nexusmcp.modules.approval.use_cases import DecideApproval, DecideApprovalCommand
 from nexusmcp.modules.catalog.use_cases import ListVisibleTools, ListVisibleToolsQuery
 from nexusmcp.modules.execution.call_tool import CallTool
-from nexusmcp.modules.execution.domain import CallToolCommand, is_valid_idempotency_key
+from nexusmcp.modules.execution.domain import (
+    CallToolCommand,
+    McpScopeType,
+    is_valid_idempotency_key,
+)
+from nexusmcp.modules.execution.lifecycle import (
+    ExecutionLifecycle,
+    RecordMcpScopeDenialCommand,
+)
 from nexusmcp.modules.tool_search.search_tools import SearchTools, SearchToolsResult
 from nexusmcp.modules.toolsets.domain import ToolsetDiscoveryMode
 from nexusmcp.modules.toolsets.runtime import (
+    McpEndpointScope,
     McpEndpointScopeType,
     ResolvedToolsetAccess,
     ResolveToolsetAccess,
 )
+from nexusmcp.shared.digests import canonical_json_digest
 from nexusmcp.shared.errors import (
     ApprovalMismatchError,
     ApprovalRequiredError,
@@ -76,6 +86,7 @@ def create_mcp_server(
     telemetry: NexusTelemetry | None = None,
     request_state_security: RequestStateSecurity | None = None,
     resolve_toolset_access: ResolveToolsetAccess | None = None,
+    scope_audit: ExecutionLifecycle | None = None,
 ) -> Server[Any]:
     """创建 SDK Server，并将 tools/list/call 适配到协议无关 Use Case。"""
 
@@ -105,8 +116,9 @@ def create_mcp_server(
                 protocol_era=request_context.protocol_era.value,
             ):
                 try:
+                    endpoint_scope = resolve_endpoint_scope(ctx)
                     access = await _resolve_toolset_access(
-                        ctx,
+                        endpoint_scope,
                         request_context,
                         resolve_toolset_access,
                     )
@@ -213,14 +225,23 @@ def create_mcp_server(
                 tenant_id=request_context.tenant_id,
                 protocol_era=request_context.protocol_era.value,
             ):
+                endpoint_scope = resolve_endpoint_scope(ctx)
                 try:
                     access = await _resolve_toolset_access(
-                        ctx,
+                        endpoint_scope,
                         request_context,
                         resolve_toolset_access,
                     )
                 except NexusMcpError as error:
                     observation.finish(outcome="rejected", error_code=error.code)
+                    await _record_scope_denial(
+                        scope_audit,
+                        error,
+                        request_context,
+                        endpoint_scope,
+                        params,
+                        access=None,
+                    )
                     return to_call_tool_error(error)
                 if params.name == NEXUS_SEARCH_TOOLS_NAME:
                     if search_tools is None:
@@ -236,12 +257,25 @@ def create_mcp_server(
                             request_context,
                             params.arguments or {},
                         )
+                        if access is not None:
+                            query = replace(
+                                query,
+                                eligible_tool_ids=tuple(sorted(access.available_tool_ids)),
+                            )
                         observation.set_search_mode(query.retrieval_mode.value)
                         result = await search_tools.execute(query)
                         if access is not None:
                             result = _filter_search_result(result, access)
                     except NexusMcpError as error:
                         observation.finish(outcome="rejected", error_code=error.code)
+                        await _record_scope_denial(
+                            scope_audit,
+                            error,
+                            request_context,
+                            endpoint_scope,
+                            params,
+                            access=access,
+                        )
                         logger.warning(
                             "mcp_meta_tool_call_rejected",
                             extra={
@@ -298,6 +332,11 @@ def create_mcp_server(
                             arguments=params.arguments or {},
                             idempotency_key=_idempotency_key(params),
                             approval_id=params.request_state,
+                            mcp_scope_type=_execution_scope_type(access),
+                            toolset_id=access.toolset_id if access is not None else None,
+                            toolset_revision=(
+                                access.toolset_revision if access is not None else None
+                            ),
                         )
                     )
                 except ApprovalRequiredError as error:
@@ -315,6 +354,14 @@ def create_mcp_server(
                     return _approval_input_required(params.name, error)
                 except NexusMcpError as error:
                     observation.finish(outcome="rejected", error_code=error.code)
+                    await _record_scope_denial(
+                        scope_audit,
+                        error,
+                        request_context,
+                        endpoint_scope,
+                        params,
+                        access=access,
+                    )
                     logger.warning(
                         "mcp_tool_call_rejected",
                         extra={
@@ -380,13 +427,53 @@ def create_mcp_server(
 
 
 async def _resolve_toolset_access(
-    ctx: RawServerContext,
+    endpoint_scope: McpEndpointScope,
     request_context: RequestContext,
     resolver: ResolveToolsetAccess | None,
 ) -> ResolvedToolsetAccess | None:
     if resolver is None:
         return None
-    return await resolver.execute(request_context, resolve_endpoint_scope(ctx))
+    return await resolver.execute(request_context, endpoint_scope)
+
+
+def _execution_scope_type(access: ResolvedToolsetAccess | None) -> McpScopeType:
+    if access is not None and access.endpoint_scope.type is McpEndpointScopeType.TOOLSET:
+        return McpScopeType.TOOLSET
+    return McpScopeType.ROOT
+
+
+async def _record_scope_denial(
+    lifecycle: ExecutionLifecycle | None,
+    error: NexusMcpError,
+    context: RequestContext,
+    endpoint_scope: McpEndpointScope,
+    params: types.CallToolRequestParams,
+    *,
+    access: ResolvedToolsetAccess | None,
+) -> None:
+    if lifecycle is None or error.code not in {
+        "toolset_not_found",
+        "toolset_not_active",
+        "toolset_access_denied",
+        "toolset_member_unavailable",
+    }:
+        return
+    await lifecycle.record_scope_denial(
+        RecordMcpScopeDenialCommand(
+            context=context,
+            tool_name=params.name,
+            arguments_digest=canonical_json_digest(dict(params.arguments or {})),
+            reason_code=error.code,
+            mcp_scope_type=(
+                McpScopeType.TOOLSET
+                if endpoint_scope.type is McpEndpointScopeType.TOOLSET
+                else McpScopeType.ROOT
+            ),
+            toolset_slug=endpoint_scope.toolset_slug,
+            toolset_id=access.toolset_id if access is not None else None,
+            toolset_revision=access.toolset_revision if access is not None else None,
+        )
+    )
 
 
 def _search_first(access: ResolvedToolsetAccess | None, root_search_first: bool) -> bool:

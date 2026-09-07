@@ -17,7 +17,7 @@ from nexusmcp.bootstrap.config import Settings
 from nexusmcp.modules.audit.domain import AuditOutcome
 from nexusmcp.modules.catalog.adapters.sqlalchemy_models import ToolModel, ToolVersionModel
 from nexusmcp.modules.connectors.adapters.sqlalchemy_models import ToolBindingModel
-from nexusmcp.modules.execution.domain import ExecutionStatus
+from nexusmcp.modules.execution.domain import ExecutionStatus, McpScopeType
 from nexusmcp.modules.identity.adapters.sqlalchemy_models import TenantModel
 from nexusmcp.modules.registry.adapters.sqlalchemy_models import UpstreamServiceModel
 from nexusmcp.modules.toolsets.adapters.sqlalchemy_repository import (
@@ -223,10 +223,29 @@ async def test_modern_mcp_read_only_http_tool_call(
     assert executions[0].principal_id == "employee-directory-agent-service"
     assert executions[0].request_id
     assert executions[0].trace_id
-    assert [event.outcome for event in audits] == [
+    assert executions[0].mcp_scope_type is McpScopeType.ROOT
+    assert executions[0].toolset_id is None
+    assert executions[0].toolset_revision is None
+    assert executions[0].policy_reason_code == "read_only_allowed"
+    execution_audits = [event for event in audits if event.execution_id == executions[0].id]
+    assert [event.outcome for event in execution_audits] == [
         AuditOutcome.ALLOWED,
         AuditOutcome.SUCCEEDED,
     ]
+    assert all(
+        event.metadata is not None
+        and event.metadata["mcp_scope_type"] == "root"
+        and event.metadata["scope_reason_code"] == "granted_toolset_union"
+        and "toolset_id" not in event.metadata
+        for event in execution_audits
+    )
+    denial = next(event for event in audits if event.execution_id is None)
+    assert denial.outcome is AuditOutcome.DENIED
+    assert denial.reason_code == "toolset_access_denied"
+    assert denial.metadata == {
+        "mcp_scope_type": "root",
+        "scope_reason_code": "toolset_access_denied",
+    }
 
 
 @pytest.mark.asyncio

@@ -1,6 +1,6 @@
 # I-03｜Toolset Scoped MCP Endpoints
 
-> 状态：In Progress（I03-3 Completed）
+> 状态：In Progress（I03-4 Completed）
 > 日期：2026-09-06
 > 触发：中央 MCP Endpoint 暴露完整 Catalog 时，单个 Agent 可能接收到与自身业务无关的大量 Tool
 > 决策依据：[ADR-0020](../adr/0020-toolset-scoped-mcp-endpoints.md)
@@ -16,7 +16,7 @@ I03-1B PostgreSQL Schema/Adapter    Completed
 I03-1C Persistence Contract Close  Completed
 I03-2 Admin API 与 Web UI          Completed
 I03-3 Scoped MCP Endpoint          Completed
-I03-4 Scoped Search 与 Audit       Planned
+I03-4 Scoped Search 与 Audit       Completed
 I03-5 E2E、Evidence 与部署         Planned
 ```
 
@@ -375,7 +375,7 @@ Scoped Endpoint 保存具体 Toolset：
 mcp_scope_type = toolset
 toolset_id = <operations-id>
 toolset_revision = 3
-policy_reason_code = active_toolset_grant
+Audit.metadata.scope_reason_code = active_toolset_grant
 ```
 
 根 `/mcp` 保存真实 Root Scope，不从多个匹配 Grant 中任意挑选一个 Toolset：
@@ -384,7 +384,7 @@ policy_reason_code = active_toolset_grant
 mcp_scope_type = root
 toolset_id = null
 toolset_revision = null
-policy_reason_code = granted_toolset_union
+Audit.metadata.scope_reason_code = granted_toolset_union
 ```
 
 `ToolExecution` 增加结构化 Scope 字段：
@@ -408,8 +408,9 @@ toolset
 ```
 
 DENY/Not Member 可能发生在创建 ToolExecution 之前，因此 `AuditEvent.metadata` 同时保存相同的 Scalar Scope
-字段。第一版不保存完整 Matched Grant 数组，也不计算 Access Basis Digest；`policy_version + reason_code` 足以
-表达当前授权算法和结论，严格合规需求出现后再增加快照摘要。
+字段。既有 `policy_reason_code` 保留 Tool Policy 的判定理由，Toolset/Root 授权理由独立写入
+`metadata.scope_reason_code`。第一版不保存完整 Matched Grant 数组，也不计算 Access Basis Digest；严格合规
+需求出现后再增加快照摘要。
 
 ## 7. Discovery Mode
 
@@ -954,8 +955,12 @@ I03-3 已完成，证据见：
 - FTS/Vector Candidate Toolset Filter；
 - RRF No-Leakage；
 - Toolset/Root Scope 写入 Execution 与 Audit Metadata；
-- `active_toolset_grant | granted_toolset_union` Policy Reason；
+- `active_toolset_grant | granted_toolset_union` Scope Reason；
 - Search Eval 增加跨 Toolset Leakage Case。
+
+I03-4 已完成，证据见：
+
+- [I03-4｜Scoped Search 与 Audit](../实验记录/44_I03-4_ScopedSearch与Audit.md)
 
 ### I03-5｜收口与部署
 

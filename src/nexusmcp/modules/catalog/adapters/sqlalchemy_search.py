@@ -27,10 +27,13 @@ class SqlAlchemyPublishedToolSearch:
         query_text: str,
         *,
         visibilities: tuple[ToolVisibility, ...],
+        eligible_tool_ids: tuple[str, ...] | None,
         namespace: str | None,
         side_effect: ToolSideEffect | None,
         limit: int,
     ) -> tuple[PublishedToolSearchHit, ...]:
+        if eligible_tool_ids == ():
+            return ()
         session_factory = self._database_runtime.require_session_factory()
         tsquery = func.websearch_to_tsquery("simple", query_text)
         rank = func.ts_rank_cd(ToolVersionModel.search_vector, tsquery).label("rank")
@@ -55,6 +58,15 @@ class SqlAlchemyPublishedToolSearch:
         )
         if namespace is not None:
             statement = statement.where(ToolModel.namespace == namespace)
+        if eligible_tool_ids is not None:
+            statement = statement.where(
+                ToolModel.id.in_(
+                    tuple(
+                        as_uuid(tool_id, field_name="eligible tool id")
+                        for tool_id in eligible_tool_ids
+                    )
+                )
+            )
         if side_effect is not None:
             statement = statement.where(ToolVersionModel.side_effect == side_effect.value)
         async with session_factory() as session:

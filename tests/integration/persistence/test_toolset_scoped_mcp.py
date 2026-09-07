@@ -12,10 +12,11 @@ from pydantic import SecretStr
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from examples.upstream_apis.employee_directory.app import app as employee_directory_app
 from nexusmcp.bootstrap.app import create_app
 from nexusmcp.bootstrap.config import Settings
+from nexusmcp.modules.audit.domain import AuditOutcome
 from nexusmcp.modules.catalog.adapters.sqlalchemy_models import ToolModel
+from nexusmcp.modules.execution.domain import McpScopeType
 from nexusmcp.modules.toolsets.adapters.sqlalchemy_repository import (
     SqlAlchemyToolsetRepository,
 )
@@ -55,8 +56,23 @@ async def test_modern_scoped_endpoint_lists_calls_and_guards_without_root_bypass
         await SqlAlchemyToolsetRepository(seed_session).add(TENANT_A_ID, search_toolset)
         await seed_session.commit()
 
+    upstream_calls: list[httpx.Request] = []
+
+    def upstream_handler(request: httpx.Request) -> httpx.Response:
+        upstream_calls.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "employee_id": "emp-001",
+                "name": "Ada Chen",
+                "department": "engineering",
+                "status": "active",
+                "email": "ada.chen@example.test",
+            },
+        )
+
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=employee_directory_app)
+        transport=httpx.MockTransport(upstream_handler)
     ) as upstream_client:
         app = create_app(
             Settings(
@@ -160,6 +176,7 @@ async def test_modern_scoped_endpoint_lists_calls_and_guards_without_root_bypass
                 )
 
             executions = await app.state.execution_reader.list_by_tenant(TENANT_A_ID)
+            audits = await app.state.audit_reader.list_by_tenant(TENANT_A_ID)
 
     assert [tool.name for tool in scoped_list.tools] == ["directory.get_employee"]
     assert meta_bypass.is_error is True
@@ -190,3 +207,29 @@ async def test_modern_scoped_endpoint_lists_calls_and_guards_without_root_bypass
         "requested": "2025-11-25",
     }
     assert len(executions) == 1
+    assert executions[0].mcp_scope_type is McpScopeType.TOOLSET
+    assert executions[0].toolset_id == toolset.id
+    assert executions[0].toolset_revision == toolset.revision
+    assert executions[0].policy_reason_code == "read_only_allowed"
+    assert len(upstream_calls) == 1
+    execution_audits = [event for event in audits if event.execution_id == executions[0].id]
+    assert [event.outcome for event in execution_audits] == [
+        AuditOutcome.ALLOWED,
+        AuditOutcome.SUCCEEDED,
+    ]
+    assert all(
+        event.metadata is not None
+        and event.metadata["mcp_scope_type"] == "toolset"
+        and event.metadata["scope_reason_code"] == "active_toolset_grant"
+        and event.metadata["toolset_id"] == toolset.id
+        and event.metadata["toolset_revision"] == toolset.revision
+        for event in execution_audits
+    )
+    denial_audits = [event for event in audits if event.outcome is AuditOutcome.DENIED]
+    assert [event.reason_code for event in denial_audits] == [
+        "toolset_access_denied",
+        "toolset_access_denied",
+        "toolset_access_denied",
+        "toolset_member_unavailable",
+    ]
+    assert all("arguments" not in (event.metadata or {}) for event in denial_audits)

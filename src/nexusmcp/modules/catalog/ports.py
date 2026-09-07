@@ -34,6 +34,7 @@ class PublishedToolSearch(Protocol):
         query_text: str,
         *,
         visibilities: tuple[ToolVisibility, ...],
+        eligible_tool_ids: tuple[str, ...] | None,
         namespace: str | None,
         side_effect: ToolSideEffect | None,
         limit: int,

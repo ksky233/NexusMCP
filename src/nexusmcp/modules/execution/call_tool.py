@@ -163,6 +163,9 @@ class CallTool:
                     credential_binding.id if credential_binding is not None else None
                 ),
                 idempotency_key=command.idempotency_key,
+                mcp_scope_type=command.mcp_scope_type,
+                toolset_id=command.toolset_id,
+                toolset_revision=command.toolset_revision,
             )
         )
         try:
@@ -245,6 +248,9 @@ class CallTool:
                 policy_version=policy_version,
                 reason_code=reason_code,
                 outcome=outcome,
+                mcp_scope_type=command.mcp_scope_type,
+                toolset_id=command.toolset_id,
+                toolset_revision=command.toolset_revision,
             )
         )
 
@@ -272,6 +278,9 @@ class CallTool:
                 policy_version=policy_version,
                 idempotency_key=command.idempotency_key,
                 policy_reason_code=reason_code,
+                mcp_scope_type=command.mcp_scope_type.value,
+                toolset_id=command.toolset_id,
+                toolset_revision=command.toolset_revision,
             )
         )
         raise ApprovalRequiredError(

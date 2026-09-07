@@ -32,6 +32,8 @@ class SearchVectorTools:
 
     async def execute(self, query: SearchPublishedToolsQuery) -> VectorSearchResult:
         query_text = _validate_query(query)
+        if query.eligible_tool_ids == ():
+            return VectorSearchResult(hits=(), eligible_count=0, indexed_count=0)
         vectors = await self._embedding_provider.embed((query_text,))
         if len(vectors) != 1:
             raise EmbeddingResponseError("query embedding provider violated count contract")
@@ -51,6 +53,7 @@ class SearchVectorTools:
             query.context.tenant_id,
             query_vector,
             visibilities=visibilities,
+            eligible_tool_ids=query.eligible_tool_ids,
             namespace=query.namespace,
             side_effect=query.side_effect,
             limit=query.limit,

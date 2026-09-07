@@ -23,6 +23,7 @@ class SearchToolsQuery:
     limit: int = 5
     namespace: str | None = None
     side_effect: ToolSideEffect | None = None
+    eligible_tool_ids: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,6 +91,7 @@ class SearchTools:
             limit=min(query.limit * self._overfetch_factor, 50),
             namespace=query.namespace,
             side_effect=query.side_effect,
+            eligible_tool_ids=query.eligible_tool_ids,
         )
         raw_diagnostics: dict[str, ToolSearchHitDiagnostics]
         if query.retrieval_mode is ToolRetrievalMode.HYBRID:

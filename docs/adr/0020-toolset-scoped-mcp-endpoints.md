@@ -206,7 +206,7 @@ Scoped Endpoint：
 mcp_scope_type = toolset
 toolset_id = required
 toolset_revision = required
-policy_reason_code = active_toolset_grant
+Audit.metadata.scope_reason_code = active_toolset_grant
 ```
 
 根 `/mcp`：
@@ -215,12 +215,16 @@ policy_reason_code = active_toolset_grant
 mcp_scope_type = root
 toolset_id = null
 toolset_revision = null
-policy_reason_code = granted_toolset_union
+Audit.metadata.scope_reason_code = granted_toolset_union
 ```
 
 根调用不从多个匹配 Grant 中任意选择一个 Toolset，避免虚假精确性。ToolExecution 保存结构化 Scope；Denied
 Call 可能早于 Execution，因此 Audit Metadata 同步保存 Scalar Scope。第一版不保存 Matched Grant 数组或 Access
 Basis Digest。
+
+既有 `policy_reason_code` 继续记录 Tool Policy 的判定理由，例如 `read_only_allowed` 或
+`sales_agent_allowed`；它不能被 Toolset 访问理由覆盖。Toolset/Root 授权理由使用独立的
+`AuditEvent.metadata.scope_reason_code`，避免把两层治理压缩成一个含义不稳定的字段。
 
 ### 12. Control Plane 以 Toolset 为 Aggregate Root
 

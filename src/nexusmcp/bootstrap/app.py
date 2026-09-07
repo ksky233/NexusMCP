@@ -295,6 +295,7 @@ def create_app(
         decide_approval = DecideApproval(approval_uow_factory, clock, identifier_generator)
         get_approval = GetApproval(approval_uow_factory)
     call_tool_use_case: CallTool | None = None
+    execution_lifecycle: ExecutionLifecycle | None = None
     execution_reader: SqlAlchemyToolExecutionReader | None = None
     audit_reader: SqlAlchemyAuditEventReader | None = None
     resolved_http_client = tool_http_client
@@ -361,6 +362,7 @@ def create_app(
         telemetry=resolved_telemetry,
         request_state_security=request_state_security or _request_state_security(resolved_settings),
         resolve_toolset_access=resolve_toolset_access,
+        scope_audit=execution_lifecycle,
     )
     transport_security = TransportSecuritySettings(
         allowed_hosts=resolved_settings.transport_allowed_hosts,
