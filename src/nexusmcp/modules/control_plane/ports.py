@@ -62,6 +62,8 @@ class ControlPlaneQueryPort(Protocol):
         *,
         offset: int,
         limit: int,
+        query: str | None,
+        upstream_id: str | None,
         namespace: str | None,
         status: str | None,
         version_status: str | None,

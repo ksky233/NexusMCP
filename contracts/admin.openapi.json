@@ -2679,6 +2679,39 @@
             "title": "Updated At",
             "type": "string"
           },
+          "upstream_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upstream Name"
+          },
+          "upstream_namespace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upstream Namespace"
+          },
+          "upstream_service_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upstream Service Id"
+          },
           "version_status": {
             "title": "Version Status",
             "type": "string"
@@ -2702,6 +2735,9 @@
           "visibility",
           "side_effect",
           "tags",
+          "upstream_service_id",
+          "upstream_name",
+          "upstream_namespace",
           "created_at",
           "updated_at"
         ],
@@ -5289,6 +5325,40 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "upstream_service_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Upstream Service Id"
             }
           },
           {

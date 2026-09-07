@@ -216,6 +216,8 @@ async def test_admin_queries_cover_dashboard_catalog_execution_audit_and_tenant_
                 tools = await client.get(
                     "/admin/tools",
                     params={
+                        "q": "employee",
+                        "upstream_service_id": UPSTREAM_ID,
                         "namespace": "directory",
                         "status": "active",
                         "version_status": "published",
@@ -224,6 +226,17 @@ async def test_admin_queries_cover_dashboard_catalog_execution_audit_and_tenant_
                     },
                 )
                 assert [item["id"] for item in tools.json()["items"]] == [TOOL_ID]
+                tool_summary = tools.json()["items"][0]
+                assert tool_summary["upstream_service_id"] == UPSTREAM_ID
+                assert tool_summary["upstream_name"] == "employee-directory-call"
+                assert tool_summary["upstream_namespace"] == "directory"
+                no_match = await client.get("/admin/tools", params={"q": "incident"})
+                assert no_match.json()["page"]["total"] == 0
+                wrong_upstream = await client.get(
+                    "/admin/tools",
+                    params={"upstream_service_id": TENANT_B_UPSTREAM_ID},
+                )
+                assert wrong_upstream.json()["page"]["total"] == 0
                 assert (await client.get(f"/admin/tools/{TOOL_ID}")).status_code == 200
                 versions = await client.get(f"/admin/tools/{TOOL_ID}/versions")
                 assert [item["id"] for item in versions.json()["items"]] == [VERSION_ID]

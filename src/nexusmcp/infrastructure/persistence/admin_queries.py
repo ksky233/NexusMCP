@@ -3,7 +3,7 @@
 import uuid
 from typing import Any
 
-from sqlalchemy import String, and_, cast, func, select
+from sqlalchemy import String, and_, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from nexusmcp.infrastructure.persistence.runtime import DatabaseRuntimePort
@@ -246,6 +246,8 @@ class SqlAlchemyControlPlaneQueries:
         *,
         offset: int,
         limit: int,
+        query: str | None,
+        upstream_id: str | None,
         namespace: str | None,
         status: str | None,
         version_status: str | None,
@@ -263,7 +265,7 @@ class SqlAlchemyControlPlaneQueries:
             .subquery()
         )
         statement = (
-            select(ToolModel, ToolVersionModel)
+            select(ToolModel, ToolVersionModel, ToolBindingModel, UpstreamServiceModel)
             .join(latest_versions, latest_versions.c.tool_id == ToolModel.id)
             .join(
                 ToolVersionModel,
@@ -272,8 +274,39 @@ class SqlAlchemyControlPlaneQueries:
                     ToolVersionModel.version == latest_versions.c.version,
                 ),
             )
+            .outerjoin(
+                ToolBindingModel,
+                and_(
+                    ToolBindingModel.tenant_id == tenant_uuid,
+                    ToolBindingModel.tool_version_id == ToolVersionModel.id,
+                ),
+            )
+            .outerjoin(
+                UpstreamServiceModel,
+                and_(
+                    UpstreamServiceModel.tenant_id == tenant_uuid,
+                    UpstreamServiceModel.id == ToolBindingModel.upstream_service_id,
+                ),
+            )
             .where(ToolModel.tenant_id == tenant_uuid)
         )
+        if query is not None:
+            normalized_query = query.strip()
+            if normalized_query:
+                escaped_query = _escape_like(normalized_query)
+                pattern = f"%{escaped_query}%"
+                statement = statement.where(
+                    or_(
+                        ToolModel.canonical_name.ilike(pattern, escape="\\"),
+                        ToolVersionModel.display_name.ilike(pattern, escape="\\"),
+                        ToolVersionModel.description.ilike(pattern, escape="\\"),
+                    )
+                )
+        upstream_uuid = _optional_uuid(upstream_id) if upstream_id is not None else None
+        if upstream_id is not None:
+            if upstream_uuid is None:
+                return Page(items=(), offset=offset, limit=limit, total=0)
+            statement = statement.where(ToolBindingModel.upstream_service_id == upstream_uuid)
         if namespace is not None:
             statement = statement.where(ToolModel.namespace == namespace)
         if status is not None:
@@ -288,7 +321,7 @@ class SqlAlchemyControlPlaneQueries:
         async with self._session() as session:
             rows, total = await _paged_rows(session, statement, offset=offset, limit=limit)
         return Page(
-            items=tuple(_tool_summary(row[0], row[1]) for row in rows),
+            items=tuple(_tool_summary(row[0], row[1], row[2], row[3]) for row in rows),
             offset=offset,
             limit=limit,
             total=total,
@@ -650,6 +683,12 @@ def _optional_uuid(value: str) -> uuid.UUID | None:
         return None
 
 
+def _escape_like(value: str) -> str:
+    """让管理员输入按普通文本匹配，不把 `%`、`_` 当成 SQL 通配符。"""
+
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 def _upstream_detail(model: UpstreamServiceModel) -> UpstreamDetail:
     return UpstreamDetail(
         id=str(model.id),
@@ -713,7 +752,12 @@ def _review_summary(model: ImportedOperationModel) -> ReviewOperationSummary:
     )
 
 
-def _tool_summary(tool: ToolModel, version: ToolVersionModel) -> ToolSummary:
+def _tool_summary(
+    tool: ToolModel,
+    version: ToolVersionModel,
+    binding: ToolBindingModel | None,
+    upstream: UpstreamServiceModel | None,
+) -> ToolSummary:
     return ToolSummary(
         id=str(tool.id),
         namespace=tool.namespace,
@@ -728,6 +772,9 @@ def _tool_summary(tool: ToolModel, version: ToolVersionModel) -> ToolSummary:
         visibility=version.visibility,
         side_effect=version.side_effect,
         tags=tuple(version.tags_json),
+        upstream_service_id=str(binding.upstream_service_id) if binding is not None else None,
+        upstream_name=upstream.name if upstream is not None else None,
+        upstream_namespace=upstream.namespace if upstream is not None else None,
         created_at=tool.created_at,
         updated_at=tool.updated_at,
     )

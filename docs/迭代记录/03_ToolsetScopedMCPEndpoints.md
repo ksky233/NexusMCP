@@ -1,6 +1,6 @@
 # I-03｜Toolset Scoped MCP Endpoints
 
-> 状态：In Progress（I03-5A E2E/Evidence Completed，Deployment Pending）
+> 状态：In Progress（I03-6 Member Picker Completed，Deployment Pending）
 > 日期：2026-09-06
 > 触发：中央 MCP Endpoint 暴露完整 Catalog 时，单个 Agent 可能接收到与自身业务无关的大量 Tool
 > 决策依据：[ADR-0020](../adr/0020-toolset-scoped-mcp-endpoints.md)
@@ -19,6 +19,7 @@ I03-3 Scoped MCP Endpoint          Completed
 I03-4 Scoped Search 与 Audit       Completed
 I03-5A E2E 与 Evidence              Completed
 I03-5B Public Demo 部署             Planned
+I03-6 Toolset Member Picker         Completed
 ```
 
 本文是初步规划，不是 Accepted ADR。带“待讨论”的内容在结论冻结前不能直接进入 Migration 或公共 Contract。
@@ -974,6 +975,18 @@ I03-4 已完成，证据见：
 I03-5A 已完成，部署按当前节奏暂缓，证据见：
 
 - [I03-5A｜Toolset E2E 与 Evidence](../实验记录/45_I03-5A_ToolsetE2E与Evidence.md)
+
+### I03-6｜Toolset Member Picker 可用性增强
+
+- `/admin/tools` 支持 `q` 普通文本搜索与 `upstream_service_id` 精确过滤；
+- Tool Summary 返回真实 Binding 对应的 Upstream ID、Name 与 Namespace；
+- Explicit Toolset 成员候选按真实 Upstream 分组，不把 Tool Namespace 当成来源；
+- UI 支持名称搜索、上游筛选、仅看已选和已选数量；
+- 过滤只改变当前可见候选，不丢失其他已选择 Tool，保存仍使用原有原子整体替换语义。
+
+I03-6 已完成，证据见：
+
+- [I03-6｜Toolset Member Picker 可用性增强](../实验记录/47_I03-6_ToolsetMemberPicker.md)
 
 ## 13. 验收草案
 

@@ -107,6 +107,9 @@ class ToolSummary:
     visibility: str
     side_effect: str
     tags: tuple[str, ...]
+    upstream_service_id: str | None
+    upstream_name: str | None
+    upstream_namespace: str | None
     created_at: datetime
     updated_at: datetime
 

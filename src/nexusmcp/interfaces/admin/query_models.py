@@ -113,6 +113,9 @@ class ToolSummaryResponse(AdminReadModel):
     visibility: str
     side_effect: str
     tags: list[str]
+    upstream_service_id: str | None
+    upstream_name: str | None
+    upstream_namespace: str | None
     created_at: datetime
     updated_at: datetime
 

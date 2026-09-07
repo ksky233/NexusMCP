@@ -1,6 +1,6 @@
 # I-04｜Direct Tool Publication Workflow
 
-> 状态：In Progress（Implementation Verified，Commit Pending）
+> 状态：Completed
 >
 > 日期：2026-09-07
 >
@@ -203,4 +203,4 @@ Frontend Build      passed
 Playwright E2E      2 passed / 11.7s
 ```
 
-最终提交完成后，将状态更新为 Completed 并补充 Commit ID。
+最终提交：`36bae37 feat: 完成工具直接发布与本地实操收口`。

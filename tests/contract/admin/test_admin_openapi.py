@@ -118,6 +118,16 @@ def test_admin_query_contract_uses_page_envelopes_and_redacted_operational_field
 
     assert schemas["UpstreamDetailResponse"]["properties"]["service_type"]["const"] == "http"
     assert schemas["ToolBindingDetailResponse"]["properties"]["binding_type"]["const"] == ("http")
+    tool_summary = schemas["ToolSummaryResponse"]
+    assert {
+        "upstream_service_id",
+        "upstream_name",
+        "upstream_namespace",
+    } <= set(tool_summary["required"])
+    list_tool_parameters = {
+        parameter["name"] for parameter in document["paths"]["/tools"]["get"]["parameters"]
+    }
+    assert {"q", "upstream_service_id"} <= list_tool_parameters
     approval_fields = set(schemas["ApprovalSummaryResponse"]["properties"])
     execution_fields = set(schemas["ExecutionSummaryResponse"]["properties"])
     audit_fields = set(schemas["AuditEventResponse"]["properties"])

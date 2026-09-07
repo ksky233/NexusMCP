@@ -1,5 +1,5 @@
 import { ArrowLeft, Clipboard, Power, PowerOff, Save } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { PageHeader } from "@/components/common/page-header";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { FieldHelp, FieldLabel, Input, Select, Textarea } from "@/components/ui/form-controls";
 import { StatusPill } from "@/components/ui/status-pill";
 import { useTools } from "@/features/catalog/hooks/use-catalog";
+import { useUpstreams } from "@/features/upstreams/hooks/use-upstreams";
 import {
   useActivateToolset,
   useDisableToolset,
@@ -16,7 +17,11 @@ import {
   useToolset,
   useUpdateToolset,
 } from "@/features/toolsets/hooks/use-toolsets";
-import type { ToolsetDiscoveryMode, ToolsetResponse } from "@/generated/api/types.gen";
+import type {
+  ToolsetDiscoveryMode,
+  ToolsetResponse,
+  ToolSummaryResponse,
+} from "@/generated/api/types.gen";
 import { formatDateTime, humanize, statusTone } from "@/lib/display";
 
 export function ToolsetDetailPage() {
@@ -227,10 +232,24 @@ function GrantEditor({ toolset }: { toolset: ToolsetResponse }) {
 }
 
 function MemberEditor({ toolset }: { toolset: ToolsetResponse }) {
-  const tools = useTools({ offset: 0, limit: 100, version_status: "published" });
-  const replace = useReplaceToolsetMembers(toolset.id);
   const [selected, setSelected] = useState(
     () => new Set(toolset.members.map((member) => member.tool_id)),
+  );
+  const [query, setQuery] = useState("");
+  const [upstreamId, setUpstreamId] = useState("");
+  const [selectedOnly, setSelectedOnly] = useState(false);
+  const tools = useTools({
+    offset: 0,
+    limit: 100,
+    q: query.trim() || undefined,
+    upstream_service_id: upstreamId || undefined,
+    version_status: "published",
+  });
+  const upstreams = useUpstreams({ offset: 0, limit: 100 });
+  const replace = useReplaceToolsetMembers(toolset.id);
+  const groups = useMemo(
+    () => groupToolsByUpstream(tools.data?.items ?? [], selected, selectedOnly),
+    [selected, selectedOnly, tools.data?.items],
   );
 
   async function save() {
@@ -257,6 +276,42 @@ function MemberEditor({ toolset }: { toolset: ToolsetResponse }) {
           <Save className="size-3.5" /> 保存成员
         </Button>
       </div>
+      <div className="mt-5 grid gap-4 border-y border-slate/20 py-5 lg:grid-cols-[minmax(0,1fr)_minmax(14rem,0.55fr)_auto] lg:items-end">
+        <div>
+          <FieldLabel htmlFor="toolset-member-query">搜索 Tool</FieldLabel>
+          <Input
+            id="toolset-member-query"
+            onChange={(event) => setQuery(event.currentTarget.value)}
+            placeholder="名称、显示名称或描述"
+            type="search"
+            value={query}
+          />
+        </div>
+        <div>
+          <FieldLabel htmlFor="toolset-member-upstream">上游服务</FieldLabel>
+          <Select
+            id="toolset-member-upstream"
+            onChange={(event) => setUpstreamId(event.currentTarget.value)}
+            value={upstreamId}
+          >
+            <option value="">全部上游</option>
+            {upstreams.data?.items.map((upstream) => (
+              <option key={upstream.id} value={upstream.id}>
+                {upstream.namespace}.{upstream.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <label className="flex h-[42px] cursor-pointer items-center gap-2 text-xs text-ink/75">
+          <input
+            checked={selectedOnly}
+            className="size-4 accent-ink"
+            onChange={(event) => setSelectedOnly(event.currentTarget.checked)}
+            type="checkbox"
+          />
+          仅看已选（{selected.size}）
+        </label>
+      </div>
       {tools.isPending ? (
         <div className="mt-5">
           <LoadingState label="正在加载 Published Tool…" />
@@ -272,39 +327,81 @@ function MemberEditor({ toolset }: { toolset: ToolsetResponse }) {
           <InlineError error={replace.error} />
         </div>
       ) : null}
+      {upstreams.isError ? (
+        <div className="mt-5">
+          <InlineError error={upstreams.error} />
+        </div>
+      ) : null}
       {toolset.members.length > 0 ? (
         <div className="mt-5">
           <p className="component-label">当前成员状态</p>
           <MemberDiagnostics toolset={toolset} />
         </div>
       ) : null}
-      {tools.data ? (
-        <div className="mt-5 divide-y divide-slate/15 border-y border-slate/20">
-          {tools.data.items.map((tool) => (
-            <label className="flex cursor-pointer items-start gap-3 py-4" key={tool.id}>
-              <input
-                checked={selected.has(tool.id)}
-                className="mt-1 size-4 accent-ink"
-                onChange={(event) => {
-                  const next = new Set(selected);
-                  if (event.currentTarget.checked) next.add(tool.id);
-                  else next.delete(tool.id);
-                  setSelected(next);
-                }}
-                type="checkbox"
-              />
-              <span className="min-w-0">
-                <span className="block font-mono text-xs text-ink">{tool.canonical_name}</span>
-                <span className="mt-1 block text-xs leading-5 text-slate/55">
-                  {tool.description}
-                </span>
-              </span>
-            </label>
-          ))}
-        </div>
+      {tools.data && groups.length === 0 ? (
+        <p className="mt-5 border-y border-slate/20 py-6 text-sm text-slate/55">
+          当前条件下没有可选的 Published Tool。
+        </p>
       ) : null}
+      {groups.map((group) => (
+        <section className="mt-5" key={group.id}>
+          <div className="flex items-center justify-between border-b border-slate/25 pb-2">
+            <p className="font-mono text-xs font-medium text-ink">{group.label}</p>
+            <span className="text-[11px] text-slate/50">{group.tools.length} Tools</span>
+          </div>
+          <div className="divide-y divide-slate/15">
+            {group.tools.map((tool) => (
+              <label className="flex cursor-pointer items-start gap-3 py-4" key={tool.id}>
+                <input
+                  checked={selected.has(tool.id)}
+                  className="mt-1 size-4 accent-ink"
+                  onChange={(event) => {
+                    const next = new Set(selected);
+                    if (event.currentTarget.checked) next.add(tool.id);
+                    else next.delete(tool.id);
+                    setSelected(next);
+                  }}
+                  type="checkbox"
+                />
+                <span className="min-w-0">
+                  <span className="block font-mono text-xs text-ink">{tool.canonical_name}</span>
+                  <span className="mt-1 block text-xs leading-5 text-slate/55">
+                    {tool.description}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </section>
+      ))}
     </article>
   );
+}
+
+type UpstreamToolGroup = {
+  id: string;
+  label: string;
+  tools: ToolSummaryResponse[];
+};
+
+function groupToolsByUpstream(
+  tools: ToolSummaryResponse[],
+  selected: ReadonlySet<string>,
+  selectedOnly: boolean,
+): UpstreamToolGroup[] {
+  const groups = new Map<string, UpstreamToolGroup>();
+  for (const tool of tools) {
+    if (selectedOnly && !selected.has(tool.id)) continue;
+    const id = tool.upstream_service_id ?? "unbound";
+    const label =
+      tool.upstream_namespace && tool.upstream_name
+        ? `${tool.upstream_namespace}.${tool.upstream_name}`
+        : "未绑定上游";
+    const group = groups.get(id) ?? { id, label, tools: [] };
+    group.tools.push(tool);
+    groups.set(id, group);
+  }
+  return [...groups.values()].sort((left, right) => left.label.localeCompare(right.label));
 }
 
 function SystemMembers({ toolset }: { toolset: ToolsetResponse }) {

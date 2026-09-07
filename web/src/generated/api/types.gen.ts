@@ -1593,6 +1593,18 @@ export type ToolSummaryResponse = {
      */
     updated_at: string;
     /**
+     * Upstream Name
+     */
+    upstream_name: string | null;
+    /**
+     * Upstream Namespace
+     */
+    upstream_namespace: string | null;
+    /**
+     * Upstream Service Id
+     */
+    upstream_service_id: string | null;
+    /**
      * Version Status
      */
     version_status: string;
@@ -3075,6 +3087,14 @@ export type ListToolsData = {
          * Limit
          */
         limit?: number;
+        /**
+         * Q
+         */
+        q?: string | null;
+        /**
+         * Upstream Service Id
+         */
+        upstream_service_id?: string | null;
         /**
          * Namespace
          */

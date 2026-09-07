@@ -634,6 +634,9 @@ export const zToolSummaryResponse = z.object({
     status: z.string(),
     tags: z.array(z.string()),
     updated_at: z.iso.datetime(),
+    upstream_name: z.string().nullable(),
+    upstream_namespace: z.string().nullable(),
+    upstream_service_id: z.string().nullable(),
     version_status: z.string(),
     visibility: z.string()
 });
