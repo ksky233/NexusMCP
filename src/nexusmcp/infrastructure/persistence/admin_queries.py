@@ -826,6 +826,9 @@ def _execution_summary(model: ToolExecutionModel, canonical_name: str) -> Execut
         error_code=model.error_code,
         error_category=model.error_category,
         attempt_count=model.attempt_count,
+        mcp_scope_type=model.mcp_scope_type,
+        toolset_id=str(model.toolset_id) if model.toolset_id is not None else None,
+        toolset_revision=model.toolset_revision,
     )
 
 

@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from nexusmcp.modules.approval.domain import ApprovalRequest, ApprovalStatus
 from nexusmcp.modules.approval.ports import ApprovalRepository, ApprovalUnitOfWorkFactory
 from nexusmcp.modules.audit.domain import AuditAction, AuditEvent, AuditOutcome
+from nexusmcp.modules.audit.scope import McpScopeAuditEvidence
 from nexusmcp.shared.clock import Clock
 from nexusmcp.shared.errors import (
     ApprovalAlreadyConsumedError,
@@ -107,7 +108,11 @@ class RequestApproval:
                     arguments_digest=command.arguments_digest,
                     policy_version=command.policy_version,
                     reason_code=command.policy_reason_code,
-                    metadata=_scope_metadata(command),
+                    metadata=McpScopeAuditEvidence(
+                        scope_type=command.mcp_scope_type,
+                        toolset_id=command.toolset_id,
+                        toolset_revision=command.toolset_revision,
+                    ).metadata(),
                 )
             )
             await unit_of_work.commit()
@@ -200,22 +205,6 @@ class GetApproval:
         if approval is None:
             raise ApprovalNotFoundError("approval did not exist in tenant")
         return approval
-
-
-def _scope_metadata(command: RequestApprovalCommand) -> dict[str, str | int]:
-    metadata: dict[str, str | int] = {
-        "mcp_scope_type": command.mcp_scope_type,
-        "scope_reason_code": (
-            "active_toolset_grant"
-            if command.mcp_scope_type == "toolset"
-            else "granted_toolset_union"
-        ),
-    }
-    if command.toolset_id is not None:
-        metadata["toolset_id"] = command.toolset_id
-    if command.toolset_revision is not None:
-        metadata["toolset_revision"] = command.toolset_revision
-    return metadata
 
 
 def _require_pending_decision(approval: ApprovalRequest) -> None:

@@ -16,6 +16,10 @@ from nexusmcp.modules.toolsets.domain import (
     ToolsetMemberAvailability,
     ToolsetStatus,
 )
+from nexusmcp.modules.toolsets.errors import (
+    SystemToolsetMutationError,
+    ToolsetRevisionConflict,
+)
 from nexusmcp.modules.toolsets.ports import ToolsetCatalogSnapshot
 from nexusmcp.modules.toolsets.use_cases import (
     ActivateToolset,
@@ -33,6 +37,7 @@ from nexusmcp.modules.toolsets.use_cases import (
     ReplaceToolsetMembersCommand,
     UpdateToolset,
     UpdateToolsetCommand,
+    _map_mutation_error,
 )
 from nexusmcp.shared.errors import (
     InvalidToolsetMembersError,
@@ -274,3 +279,14 @@ async def test_system_toolset_bootstrap_is_idempotent_and_only_appends_grants() 
     assert second.principal_ids == ("agent-a", "agent-b")
     assert third == second
     assert await repository.list_by_tenant("tenant-a") == (second,)
+
+
+def test_typed_domain_error_mapping_does_not_depend_on_exception_message() -> None:
+    assert isinstance(
+        _map_mutation_error(ToolsetRevisionConflict("aggregate changed")),
+        ToolsetRevisionConflictError,
+    )
+    assert isinstance(
+        _map_mutation_error(SystemToolsetMutationError("operation forbidden")),
+        SystemToolsetImmutableError,
+    )

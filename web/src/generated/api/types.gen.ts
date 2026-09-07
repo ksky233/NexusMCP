@@ -414,6 +414,10 @@ export type ExecutionSummaryResponse = {
      */
     id: string;
     /**
+     * Mcp Scope Type
+     */
+    mcp_scope_type: 'root' | 'toolset';
+    /**
      * Planned At
      */
     planned_at: string;
@@ -457,6 +461,14 @@ export type ExecutionSummaryResponse = {
      * Tool Version Id
      */
     tool_version_id: string;
+    /**
+     * Toolset Id
+     */
+    toolset_id: string | null;
+    /**
+     * Toolset Revision
+     */
+    toolset_revision: number | null;
     /**
      * Trace Id
      */

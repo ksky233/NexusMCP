@@ -13,6 +13,10 @@ from nexusmcp.modules.toolsets.domain import (
     ToolsetStatus,
     derive_toolset_health,
 )
+from nexusmcp.modules.toolsets.errors import (
+    SystemToolsetMutationError,
+    ToolsetRevisionConflict,
+)
 
 NOW = datetime(2026, 9, 6, tzinfo=UTC)
 LATER = NOW + timedelta(minutes=1)
@@ -109,7 +113,7 @@ def test_replace_grants_supports_many_to_many_and_is_idempotent() -> None:
 
 
 def test_revision_conflict_precedes_aggregate_mutation() -> None:
-    with pytest.raises(ValueError, match="revision conflict"):
+    with pytest.raises(ToolsetRevisionConflict, match="revision conflict"):
         explicit_toolset().replace_members(
             expected_revision=2,
             tool_ids=("tool-1",),
@@ -158,7 +162,7 @@ def test_all_published_is_active_search_first_and_rejects_explicit_members() -> 
     )
     assert direct.discovery_mode is ToolsetDiscoveryMode.DIRECT
     assert direct.revision == 2
-    with pytest.raises(ValueError, match="identity is immutable"):
+    with pytest.raises(SystemToolsetMutationError, match="identity is immutable"):
         toolset.update_profile(
             expected_revision=1,
             name="Renamed system toolset",
@@ -166,14 +170,14 @@ def test_all_published_is_active_search_first_and_rejects_explicit_members() -> 
             discovery_mode=toolset.discovery_mode,
             updated_at=LATER,
         )
-    with pytest.raises(ValueError, match="does not accept explicit members"):
+    with pytest.raises(SystemToolsetMutationError, match="does not accept explicit members"):
         toolset.replace_members(
             expected_revision=1,
             tool_ids=("tool-1",),
             actor_id="admin-a",
             occurred_at=LATER,
         )
-    with pytest.raises(ValueError, match="cannot be disabled"):
+    with pytest.raises(SystemToolsetMutationError, match="cannot be disabled"):
         toolset.disable(expected_revision=1, disabled_at=LATER)
 
 

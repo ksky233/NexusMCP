@@ -152,6 +152,7 @@ export const zExecutionSummaryResponse = z.object({
     finished_at: z.iso.datetime().nullable(),
     has_idempotency_key: z.boolean(),
     id: z.string(),
+    mcp_scope_type: z.enum(['root', 'toolset']),
     planned_at: z.iso.datetime(),
     policy_reason_code: z.string(),
     policy_version: z.string(),
@@ -163,6 +164,8 @@ export const zExecutionSummaryResponse = z.object({
     tool_binding_id: z.string(),
     tool_id: z.string(),
     tool_version_id: z.string(),
+    toolset_id: z.string().nullable(),
+    toolset_revision: z.int().nullable(),
     trace_id: z.string()
 });
 

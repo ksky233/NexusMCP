@@ -2,6 +2,7 @@ import benchmarkSnapshot from "../../../../../benchmarks/results/2026-08-27_loca
 import failureCases from "../../../../../evals/reliability/failure_injection_cases.json";
 import protocolMatrix from "../../../../../evals/protocol/compatibility_matrix.json";
 import securityCases from "../../../../../evals/security/security_cases.json";
+import toolsetCases from "../../../../../evals/toolsets/toolset_cases.json";
 import retrievalSnapshot from "../../../../../evals/tool_search/results/2026-08-27_siliconflow_qwen3_embedding_8b.json";
 import { PageHeader } from "@/components/common/page-header";
 import {
@@ -25,7 +26,7 @@ export function EvidencePage() {
         title="证据中心"
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <EvidenceMetric
           label="检索查询"
           value={retrievalSnapshot.dataset.case_count}
@@ -38,6 +39,7 @@ export function EvidencePage() {
           note="Modern + Legacy"
         />
         <EvidenceMetric label="故障用例" value={failureCases.cases.length} note="边界故障注入" />
+        <EvidenceMetric label="Toolset 用例" value={toolsetCases.cases.length} note="发布面边界" />
       </div>
 
       <section className="mt-10">
@@ -83,6 +85,13 @@ export function EvidencePage() {
           title="安全回归"
           label="安全"
           items={securityCases.cases
+            .slice(0, 8)
+            .map((item) => ({ id: item.id, category: item.category, expected: item.expected }))}
+        />
+        <EvidenceList
+          title="Toolset 发布面"
+          label="Scope · Search · Audit"
+          items={toolsetCases.cases
             .slice(0, 8)
             .map((item) => ({ id: item.id, category: item.category, expected: item.expected }))}
         />

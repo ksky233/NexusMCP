@@ -49,6 +49,15 @@ export function ExecutionDetailPage() {
             label="Policy"
             value={`${data.policy_version} · ${data.policy_reason_code}`}
           />
+          <Definition
+            label="MCP Scope"
+            value={
+              data.mcp_scope_type === "toolset"
+                ? `Toolset · revision ${data.toolset_revision}`
+                : "Root · granted toolset union"
+            }
+          />
+          {data.toolset_id ? <Definition label="Toolset ID" value={data.toolset_id} mono /> : null}
           <Definition label="计划时间" value={formatDateTime(data.planned_at)} />
           <Definition label="开始时间" value={formatDateTime(data.started_at)} />
           <Definition label="完成时间" value={formatDateTime(data.finished_at)} />
@@ -93,6 +102,12 @@ export function ExecutionDetailPage() {
                   {humanize(event.action)} · {event.actor_id}
                 </p>
                 <p className="mt-2 text-sm text-slate">{event.reason_code ?? "无原因代码"}</p>
+                {event.metadata.scope_reason_code ? (
+                  <p className="mt-1 text-xs text-slate/50">
+                    Scope：{String(event.metadata.mcp_scope_type)} ·{" "}
+                    {String(event.metadata.scope_reason_code)}
+                  </p>
+                ) : null}
               </div>
               <StatusPill tone={statusTone(event.outcome)}>{humanize(event.outcome)}</StatusPill>
             </div>

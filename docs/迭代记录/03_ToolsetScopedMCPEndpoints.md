@@ -1,6 +1,6 @@
 # I-03｜Toolset Scoped MCP Endpoints
 
-> 状态：In Progress（I03-4 Completed）
+> 状态：In Progress（I03-5A E2E/Evidence Completed，Deployment Pending）
 > 日期：2026-09-06
 > 触发：中央 MCP Endpoint 暴露完整 Catalog 时，单个 Agent 可能接收到与自身业务无关的大量 Tool
 > 决策依据：[ADR-0020](../adr/0020-toolset-scoped-mcp-endpoints.md)
@@ -17,7 +17,8 @@ I03-1C Persistence Contract Close  Completed
 I03-2 Admin API 与 Web UI          Completed
 I03-3 Scoped MCP Endpoint          Completed
 I03-4 Scoped Search 与 Audit       Completed
-I03-5 E2E、Evidence 与部署         Planned
+I03-5A E2E 与 Evidence              Completed
+I03-5B Public Demo 部署             Planned
 ```
 
 本文是初步规划，不是 Accepted ADR。带“待讨论”的内容在结论冻结前不能直接进入 Migration 或公共 Contract。
@@ -969,6 +970,10 @@ I03-4 已完成，证据见：
 - Migration/Backup/Reset Demo Workspace 兼容；
 - Public Demo Image、Release 与滚动替换；
 - 更新架构图、README、学习笔记和作品集叙事。
+
+I03-5A 已完成，部署按当前节奏暂缓，证据见：
+
+- [I03-5A｜Toolset E2E 与 Evidence](../实验记录/45_I03-5A_ToolsetE2E与Evidence.md)
 
 ## 13. 验收草案
 

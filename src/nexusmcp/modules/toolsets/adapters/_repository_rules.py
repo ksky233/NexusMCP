@@ -1,6 +1,7 @@
 """Toolset Repository Adapter 共享的保存边界。"""
 
 from nexusmcp.modules.toolsets.domain import Toolset
+from nexusmcp.modules.toolsets.errors import ToolsetRevisionConflict
 
 
 def requires_persistence_update(current: Toolset, replacement: Toolset) -> bool:
@@ -17,5 +18,5 @@ def requires_persistence_update(current: Toolset, replacement: Toolset) -> bool:
     if replacement == current:
         return False
     if replacement.revision != current.revision + 1:
-        raise ValueError("toolset revision transition was invalid")
+        raise ToolsetRevisionConflict("toolset revision transition was invalid")
     return True

@@ -214,6 +214,9 @@ class ExecutionSummaryResponse(AdminReadModel):
     error_code: str | None
     error_category: str | None
     attempt_count: int
+    mcp_scope_type: Literal["root", "toolset"]
+    toolset_id: str | None
+    toolset_revision: int | None
 
 
 class ExecutionPageResponse(AdminReadModel):

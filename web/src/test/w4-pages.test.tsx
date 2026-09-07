@@ -47,6 +47,7 @@ test("renders tracked engineering snapshots with explicit limitations", () => {
   expect(screen.getByRole("heading", { name: "证据中心" })).toBeInTheDocument();
   expect(screen.getByText("Gateway 基准测试")).toBeInTheDocument();
   expect(screen.getByText("这些证据不代表什么")).toBeInTheDocument();
+  expect(screen.getByText("Toolset 发布面")).toBeInTheDocument();
   expect(screen.getByText("24")).toBeInTheDocument();
 });
 

@@ -282,5 +282,8 @@ function executionSummary(): ExecutionPageResponse["items"][number] {
     error_code: null,
     error_category: null,
     attempt_count: 1,
+    mcp_scope_type: "root",
+    toolset_id: null,
+    toolset_revision: null,
   };
 }

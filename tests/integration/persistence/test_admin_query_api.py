@@ -250,6 +250,8 @@ async def test_admin_queries_cover_dashboard_catalog_execution_audit_and_tenant_
                 execution = executions.json()["items"][0]
                 execution_id = execution["id"]
                 assert execution["has_idempotency_key"] is False
+                assert execution["mcp_scope_type"] == "root"
+                assert execution["toolset_id"] is None
                 assert (await client.get(f"/admin/executions/{execution_id}")).status_code == 200
                 attempts = await client.get(f"/admin/executions/{execution_id}/attempts")
                 assert attempts.json()["items"][0]["upstream_status"] == 200

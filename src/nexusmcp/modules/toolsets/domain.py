@@ -8,6 +8,10 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from enum import StrEnum
 
+from nexusmcp.modules.toolsets.errors import (
+    SystemToolsetMutationError,
+    ToolsetRevisionConflict,
+)
 from nexusmcp.shared.digests import canonical_json_digest
 
 _TOOLSET_SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
@@ -202,7 +206,7 @@ class Toolset:
         if self.kind is ToolsetKind.ALL_PUBLISHED and (
             self.name != name or self.description != description
         ):
-            raise ValueError("system all_published toolset identity is immutable")
+            raise SystemToolsetMutationError("system all_published toolset identity is immutable")
         if (
             self.name == name
             and self.description == description
@@ -229,7 +233,9 @@ class Toolset:
     ) -> Toolset:
         self._require_revision(expected_revision)
         if self.kind is ToolsetKind.ALL_PUBLISHED:
-            raise ValueError("all_published toolset does not accept explicit members")
+            raise SystemToolsetMutationError(
+                "all_published toolset does not accept explicit members"
+            )
         normalized = _normalized_ids("tool id", tool_ids)
         if self.status is ToolsetStatus.ACTIVE and not normalized:
             raise ValueError("active explicit toolset must contain at least one member")
@@ -307,7 +313,7 @@ class Toolset:
         if self.status is ToolsetStatus.DISABLED:
             return self
         if self.kind is ToolsetKind.ALL_PUBLISHED:
-            raise ValueError("system all_published toolset cannot be disabled")
+            raise SystemToolsetMutationError("system all_published toolset cannot be disabled")
         self._require_mutation_time(disabled_at)
         return replace(
             self,
@@ -318,7 +324,7 @@ class Toolset:
 
     def _require_revision(self, expected_revision: int) -> None:
         if expected_revision != self.revision:
-            raise ValueError("toolset revision conflict")
+            raise ToolsetRevisionConflict("toolset revision conflict")
 
     def _require_mutation_time(self, occurred_at: datetime) -> None:
         _require_aware("toolset mutation time", occurred_at)

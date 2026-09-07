@@ -10,6 +10,7 @@ from mcp.server.streamable_http_manager import (
     StreamableHTTPSessionManager,
 )
 from mcp.server.transport_security import TransportSecuritySettings
+from mcp.shared.inbound import MCP_PROTOCOL_VERSION_HEADER
 from mcp_types import UNSUPPORTED_PROTOCOL_VERSION
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
@@ -64,7 +65,7 @@ class ModernToolsetEndpoint:
                 key.decode("latin-1").lower(): value.decode("latin-1")
                 for key, value in scope.get("headers", ())
             }
-            requested_version = headers.get("mcp-protocol-version")
+            requested_version = headers.get(MCP_PROTOCOL_VERSION_HEADER)
             if requested_version != MODERN_PROTOCOL_VERSION:
                 response = JSONResponse(
                     {

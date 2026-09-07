@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "modern_version": "2026-07-28",
+  "cases": [
+    {
+      "id": "modern-dynamic-toolset-path",
+      "category": "protocol",
+      "expected": "Modern MCP resolves the Toolset slug from the trusted dynamic path.",
+      "evidence": "tests/integration/persistence/test_toolset_scoped_mcp.py::test_modern_scoped_endpoint_lists_calls_and_guards_without_root_bypass"
+    },
+    {
+      "id": "legacy-scoped-explicit-rejection",
+      "category": "protocol",
+      "expected": "Legacy MCP is rejected before entering the scoped SDK session manager.",
+      "evidence": "tests/integration/persistence/test_toolset_scoped_mcp.py::test_modern_scoped_endpoint_lists_calls_and_guards_without_root_bypass"
+    },
+    {
+      "id": "root-granted-toolset-union",
+      "category": "access",
+      "expected": "Root MCP exposes only the distinct union of active Toolsets granted to the principal.",
+      "evidence": "tests/unit/modules/toolsets/test_runtime.py::test_root_access_is_distinct_union_of_all_granted_active_toolsets"
+    },
+    {
+      "id": "non-member-call-denied",
+      "category": "access",
+      "expected": "A guessed non-member Tool is denied before execution and upstream I/O.",
+      "evidence": "tests/integration/persistence/test_toolset_scoped_mcp.py::test_modern_scoped_endpoint_lists_calls_and_guards_without_root_bypass"
+    },
+    {
+      "id": "unavailable-member-denied",
+      "category": "access",
+      "expected": "A disabled or unpublished member fails closed without disabling healthy members.",
+      "evidence": "tests/unit/modules/toolsets/test_runtime.py::test_guard_distinguishes_unavailable_member_from_non_member"
+    },
+    {
+      "id": "all-published-dynamic-projection",
+      "category": "access",
+      "expected": "The system Toolset resolves current Published Tools without explicit member rows.",
+      "evidence": "tests/unit/modules/toolsets/test_runtime.py::test_all_published_is_dynamic_projection_without_member_rows"
+    },
+    {
+      "id": "scoped-fts-before-limit",
+      "category": "search",
+      "expected": "FTS restricts eligible Tool IDs before ranking and LIMIT.",
+      "evidence": "tests/integration/persistence/test_postgresql_fts_search.py::test_fts_ranking_and_governance_filters"
+    },
+    {
+      "id": "scoped-hybrid-no-leakage",
+      "category": "search",
+      "expected": "Lexical and vector candidates are scoped before RRF and cannot leak another Toolset.",
+      "evidence": "tests/integration/persistence/test_postgresql_exact_vector_search.py::test_scoped_hybrid_filters_fts_and_vector_candidates_before_rrf"
+    },
+    {
+      "id": "empty-scope-skips-embedding",
+      "category": "search",
+      "expected": "An empty eligible scope returns no candidates without a paid embedding call.",
+      "evidence": "tests/unit/modules/tool_search/test_vector_search.py::test_empty_toolset_scope_skips_paid_query_embedding"
+    },
+    {
+      "id": "scoped-execution-evidence",
+      "category": "audit",
+      "expected": "ToolExecution and terminal Audit events preserve Toolset ID and revision.",
+      "evidence": "tests/unit/modules/execution/test_execution_lifecycle.py::test_scoped_execution_and_pre_execution_denial_preserve_scope_evidence"
+    },
+    {
+      "id": "pre-execution-denial-audit",
+      "category": "audit",
+      "expected": "A scope denial persists a redacted Audit event without creating ToolExecution.",
+      "evidence": "tests/integration/persistence/test_toolset_scoped_mcp.py::test_modern_scoped_endpoint_lists_calls_and_guards_without_root_bypass"
+    },
+    {
+      "id": "public-demo-system-toolset-reset",
+      "category": "bootstrap",
+      "expected": "Public Demo reset restores the all_published Toolset and fixed service grant.",
+      "evidence": "tests/integration/persistence/test_public_demo_workspace.py::test_public_demo_bootstraps_tenant_and_resets_business_workspace"
+    }
+  ]
+}

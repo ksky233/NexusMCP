@@ -34,7 +34,6 @@ from nexusmcp.modules.execution.domain import (
     is_valid_idempotency_key,
 )
 from nexusmcp.modules.execution.lifecycle import (
-    ExecutionLifecycle,
     RecordMcpScopeDenialCommand,
 )
 from nexusmcp.modules.tool_search.search_tools import SearchTools, SearchToolsResult
@@ -52,6 +51,7 @@ from nexusmcp.shared.errors import (
     InvalidArgumentsError,
     NexusMcpError,
     ToolsetAccessDeniedError,
+    ToolsetScopeError,
 )
 from nexusmcp.shared.log_context import bind_log_context
 from nexusmcp.shared.request_context import RequestContext
@@ -72,6 +72,10 @@ class ContextResolver(Protocol):
     def __call__(self, ctx: RawServerContext) -> RequestContext: ...
 
 
+class ScopeDenialAudit(Protocol):
+    async def record_scope_denial(self, command: RecordMcpScopeDenialCommand) -> None: ...
+
+
 def _anonymous_local_context(ctx: RawServerContext) -> RequestContext:
     return resolve_request_context(ctx, tenant_id="local")
 
@@ -86,7 +90,7 @@ def create_mcp_server(
     telemetry: NexusTelemetry | None = None,
     request_state_security: RequestStateSecurity | None = None,
     resolve_toolset_access: ResolveToolsetAccess | None = None,
-    scope_audit: ExecutionLifecycle | None = None,
+    scope_audit: ScopeDenialAudit | None = None,
 ) -> Server[Any]:
     """创建 SDK Server，并将 tools/list/call 适配到协议无关 Use Case。"""
 
@@ -443,7 +447,7 @@ def _execution_scope_type(access: ResolvedToolsetAccess | None) -> McpScopeType:
 
 
 async def _record_scope_denial(
-    lifecycle: ExecutionLifecycle | None,
+    lifecycle: ScopeDenialAudit | None,
     error: NexusMcpError,
     context: RequestContext,
     endpoint_scope: McpEndpointScope,
@@ -451,29 +455,35 @@ async def _record_scope_denial(
     *,
     access: ResolvedToolsetAccess | None,
 ) -> None:
-    if lifecycle is None or error.code not in {
-        "toolset_not_found",
-        "toolset_not_active",
-        "toolset_access_denied",
-        "toolset_member_unavailable",
-    }:
+    if lifecycle is None or not isinstance(error, ToolsetScopeError):
         return
-    await lifecycle.record_scope_denial(
-        RecordMcpScopeDenialCommand(
-            context=context,
-            tool_name=params.name,
-            arguments_digest=canonical_json_digest(dict(params.arguments or {})),
-            reason_code=error.code,
-            mcp_scope_type=(
-                McpScopeType.TOOLSET
-                if endpoint_scope.type is McpEndpointScopeType.TOOLSET
-                else McpScopeType.ROOT
-            ),
-            toolset_slug=endpoint_scope.toolset_slug,
-            toolset_id=access.toolset_id if access is not None else None,
-            toolset_revision=access.toolset_revision if access is not None else None,
+    try:
+        await lifecycle.record_scope_denial(
+            RecordMcpScopeDenialCommand(
+                context=context,
+                tool_name=params.name,
+                arguments_digest=canonical_json_digest(dict(params.arguments or {})),
+                reason_code=error.code,
+                mcp_scope_type=(
+                    McpScopeType.TOOLSET
+                    if endpoint_scope.type is McpEndpointScopeType.TOOLSET
+                    else McpScopeType.ROOT
+                ),
+                toolset_slug=endpoint_scope.toolset_slug,
+                toolset_id=access.toolset_id if access is not None else None,
+                toolset_revision=access.toolset_revision if access is not None else None,
+            )
         )
-    )
+    except Exception:
+        # 拒绝已在业务边界生效；Audit 故障不能把稳定拒绝语义替换为 Internal Error。
+        logger.exception(
+            "mcp_scope_denial_audit_failed",
+            extra={
+                "event": "mcp_scope_denial_audit_failed",
+                "error_code": "audit_write_failed",
+                "original_error_code": error.code,
+            },
+        )
 
 
 def _search_first(access: ResolvedToolsetAccess | None, root_search_first: bool) -> bool:

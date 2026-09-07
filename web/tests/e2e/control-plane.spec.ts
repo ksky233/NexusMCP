@@ -40,6 +40,25 @@ test("browser drives publish, MCP call and audit through production-like Nginx",
   await page.getByRole("link", { name: "工具目录" }).click();
   await expect(page.getByText("directory.get_employee", { exact: true })).toBeVisible();
 
+  await page.getByRole("link", { name: "工具集" }).click();
+  await page.getByRole("button", { name: "创建工具集" }).click();
+  const toolsetForm = page.locator("form");
+  await toolsetForm.getByLabel("Slug").fill("people-directory-e2e");
+  await toolsetForm.getByLabel("名称", { exact: true }).fill("People Directory E2E");
+  await toolsetForm.getByRole("button", { name: "创建草稿" }).click();
+  await expect(page.getByRole("heading", { name: "People Directory E2E" })).toBeVisible();
+
+  const member = page.getByRole("checkbox", { name: /directory\.get_employee/ });
+  await member.check();
+  await page.getByRole("button", { name: "保存成员" }).click();
+  await expect(page.getByText("健康", { exact: true })).toBeVisible();
+
+  await page.getByLabel("Principal IDs").fill("local-agent-service");
+  await page.getByRole("button", { name: "保存 Grant" }).click();
+  await expect(page.getByLabel("Principal IDs")).toHaveValue("local-agent-service");
+  await page.getByRole("button", { name: "启用" }).click();
+  await expect(page.getByText("已启用", { exact: true }).first()).toBeVisible();
+
   const repositoryRoot = path.resolve(process.cwd(), "..");
   execFileSync(
     "uv",
@@ -47,7 +66,7 @@ test("browser drives publish, MCP call and audit through production-like Nginx",
       "run",
       "python",
       path.join(repositoryRoot, "tests", "e2e", "call_published_tool.py"),
-      "http://127.0.0.1:8088/mcp",
+      "http://127.0.0.1:8088/mcp/toolsets/people-directory-e2e",
     ],
     { cwd: repositoryRoot, stdio: "inherit" },
   );
@@ -59,6 +78,8 @@ test("browser drives publish, MCP call and audit through production-like Nginx",
   await page.getByText("directory.get_employee", { exact: true }).click();
   await expect(page.getByRole("heading", { name: "Attempt 时间线" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "审计时间线" })).toBeVisible();
+  await expect(page.getByText("Toolset · revision 4", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Scope：toolset · active_toolset_grant/).first()).toBeVisible();
   await expect(page.getByText("成功", { exact: true }).first()).toBeVisible();
 });
 

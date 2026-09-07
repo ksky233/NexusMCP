@@ -733,6 +733,14 @@
             "title": "Id",
             "type": "string"
           },
+          "mcp_scope_type": {
+            "enum": [
+              "root",
+              "toolset"
+            ],
+            "title": "Mcp Scope Type",
+            "type": "string"
+          },
           "planned_at": {
             "format": "date-time",
             "title": "Planned At",
@@ -786,6 +794,28 @@
             "title": "Tool Version Id",
             "type": "string"
           },
+          "toolset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Toolset Id"
+          },
+          "toolset_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Toolset Revision"
+          },
           "trace_id": {
             "title": "Trace Id",
             "type": "string"
@@ -810,7 +840,10 @@
           "finished_at",
           "error_code",
           "error_category",
-          "attempt_count"
+          "attempt_count",
+          "mcp_scope_type",
+          "toolset_id",
+          "toolset_revision"
         ],
         "title": "ExecutionSummaryResponse",
         "type": "object"

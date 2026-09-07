@@ -8,6 +8,7 @@ from nexusmcp.modules.approval.use_cases import (
     consume_locked_approval,
 )
 from nexusmcp.modules.audit.domain import AuditAction, AuditEvent, AuditOutcome
+from nexusmcp.modules.audit.scope import McpScopeAuditEvidence
 from nexusmcp.modules.catalog.domain import ToolSideEffect
 from nexusmcp.modules.execution.domain import (
     ExecutionAttempt,
@@ -233,25 +234,23 @@ class ExecutionLifecycle:
             arguments_digest=command.arguments_digest,
             policy_version=command.policy_version,
             reason_code=command.reason_code,
-            metadata=_scope_metadata(
-                command.mcp_scope_type,
-                command.toolset_id,
-                command.toolset_revision,
-            ),
+            metadata=McpScopeAuditEvidence(
+                scope_type=command.mcp_scope_type.value,
+                toolset_id=command.toolset_id,
+                toolset_revision=command.toolset_revision,
+            ).metadata(),
         )
         async with self._unit_of_work_factory() as unit_of_work:
             await unit_of_work.audits.append(event)
             await unit_of_work.commit()
 
     async def record_scope_denial(self, command: RecordMcpScopeDenialCommand) -> None:
-        metadata = _scope_metadata(
-            command.mcp_scope_type,
-            command.toolset_id,
-            command.toolset_revision,
-            reason_code=command.reason_code,
-        )
-        if command.toolset_slug is not None:
-            metadata["toolset_slug"] = command.toolset_slug
+        metadata = McpScopeAuditEvidence(
+            scope_type=command.mcp_scope_type.value,
+            toolset_id=command.toolset_id,
+            toolset_revision=command.toolset_revision,
+            toolset_slug=command.toolset_slug,
+        ).metadata(denial_reason_code=command.reason_code)
         event = AuditEvent(
             id=self._identifier_generator.new_id(),
             tenant_id=command.context.tenant_id,
@@ -407,36 +406,13 @@ class ExecutionLifecycle:
                 "side_effect": execution.side_effect.value,
                 "execution_status": execution.status.value,
                 "attempt_count": execution.attempt_count,
-                **_scope_metadata(
-                    execution.mcp_scope_type,
-                    execution.toolset_id,
-                    execution.toolset_revision,
-                ),
+                **McpScopeAuditEvidence(
+                    scope_type=execution.mcp_scope_type.value,
+                    toolset_id=execution.toolset_id,
+                    toolset_revision=execution.toolset_revision,
+                ).metadata(),
             },
         )
-
-
-def _scope_metadata(
-    scope_type: McpScopeType,
-    toolset_id: str | None,
-    toolset_revision: int | None,
-    *,
-    reason_code: str | None = None,
-) -> dict[str, str | int]:
-    metadata: dict[str, str | int] = {
-        "mcp_scope_type": scope_type.value,
-        "scope_reason_code": reason_code
-        or (
-            "active_toolset_grant"
-            if scope_type is McpScopeType.TOOLSET
-            else "granted_toolset_union"
-        ),
-    }
-    if toolset_id is not None:
-        metadata["toolset_id"] = toolset_id
-    if toolset_revision is not None:
-        metadata["toolset_revision"] = toolset_revision
-    return metadata
 
 
 def _raise_idempotency_reuse(

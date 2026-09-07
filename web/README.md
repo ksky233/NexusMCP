@@ -103,6 +103,7 @@ second theme.
 - Tool catalog, version history, schemas and HTTP binding;
 - Approval list and confirmed decision;
 - Execution, attempt and audit filters/timelines.
+- Toolset list, aggregate editor, member/grant replacement, endpoint copy and scoped execution evidence.
 
 Search Lab, tracked Evidence, Multi-stage Nginx and Full-stack Playwright are implemented in W4. UI localization and
 the v2 admin-density calibration are implemented in W4.5.
@@ -119,5 +120,7 @@ docker build --pull=false -f Dockerfile -t nexusmcp-web:w4 ..
 pnpm test:e2e
 ```
 
-The Playwright command assumes disposable PostgreSQL, Fake Upstream, NexusMCP and the Nginx Container are already
-running. See `docs/学习笔记/08_Multi-stageBuild_Nginx与Full-stackE2E.md` for the orchestration and safety boundary.
+The main Playwright flow now publishes a Tool, creates and activates an explicit Toolset, invokes its scoped MCP
+endpoint through Nginx, and verifies Toolset revision plus Audit scope in the Admin UI. The command assumes
+disposable PostgreSQL, Fake Upstream, NexusMCP and the Nginx Container are already running. See
+`docs/学习笔记/08_Multi-stageBuild_Nginx与Full-stackE2E.md` for the orchestration and safety boundary.

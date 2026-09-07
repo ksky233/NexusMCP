@@ -12,6 +12,10 @@ from nexusmcp.modules.toolsets.domain import (
     ToolsetMemberAvailability,
     ToolsetStatus,
 )
+from nexusmcp.modules.toolsets.errors import (
+    SystemToolsetMutationError,
+    ToolsetRevisionConflict,
+)
 from nexusmcp.modules.toolsets.ports import (
     ToolsetCatalogSnapshot,
     ToolsetUnitOfWork,
@@ -471,9 +475,8 @@ def _require_expected_revision(toolset: Toolset, expected_revision: int) -> None
 
 
 def _map_mutation_error(error: ValueError) -> Exception:
-    message = str(error)
-    if "revision" in message:
-        return ToolsetRevisionConflictError(message)
-    if "all_published" in message or "system" in message:
-        return SystemToolsetImmutableError(message)
-    return InvalidArgumentsError(message)
+    if isinstance(error, ToolsetRevisionConflict):
+        return ToolsetRevisionConflictError(str(error))
+    if isinstance(error, SystemToolsetMutationError):
+        return SystemToolsetImmutableError(str(error))
+    return InvalidArgumentsError(str(error))

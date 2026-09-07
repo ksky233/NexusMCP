@@ -33,7 +33,11 @@ class ToolNotVisibleError(NexusMcpError):
     safe_message = "The requested tool is not available to this principal."
 
 
-class ToolsetNotFoundError(NexusMcpError):
+class ToolsetScopeError(NexusMcpError):
+    """由 MCP Toolset Scope 解析或成员边界产生的拒绝。"""
+
+
+class ToolsetNotFoundError(ToolsetScopeError):
     code = "toolset_not_found"
     safe_message = "The requested toolset was not found."
 
@@ -53,17 +57,17 @@ class InvalidToolsetMembersError(NexusMcpError):
     safe_message = "The toolset contains invalid members."
 
 
-class ToolsetMemberUnavailableError(NexusMcpError):
+class ToolsetMemberUnavailableError(ToolsetScopeError):
     code = "toolset_member_unavailable"
     safe_message = "One or more toolset members are unavailable."
 
 
-class ToolsetNotActiveError(NexusMcpError):
+class ToolsetNotActiveError(ToolsetScopeError):
     code = "toolset_not_active"
     safe_message = "The requested toolset is not active."
 
 
-class ToolsetAccessDeniedError(NexusMcpError):
+class ToolsetAccessDeniedError(ToolsetScopeError):
     code = "toolset_access_denied"
     safe_message = "The principal is not allowed to access this toolset scope."
 
