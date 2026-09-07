@@ -542,6 +542,77 @@
         "title": "DemoWorkspaceResetResponse",
         "type": "object"
       },
+      "DirectPublishOperationResponse": {
+        "properties": {
+          "already_published": {
+            "title": "Already Published",
+            "type": "boolean"
+          },
+          "binding_digest": {
+            "title": "Binding Digest",
+            "type": "string"
+          },
+          "canonical_name": {
+            "title": "Canonical Name",
+            "type": "string"
+          },
+          "operation_id": {
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "retired_tool_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retired Tool Version Id"
+          },
+          "schema_digest": {
+            "title": "Schema Digest",
+            "type": "string"
+          },
+          "tool_binding_id": {
+            "title": "Tool Binding Id",
+            "type": "string"
+          },
+          "tool_id": {
+            "title": "Tool Id",
+            "type": "string"
+          },
+          "tool_version_id": {
+            "title": "Tool Version Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "operation_id",
+          "tool_id",
+          "tool_version_id",
+          "tool_binding_id",
+          "canonical_name",
+          "version",
+          "schema_digest",
+          "binding_digest",
+          "retired_tool_version_id",
+          "published_at",
+          "already_published"
+        ],
+        "title": "DirectPublishOperationResponse",
+        "type": "object"
+      },
       "ExecutionAttemptPageResponse": {
         "additionalProperties": false,
         "properties": {
@@ -1100,6 +1171,17 @@
             "title": "Conflict Status",
             "type": "string"
           },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
           "draft_tool_binding_id": {
             "anyOf": [
               {
@@ -1137,6 +1219,11 @@
             "title": "Id",
             "type": "string"
           },
+          "input_schema": {
+            "additionalProperties": true,
+            "title": "Input Schema",
+            "type": "object"
+          },
           "method": {
             "title": "Method",
             "type": "string"
@@ -1156,6 +1243,18 @@
             "title": "Operation Key",
             "type": "string"
           },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Schema"
+          },
           "path": {
             "title": "Path",
             "type": "string"
@@ -1163,6 +1262,20 @@
           "review_status": {
             "title": "Review Status",
             "type": "string"
+          },
+          "side_effect": {
+            "$ref": "#/components/schemas/ToolSideEffect"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
           }
         },
         "required": [
@@ -1175,7 +1288,12 @@
           "conflict_status",
           "review_status",
           "draft_tool_version_id",
-          "draft_tool_binding_id"
+          "draft_tool_binding_id",
+          "summary",
+          "description",
+          "side_effect",
+          "input_schema",
+          "output_schema"
         ],
         "title": "ImportedOperationResponse",
         "type": "object"
@@ -4406,6 +4524,85 @@
           }
         },
         "summary": "List Review Operations"
+      }
+    },
+    "/openapi/operations/{operation_id}/publish": {
+      "post": {
+        "operationId": "directPublishImportedOperation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "operation_id",
+            "required": true,
+            "schema": {
+              "title": "Operation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewOperationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectPublishOperationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Direct Publish Operation"
       }
     },
     "/openapi/operations/{operation_id}/review": {

@@ -54,5 +54,9 @@ def test_local_defaults_do_not_override_shell_or_dotenv(tmp_path: Path) -> None:
     assert "NEXUSMCP_LOCAL_TENANT_ID" not in environment
     assert environment["NEXUSMCP_CONTROL_PLANE_ENABLED"] == "false"
     assert environment["NEXUSMCP_CATALOG_BACKEND"] == "postgresql"
+    assert environment["NEXUSMCP_TOOL_EXECUTION_ENABLED"] == "true"
+    assert environment["NEXUSMCP_UPSTREAM_EGRESS_POLICY_ENABLED"] == "true"
+    assert environment["NEXUSMCP_UPSTREAM_ALLOWED_PORTS"] == "[80,443,9001,9002,9003]"
+    assert environment["NEXUSMCP_UPSTREAM_ALLOW_LOCAL_DEMO"] == "true"
     assert environment["NEXUSMCP_MCP_IDENTITY_MODE"] == "static_service"
     assert environment["NEXUSMCP_STATIC_AGENT_PRINCIPAL_ID"] == "local-agent-service"

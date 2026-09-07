@@ -313,6 +313,56 @@ export type DemoWorkspaceResetResponse = {
 };
 
 /**
+ * DirectPublishOperationResponse
+ */
+export type DirectPublishOperationResponse = {
+    /**
+     * Already Published
+     */
+    already_published: boolean;
+    /**
+     * Binding Digest
+     */
+    binding_digest: string;
+    /**
+     * Canonical Name
+     */
+    canonical_name: string;
+    /**
+     * Operation Id
+     */
+    operation_id: string;
+    /**
+     * Published At
+     */
+    published_at: string;
+    /**
+     * Retired Tool Version Id
+     */
+    retired_tool_version_id: string | null;
+    /**
+     * Schema Digest
+     */
+    schema_digest: string;
+    /**
+     * Tool Binding Id
+     */
+    tool_binding_id: string;
+    /**
+     * Tool Id
+     */
+    tool_id: string;
+    /**
+     * Tool Version Id
+     */
+    tool_version_id: string;
+    /**
+     * Version
+     */
+    version: number;
+};
+
+/**
  * ExecutionAttemptPageResponse
  */
 export type ExecutionAttemptPageResponse = {
@@ -615,6 +665,10 @@ export type ImportedOperationResponse = {
      */
     conflict_status: string;
     /**
+     * Description
+     */
+    description: string | null;
+    /**
      * Draft Tool Binding Id
      */
     draft_tool_binding_id: string | null;
@@ -631,6 +685,12 @@ export type ImportedOperationResponse = {
      */
     id: string;
     /**
+     * Input Schema
+     */
+    input_schema: {
+        [key: string]: unknown;
+    };
+    /**
      * Method
      */
     method: string;
@@ -643,6 +703,12 @@ export type ImportedOperationResponse = {
      */
     operation_key: string;
     /**
+     * Output Schema
+     */
+    output_schema: {
+        [key: string]: unknown;
+    } | null;
+    /**
      * Path
      */
     path: string;
@@ -650,6 +716,11 @@ export type ImportedOperationResponse = {
      * Review Status
      */
     review_status: string;
+    side_effect: ToolSideEffect;
+    /**
+     * Summary
+     */
+    summary: string | null;
 };
 
 /**
@@ -2548,6 +2619,48 @@ export type ListReviewOperationsResponses = {
 };
 
 export type ListReviewOperationsResponse = ListReviewOperationsResponses[keyof ListReviewOperationsResponses];
+
+export type DirectPublishImportedOperationData = {
+    body: ReviewOperationRequest;
+    path: {
+        /**
+         * Operation Id
+         */
+        operation_id: string;
+    };
+    query?: never;
+    url: '/openapi/operations/{operation_id}/publish';
+};
+
+export type DirectPublishImportedOperationErrors = {
+    /**
+     * Bad Request
+     */
+    400: ProblemDetails;
+    /**
+     * Not Found
+     */
+    404: ProblemDetails;
+    /**
+     * Conflict
+     */
+    409: ProblemDetails;
+    /**
+     * Unprocessable Entity
+     */
+    422: ProblemDetails;
+};
+
+export type DirectPublishImportedOperationError = DirectPublishImportedOperationErrors[keyof DirectPublishImportedOperationErrors];
+
+export type DirectPublishImportedOperationResponses = {
+    /**
+     * Successful Response
+     */
+    200: DirectPublishOperationResponse;
+};
+
+export type DirectPublishImportedOperationResponse = DirectPublishImportedOperationResponses[keyof DirectPublishImportedOperationResponses];
 
 export type ReviewImportedOperationData = {
     body: ReviewOperationRequest;

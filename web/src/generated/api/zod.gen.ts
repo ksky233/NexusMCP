@@ -115,6 +115,23 @@ export const zDemoWorkspaceResetResponse = z.object({
 });
 
 /**
+ * DirectPublishOperationResponse
+ */
+export const zDirectPublishOperationResponse = z.object({
+    already_published: z.boolean(),
+    binding_digest: z.string(),
+    canonical_name: z.string(),
+    operation_id: z.string(),
+    published_at: z.iso.datetime(),
+    retired_tool_version_id: z.string().nullable(),
+    schema_digest: z.string(),
+    tool_binding_id: z.string(),
+    tool_id: z.string(),
+    tool_version_id: z.string(),
+    version: z.int()
+});
+
+/**
  * ExecutionAttemptResponse
  */
 export const zExecutionAttemptResponse = z.object({
@@ -213,30 +230,6 @@ export const zImportJobSummaryResponse = z.object({
     status: z.string(),
     upstream_name: z.string(),
     upstream_service_id: z.string()
-});
-
-/**
- * ImportedOperationResponse
- */
-export const zImportedOperationResponse = z.object({
-    conflict_status: z.string(),
-    draft_tool_binding_id: z.string().nullable(),
-    draft_tool_version_id: z.string().nullable(),
-    generated_tool_name: z.string().nullable(),
-    id: z.string(),
-    method: z.string(),
-    operation_id: z.string().nullable(),
-    operation_key: z.string(),
-    path: z.string(),
-    review_status: z.string()
-});
-
-/**
- * ImportDetailResponse
- */
-export const zImportDetailResponse = z.object({
-    job: zImportJobResponse,
-    operations: z.array(zImportedOperationResponse)
 });
 
 /**
@@ -589,6 +582,35 @@ export const zToolSideEffect = z.enum([
     'non_idempotent_write',
     'unknown'
 ]);
+
+/**
+ * ImportedOperationResponse
+ */
+export const zImportedOperationResponse = z.object({
+    conflict_status: z.string(),
+    description: z.string().nullable(),
+    draft_tool_binding_id: z.string().nullable(),
+    draft_tool_version_id: z.string().nullable(),
+    generated_tool_name: z.string().nullable(),
+    id: z.string(),
+    input_schema: z.record(z.string(), z.unknown()),
+    method: z.string(),
+    operation_id: z.string().nullable(),
+    operation_key: z.string(),
+    output_schema: z.record(z.string(), z.unknown()).nullable(),
+    path: z.string(),
+    review_status: z.string(),
+    side_effect: zToolSideEffect,
+    summary: z.string().nullable()
+});
+
+/**
+ * ImportDetailResponse
+ */
+export const zImportDetailResponse = z.object({
+    job: zImportJobResponse,
+    operations: z.array(zImportedOperationResponse)
+});
 
 /**
  * ToolStatus
@@ -981,6 +1003,11 @@ export const zGetOpenApiImportResponse = zImportDetailResponse;
  * Successful Response
  */
 export const zListReviewOperationsResponse = zReviewOperationPageResponse;
+
+/**
+ * Successful Response
+ */
+export const zDirectPublishImportedOperationResponse = zDirectPublishOperationResponse;
 
 /**
  * Successful Response

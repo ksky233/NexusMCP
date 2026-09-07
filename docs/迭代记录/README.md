@@ -102,4 +102,5 @@ Cancelled
 |---|---|---|---|
 | I-01 | [Service-Centric Identity 代码收敛](./01_ServiceCentricIdentity代码收敛.md) | Completed（本地） | ADR-0019 |
 | I-02 | [Public Demo Production Packaging](./02_PublicDemoProductionPackaging.md) | Completed（已部署） | ADR-0019、单机生产部署规划 |
-| I-03 | [Toolset Scoped MCP Endpoints](./03_ToolsetScopedMCPEndpoints.md) | In Progress（I03-0 Completed） | ADR-0020 |
+| I-03 | [Toolset Scoped MCP Endpoints](./03_ToolsetScopedMCPEndpoints.md) | In Progress（I03-5A Completed，Deployment Pending） | ADR-0020 |
+| I-04 | [Direct Tool Publication Workflow](./04_DirectToolPublicationWorkflow.md) | In Progress（Implementation Verified） | ADR-0021 |

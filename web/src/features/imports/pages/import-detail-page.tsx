@@ -1,27 +1,26 @@
-import { ArrowLeft, Check, Send } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { PageHeader } from "@/components/common/page-header";
 import { ErrorState, InlineError, LoadingState } from "@/components/common/query-state";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FieldLabel, Input, Select, Textarea } from "@/components/ui/form-controls";
 import { StatusPill } from "@/components/ui/status-pill";
 import {
-  useAcceptOperation,
+  useDirectPublishOperation,
   useImport,
-  usePublishVersion,
-  useSubmitVersion,
   useToolBinding,
   useToolVersion,
 } from "@/features/imports/hooks/use-imports";
+import { useToolsets } from "@/features/toolsets/hooks/use-toolsets";
 import type { ImportedOperationResponse, ToolVisibility } from "@/generated/api/types.gen";
 import { formatDateTime, humanize, statusTone } from "@/lib/display";
 
 export function ImportDetailPage() {
   const importId = useParams().importId ?? "";
   const detail = useImport(importId);
+  const allPublished = useToolsets({ offset: 0, limit: 1, kind: "all_published" });
 
   if (detail.isPending) return <LoadingState label="正在加载导入详情…" />;
   if (detail.isError)
@@ -60,7 +59,12 @@ export function ImportDetailPage() {
 
       <div className="space-y-4">
         {operations.map((operation) => (
-          <OperationWorkflow importId={importId} key={operation.id} operation={operation} />
+          <OperationWorkflow
+            allPublishedGrantCount={allPublished.data?.items[0]?.grant_count ?? 0}
+            importId={importId}
+            key={operation.id}
+            operation={operation}
+          />
         ))}
       </div>
     </section>
@@ -68,23 +72,22 @@ export function ImportDetailPage() {
 }
 
 function OperationWorkflow({
+  allPublishedGrantCount,
   importId,
   operation,
 }: {
+  allPublishedGrantCount: number;
   importId: string;
   operation: ImportedOperationResponse;
 }) {
-  const [reviewing, setReviewing] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [owner, setOwner] = useState("platform-team");
   const [visibility, setVisibility] = useState<ToolVisibility>("public");
   const [notes, setNotes] = useState("");
-  const [publishOpen, setPublishOpen] = useState(false);
-  const accept = useAcceptOperation(importId, operation.id);
+  const directPublish = useDirectPublishOperation(importId, operation.id);
   const version = useToolVersion(operation.draft_tool_version_id);
   const binding = useToolBinding(operation.draft_tool_binding_id);
-  const submit = useSubmitVersion(operation.draft_tool_version_id ?? "");
-  const publish = usePublishVersion(version.data?.tool_id ?? "", version.data?.id ?? "");
-  const canReview = operation.review_status === "pending" && operation.conflict_status === "none";
+  const canPublish = operation.conflict_status === "none" && version.data?.status !== "published";
 
   return (
     <article className="panel p-6 sm:p-7">
@@ -108,21 +111,46 @@ function OperationWorkflow({
             <p className="mt-3 text-sm text-slate/65">Tool：{operation.generated_tool_name}</p>
           ) : null}
         </div>
-        {canReview ? (
-          <Button onClick={() => setReviewing((value) => !value)} size="small">
-            <Check aria-hidden="true" className="size-3.5" /> 审核 Operation
+        {canPublish ? (
+          <Button onClick={() => setPublishing((value) => !value)} size="small">
+            <Check aria-hidden="true" className="size-3.5" /> 直接发布
           </Button>
         ) : null}
       </div>
 
-      {reviewing ? (
+      <div className="mt-6 border-t border-slate/15 pt-6">
+        <p className="component-label">Generated Tool Contract</p>
+        <dl className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <Definition
+            label="名称"
+            value={operation.summary ?? operation.generated_tool_name ?? "—"}
+          />
+          <Definition label="副作用" value={humanize(operation.side_effect)} />
+          <Definition label="Tool Name" mono value={operation.generated_tool_name ?? "—"} />
+          <Definition label="输出 Schema" value={operation.output_schema ? "已声明" : "未声明"} />
+        </dl>
+        {operation.description ? (
+          <p className="mt-4 text-sm leading-6 text-slate/65">{operation.description}</p>
+        ) : null}
+        <details className="mt-4 border border-slate/15 bg-canvas p-4">
+          <summary className="cursor-pointer text-xs text-slate">
+            查看 Input / Output Schema
+          </summary>
+          <div className="mt-4 grid gap-4 xl:grid-cols-2">
+            <Schema label="Input Schema" value={operation.input_schema} />
+            <Schema label="Output Schema" value={operation.output_schema} />
+          </div>
+        </details>
+      </div>
+
+      {publishing ? (
         <form
           className="mt-6 grid gap-5 border-t border-slate/15 pt-6 sm:grid-cols-2"
           onSubmit={(event) => {
             event.preventDefault();
-            void accept
+            void directPublish
               .mutateAsync({ owner, visibility, review_notes: notes || null })
-              .then(() => setReviewing(false));
+              .then(() => setPublishing(false));
           }}
         >
           <div>
@@ -147,24 +175,29 @@ function OperationWorkflow({
             </Select>
           </div>
           <div className="sm:col-span-2">
-            <FieldLabel htmlFor={`notes-${operation.id}`}>审核备注</FieldLabel>
+            <FieldLabel htmlFor={`notes-${operation.id}`}>发布备注</FieldLabel>
             <Textarea
               id={`notes-${operation.id}`}
               onChange={(event) => setNotes(event.currentTarget.value)}
               value={notes}
             />
           </div>
-          {accept.error ? (
+          <div className="border border-slate/20 bg-canvas p-4 text-xs leading-5 text-slate/65 sm:col-span-2">
+            {allPublishedGrantCount > 0
+              ? `发布后会立即对 ${allPublishedGrantCount} 个拥有 all_published Grant 的 Agent Service 生效。`
+              : "发布后进入 Catalog；普通 Agent 仍需通过 Explicit Toolset Membership 与 Grant 才能使用。"}
+          </div>
+          {directPublish.error ? (
             <div className="sm:col-span-2">
-              <InlineError error={accept.error} />
+              <InlineError error={directPublish.error} />
             </div>
           ) : null}
           <div className="flex justify-end gap-3 sm:col-span-2">
-            <Button onClick={() => setReviewing(false)} type="button" variant="secondary">
+            <Button onClick={() => setPublishing(false)} type="button" variant="secondary">
               取消
             </Button>
-            <Button disabled={accept.isPending} type="submit">
-              {accept.isPending ? "正在审核…" : "接受并创建草稿"}
+            <Button disabled={directPublish.isPending} type="submit">
+              {directPublish.isPending ? "正在发布…" : "确认并直接发布"}
             </Button>
           </div>
         </form>
@@ -173,7 +206,7 @@ function OperationWorkflow({
       {operation.draft_tool_version_id && operation.draft_tool_binding_id ? (
         <div className="mt-6 border-t border-slate/15 pt-6">
           {version.isPending || binding.isPending ? (
-            <LoadingState label="正在加载草稿 Contract…" />
+            <LoadingState label="正在加载发布结果…" />
           ) : null}
           {version.error ? <InlineError error={version.error} /> : null}
           {binding.error ? <InlineError error={binding.error} /> : null}
@@ -188,59 +221,25 @@ function OperationWorkflow({
                 <Definition label="Schema Digest" mono value={version.data.schema_digest} />
                 <Definition label="Binding Digest" mono value={binding.data.binding_digest} />
               </dl>
-              <div className="flex shrink-0 gap-3">
-                {version.data.status === "draft" ? (
-                  <Button
-                    disabled={submit.isPending}
-                    onClick={() => void submit.mutateAsync()}
-                    size="small"
-                  >
-                    <Send aria-hidden="true" className="size-3.5" />
-                    {submit.isPending ? "正在提交…" : "提交审核"}
-                  </Button>
-                ) : null}
-                {version.data.status === "review" ? (
-                  <Button onClick={() => setPublishOpen(true)} size="small">
-                    发布版本
-                  </Button>
-                ) : null}
-                {version.data.status === "published" ? (
-                  <StatusPill tone="completed">已发布</StatusPill>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
-          {submit.error ? (
-            <div className="mt-4">
-              <InlineError error={submit.error} />
-            </div>
-          ) : null}
-          {publish.error ? (
-            <div className="mt-4">
-              <InlineError error={publish.error} />
+              <StatusPill tone={statusTone(version.data.status)}>
+                {humanize(version.data.status)}
+              </StatusPill>
             </div>
           ) : null}
         </div>
       ) : null}
-
-      {version.data && binding.data ? (
-        <ConfirmDialog
-          confirmLabel={publish.isPending ? "正在发布…" : "发布 Tool 版本"}
-          description="发布前会原子校验已审核的 Schema 与 Binding Digest；成功后该版本才会对 MCP Client 可见。"
-          onConfirm={() => {
-            void publish
-              .mutateAsync({
-                expected_schema_digest: version.data.schema_digest,
-                expected_binding_digest: binding.data.binding_digest,
-              })
-              .then(() => setPublishOpen(false));
-          }}
-          onOpenChange={setPublishOpen}
-          open={publishOpen}
-          title={`确认发布 ${operation.generated_tool_name ?? "Tool"}？`}
-        />
-      ) : null}
     </article>
+  );
+}
+
+function Schema({ label, value }: { label: string; value: Record<string, unknown> | null }) {
+  return (
+    <div className="min-w-0">
+      <p className="component-label">{label}</p>
+      <pre className="mt-3 max-h-64 overflow-auto border border-slate/15 bg-paper p-3 font-mono text-[11px] leading-5 text-slate">
+        {JSON.stringify(value, null, 2)}
+      </pre>
+    </div>
   );
 }
 

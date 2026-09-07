@@ -1,5 +1,7 @@
 """Employee Directory OpenAPI → PostgreSQL → MCP tools/list 首条纵向切片。"""
 
+from __future__ import annotations
+
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -18,18 +20,6 @@ from nexusmcp.infrastructure.identifiers import UuidIdentifierGenerator
 from nexusmcp.modules.catalog.adapters.sqlalchemy_repository import (
     SqlAlchemyToolCatalogRepository,
 )
-from nexusmcp.modules.catalog.adapters.sqlalchemy_uow import (
-    SqlAlchemyCatalogUnitOfWorkFactory,
-)
-from nexusmcp.modules.catalog.domain import ToolVersionStatus
-from nexusmcp.modules.catalog.publish import PublishTool, PublishToolCommand
-from nexusmcp.modules.catalog.review import (
-    SubmitToolVersionForReview,
-    SubmitToolVersionForReviewCommand,
-)
-from nexusmcp.modules.connectors.adapters.sqlalchemy_repository import (
-    SqlAlchemyToolBindingRepository,
-)
 from nexusmcp.modules.identity.adapters.sqlalchemy_models import TenantModel
 from nexusmcp.modules.openapi_import.adapters.local_document_reader import (
     LocalOpenApiDocumentReader,
@@ -38,18 +28,19 @@ from nexusmcp.modules.openapi_import.adapters.sqlalchemy_repository import (
     SqlAlchemyOpenApiImportRepository,
 )
 from nexusmcp.modules.openapi_import.adapters.sqlalchemy_review_uow import (
+    SqlAlchemyReviewUnitOfWork,
     SqlAlchemyReviewUnitOfWorkFactory,
 )
 from nexusmcp.modules.openapi_import.adapters.sqlalchemy_uow import (
     SqlAlchemyOpenApiImportUnitOfWorkFactory,
 )
+from nexusmcp.modules.openapi_import.direct_publish import (
+    DirectPublishImportedOperation,
+    DirectPublishImportedOperationCommand,
+)
 from nexusmcp.modules.openapi_import.domain import ImportJobStatus, OperationReviewStatus
 from nexusmcp.modules.openapi_import.import_openapi import ImportOpenApi, ImportOpenApiCommand
 from nexusmcp.modules.openapi_import.parser import OpenApiParser
-from nexusmcp.modules.openapi_import.review import (
-    ReviewImportedOperation,
-    ReviewImportedOperationCommand,
-)
 from nexusmcp.modules.registry.adapters.sqlalchemy_models import UpstreamServiceModel
 from nexusmcp.shared.request_context import ProtocolEra, RequestContext
 from tests.contract.repositories.contracts import TENANT_A_ID, UPSTREAM_ID
@@ -109,6 +100,23 @@ async def seed_registry(session: AsyncSession) -> None:
     await session.commit()
 
 
+class FailingCommitReviewUnitOfWork(SqlAlchemyReviewUnitOfWork):
+    async def __aenter__(self) -> FailingCommitReviewUnitOfWork:
+        await super().__aenter__()
+        return self
+
+    async def commit(self) -> None:
+        raise RuntimeError("simulated direct publish commit failure")
+
+
+class FailingCommitReviewFactory:
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
+        self._session_factory = session_factory
+
+    def __call__(self) -> FailingCommitReviewUnitOfWork:
+        return FailingCommitReviewUnitOfWork(self._session_factory)
+
+
 @pytest.mark.asyncio
 async def test_employee_directory_openapi_to_mcp_catalog_slice(
     pg_session_factory: async_sessionmaker[AsyncSession],
@@ -144,49 +152,29 @@ async def test_employee_directory_openapi_to_mcp_catalog_slice(
         operation for operation in operations if operation.operation_id == "getEmployee"
     )
 
-    review_result = await ReviewImportedOperation(
+    publication = await DirectPublishImportedOperation(
         SqlAlchemyReviewUnitOfWorkFactory(pg_session_factory),
         clock,
         identifier_generator,
     ).execute(
-        ReviewImportedOperationCommand(
+        DirectPublishImportedOperationCommand(
             context=context,
             operation_id=get_employee.id,
             owner="people-platform",
         )
     )
-    catalog_uow_factory = SqlAlchemyCatalogUnitOfWorkFactory(pg_session_factory)
-    await SubmitToolVersionForReview(catalog_uow_factory, clock).execute(
-        SubmitToolVersionForReviewCommand(
-            context=context,
-            tool_version_id=review_result.tool_version_id,
-        )
-    )
 
     async with pg_session_factory() as observer_session:
         catalog = SqlAlchemyToolCatalogRepository(observer_session)
-        bindings = SqlAlchemyToolBindingRepository(observer_session)
-        reviewed = await catalog.get_version_by_id(
+        published = await catalog.get_version_by_id(
             TENANT_A_ID,
-            review_result.tool_version_id,
+            publication.tool_version_id,
         )
-        binding = await bindings.get_by_id(TENANT_A_ID, review_result.tool_binding_id)
         accepted = await SqlAlchemyOpenApiImportRepository(
             observer_session
         ).get_operation_for_update(TENANT_A_ID, get_employee.id)
-    assert reviewed is not None and reviewed.status is ToolVersionStatus.REVIEW
-    assert binding is not None
+    assert published is not None and published.status.value == "published"
     assert accepted is not None and accepted.review_status is OperationReviewStatus.ACCEPTED
-
-    await PublishTool(catalog_uow_factory, clock).execute(
-        PublishToolCommand(
-            context=context,
-            tool_id=review_result.tool_id,
-            tool_version_id=reviewed.id,
-            expected_schema_digest=reviewed.schema_digest,
-            expected_binding_digest=binding.binding_digest,
-        )
-    )
 
     app = create_app(
         Settings(
@@ -216,3 +204,59 @@ async def test_employee_directory_openapi_to_mcp_catalog_slice(
     assert tools.tools[1].input_schema["required"] == ["employee_id"]
     assert tools.tools[1].meta is not None
     assert tools.tools[1].meta["com.nexusmcp/toolVersion"] == 1
+
+
+@pytest.mark.asyncio
+async def test_direct_publish_commit_failure_rolls_back_review_and_catalog(
+    pg_session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    async with pg_session_factory() as seed_session:
+        await seed_registry(seed_session)
+    context = make_context()
+    import_result = await ImportOpenApi(
+        SqlAlchemyOpenApiImportUnitOfWorkFactory(pg_session_factory),
+        LocalOpenApiDocumentReader(UPSTREAM_ROOT),
+        OpenApiParser(),
+        FixedClock(NOW),
+        UuidIdentifierGenerator(),
+    ).execute(
+        ImportOpenApiCommand(
+            context=context,
+            upstream_service_id=UPSTREAM_ID,
+            source_ref="employee_directory/openapi.json",
+        )
+    )
+    async with pg_session_factory() as observer_session:
+        imports = SqlAlchemyOpenApiImportRepository(observer_session)
+        operations = await imports.list_operations(TENANT_A_ID, import_result.import_job_id)
+    get_employee = next(
+        operation for operation in operations if operation.operation_id == "getEmployee"
+    )
+
+    with pytest.raises(RuntimeError, match="direct publish commit failure"):
+        await DirectPublishImportedOperation(
+            FailingCommitReviewFactory(pg_session_factory),
+            FixedClock(NOW),
+            UuidIdentifierGenerator(),
+        ).execute(
+            DirectPublishImportedOperationCommand(
+                context=context,
+                operation_id=get_employee.id,
+                owner="people-platform",
+            )
+        )
+
+    async with pg_session_factory() as observer_session:
+        imports = SqlAlchemyOpenApiImportRepository(observer_session)
+        persisted_operation = await imports.get_operation_for_update(
+            TENANT_A_ID,
+            get_employee.id,
+        )
+        tool = await SqlAlchemyToolCatalogRepository(observer_session).get_tool_by_name(
+            TENANT_A_ID,
+            "directory.get_employee",
+        )
+    assert persisted_operation is not None
+    assert persisted_operation.review_status is OperationReviewStatus.PENDING
+    assert persisted_operation.draft_tool_version_id is None
+    assert tool is None

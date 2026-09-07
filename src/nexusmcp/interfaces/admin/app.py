@@ -36,6 +36,10 @@ from nexusmcp.modules.catalog.search import SearchPublishedTools, SearchPublishe
 from nexusmcp.modules.control_plane.demo_reset import ResetDemoWorkspace
 from nexusmcp.modules.control_plane.ports import ControlPlaneQueryPort
 from nexusmcp.modules.control_plane.read_models import UpstreamDetail
+from nexusmcp.modules.openapi_import.direct_publish import (
+    DirectPublishImportedOperation,
+    DirectPublishImportedOperationCommand,
+)
 from nexusmcp.modules.openapi_import.domain import ImportedOperation, OpenApiImportJob
 from nexusmcp.modules.openapi_import.import_openapi import ImportOpenApi, ImportOpenApiCommand
 from nexusmcp.modules.openapi_import.queries import GetOpenApiImport, GetOpenApiImportQuery
@@ -82,6 +86,7 @@ class AdminServices:
     import_openapi: ImportOpenApi
     get_openapi_import: GetOpenApiImport
     review_operation: ReviewImportedOperation
+    direct_publish_operation: DirectPublishImportedOperation
     submit_version_review: SubmitToolVersionForReview
     publish_tool: PublishTool
     search_tools: SearchPublishedTools
@@ -217,6 +222,11 @@ class ImportedOperationResponse(BaseModel):
     review_status: str
     draft_tool_version_id: str | None
     draft_tool_binding_id: str | None
+    summary: str | None
+    description: str | None
+    side_effect: ToolSideEffect
+    input_schema: dict[str, Any]
+    output_schema: dict[str, Any] | None
 
 
 class ImportDetailResponse(BaseModel):
@@ -239,6 +249,20 @@ class ReviewOperationResponse(BaseModel):
     version: int
     schema_digest: str
     binding_digest: str
+
+
+class DirectPublishOperationResponse(BaseModel):
+    operation_id: str
+    tool_id: str
+    tool_version_id: str
+    tool_binding_id: str
+    canonical_name: str
+    version: int
+    schema_digest: str
+    binding_digest: str
+    retired_tool_version_id: str | None
+    published_at: datetime
+    already_published: bool
 
 
 class StateResponse(BaseModel):
@@ -616,6 +640,40 @@ def create_admin_app(
             version=result.version,
             schema_digest=result.schema_digest,
             binding_digest=result.binding_digest,
+        )
+
+    @app.post(
+        "/openapi/operations/{operation_id}/publish",
+        response_model=DirectPublishOperationResponse,
+        operation_id="directPublishImportedOperation",
+        responses=problem_responses(400, 404, 409, 422),
+    )
+    async def direct_publish_operation(
+        operation_id: str,
+        request: ReviewOperationRequest,
+        context: AdminContext,
+    ) -> DirectPublishOperationResponse:
+        result = await services.direct_publish_operation.execute(
+            DirectPublishImportedOperationCommand(
+                context=context,
+                operation_id=operation_id,
+                owner=request.owner,
+                visibility=request.visibility,
+                review_notes=request.review_notes,
+            )
+        )
+        return DirectPublishOperationResponse(
+            operation_id=result.operation_id,
+            tool_id=result.tool_id,
+            tool_version_id=result.tool_version_id,
+            tool_binding_id=result.tool_binding_id,
+            canonical_name=result.canonical_name,
+            version=result.version,
+            schema_digest=result.schema_digest,
+            binding_digest=result.binding_digest,
+            retired_tool_version_id=result.retired_tool_version_id,
+            published_at=result.published_at,
+            already_published=result.already_published,
         )
 
     @app.post(
@@ -1030,6 +1088,13 @@ def _job_response(job: OpenApiImportJob) -> ImportJobResponse:
 
 
 def _operation_response(operation: ImportedOperation) -> ImportedOperationResponse:
+    normalized = operation.normalized_operation
+    raw_input_schema = normalized.get("tool_input_schema")
+    raw_output_schema = normalized.get("tool_output_schema")
+    try:
+        side_effect = ToolSideEffect(str(normalized.get("side_effect", "unknown")))
+    except ValueError:
+        side_effect = ToolSideEffect.UNKNOWN
     return ImportedOperationResponse(
         id=operation.id,
         operation_key=operation.operation_key,
@@ -1041,4 +1106,13 @@ def _operation_response(operation: ImportedOperation) -> ImportedOperationRespon
         review_status=operation.review_status.value,
         draft_tool_version_id=operation.draft_tool_version_id,
         draft_tool_binding_id=operation.draft_tool_binding_id,
+        summary=_optional_response_text(normalized.get("summary")),
+        description=_optional_response_text(normalized.get("description")),
+        side_effect=side_effect,
+        input_schema=(dict(raw_input_schema) if isinstance(raw_input_schema, dict) else {}),
+        output_schema=(dict(raw_output_schema) if isinstance(raw_output_schema, dict) else None),
     )
+
+
+def _optional_response_text(value: object) -> str | None:
+    return value if isinstance(value, str) and value.strip() else None

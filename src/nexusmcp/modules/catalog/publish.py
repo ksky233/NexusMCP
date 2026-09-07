@@ -51,75 +51,14 @@ class PublishTool:
         published_at = self._clock.now()
         if published_at.tzinfo is None:
             raise ValueError("publish clock must return a timezone-aware datetime")
-        tenant_id = command.context.tenant_id
         async with self._unit_of_work_factory() as unit_of_work:
-            tool = await unit_of_work.catalog.get_tool_for_update(tenant_id, command.tool_id)
-            if tool is None:
-                raise ToolNotFoundError(f"tool {command.tool_id} was not found in tenant")
-
-            version = await unit_of_work.catalog.get_version_for_update(
-                tenant_id,
-                command.tool_version_id,
-            )
-            if version is None:
-                raise ToolVersionNotFoundError(
-                    f"tool version {command.tool_version_id} was not found in tenant"
-                )
-
-            binding = await unit_of_work.bindings.get_by_tool_version_for_update(
-                tenant_id,
-                version.id,
-            )
-            if binding is None:
-                raise ToolBindingNotFoundError(
-                    f"binding for tool version {version.id} was not found in tenant"
-                )
-
-            upstream = await unit_of_work.upstreams.get_for_update(
-                tenant_id,
-                binding.upstream_service_id,
-            )
-            if upstream is None:
-                raise TenantBoundaryViolationError(
-                    "binding upstream was not found in the requested tenant"
-                )
-
-            self._validate_publish_snapshot(command, tool, version, binding, upstream)
-            retired_version_id = await self._retire_current_version(
+            result = await publish_tool_in_transaction(
                 unit_of_work,
-                tenant_id,
-                tool,
-                version,
-                published_at,
+                command,
+                published_at=published_at,
             )
-
-            await unit_of_work.catalog.save_version(
-                tenant_id,
-                version.publish(published_at),
-            )
-            await unit_of_work.bindings.save(
-                tenant_id,
-                binding.publish(published_at),
-            )
-            await unit_of_work.catalog.save_tool(tenant_id, tool.activate())
             await unit_of_work.commit()
-
-        event = ToolPublished(
-            tenant_id=tenant_id,
-            tool_id=tool.id,
-            tool_version_id=version.id,
-            tool_binding_id=binding.id,
-            canonical_name=tool.canonical_name,
-            version=version.version,
-            actor_id=command.context.principal_id,
-            request_id=command.context.request_id,
-            trace_id=command.context.trace_id,
-            occurred_at=published_at,
-        )
-        return PublishToolResult(
-            event=event,
-            retired_tool_version_id=retired_version_id,
-        )
+            return result
 
     @staticmethod
     def _validate_publish_snapshot(
@@ -203,3 +142,77 @@ class PublishTool:
         )
         await unit_of_work.bindings.save(tenant_id, current_binding.disable())
         return locked_current.id
+
+
+async def publish_tool_in_transaction(
+    unit_of_work: CatalogUnitOfWork,
+    command: PublishToolCommand,
+    *,
+    published_at: datetime,
+) -> PublishToolResult:
+    """在调用方 UoW 中完成发布切换，不在内部 Commit。"""
+
+    tenant_id = command.context.tenant_id
+    tool = await unit_of_work.catalog.get_tool_for_update(tenant_id, command.tool_id)
+    if tool is None:
+        raise ToolNotFoundError(f"tool {command.tool_id} was not found in tenant")
+
+    version = await unit_of_work.catalog.get_version_for_update(
+        tenant_id,
+        command.tool_version_id,
+    )
+    if version is None:
+        raise ToolVersionNotFoundError(
+            f"tool version {command.tool_version_id} was not found in tenant"
+        )
+
+    binding = await unit_of_work.bindings.get_by_tool_version_for_update(
+        tenant_id,
+        version.id,
+    )
+    if binding is None:
+        raise ToolBindingNotFoundError(
+            f"binding for tool version {version.id} was not found in tenant"
+        )
+
+    upstream = await unit_of_work.upstreams.get_for_update(
+        tenant_id,
+        binding.upstream_service_id,
+    )
+    if upstream is None:
+        raise TenantBoundaryViolationError("binding upstream was not found in the requested tenant")
+
+    PublishTool._validate_publish_snapshot(command, tool, version, binding, upstream)
+    retired_version_id = await PublishTool._retire_current_version(
+        unit_of_work,
+        tenant_id,
+        tool,
+        version,
+        published_at,
+    )
+
+    await unit_of_work.catalog.save_version(
+        tenant_id,
+        version.publish(published_at),
+    )
+    await unit_of_work.bindings.save(
+        tenant_id,
+        binding.publish(published_at),
+    )
+    await unit_of_work.catalog.save_tool(tenant_id, tool.activate())
+
+    return PublishToolResult(
+        event=ToolPublished(
+            tenant_id=tenant_id,
+            tool_id=tool.id,
+            tool_version_id=version.id,
+            tool_binding_id=binding.id,
+            canonical_name=tool.canonical_name,
+            version=version.version,
+            actor_id=command.context.principal_id,
+            request_id=command.context.request_id,
+            trace_id=command.context.trace_id,
+            occurred_at=published_at,
+        ),
+        retired_tool_version_id=retired_version_id,
+    )

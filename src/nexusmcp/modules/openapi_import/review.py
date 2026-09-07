@@ -75,67 +75,77 @@ class ReviewImportedOperation:
         self,
         command: ReviewImportedOperationCommand,
     ) -> ReviewImportedOperationResult:
-        tenant_id = command.context.tenant_id
         async with self._unit_of_work_factory() as unit_of_work:
-            operation = await unit_of_work.imports.get_operation_for_update(
-                tenant_id,
-                command.operation_id,
-            )
-            if operation is None:
-                raise ImportedOperationNotFoundError(
-                    f"imported operation {command.operation_id} was not found in tenant"
-                )
-            if operation.review_status is OperationReviewStatus.ACCEPTED:
-                return await self._existing_result(unit_of_work, tenant_id, operation)
-            if operation.conflict_status is not OperationConflictStatus.NONE:
-                raise InvalidReviewStateError(
-                    f"operation {operation.id} has conflict {operation.conflict_status.value}"
-                )
-            if operation.generated_tool_name is None:
-                raise InvalidReviewStateError("operation has no generated tool name")
-
-            upstream = await unit_of_work.upstreams.get_for_update(
-                tenant_id,
-                operation.upstream_service_id,
-            )
-            if upstream is None:
-                raise TenantBoundaryViolationError(
-                    "operation upstream was not found in requested tenant"
-                )
-            if upstream.status is not UpstreamStatus.ACTIVE:
-                raise UpstreamNotActiveError(f"upstream {upstream.id} is not active")
-
-            tool = await unit_of_work.catalog.get_tool_by_name_for_update(
-                tenant_id,
-                operation.generated_tool_name,
-            )
-            if tool is None:
-                tool = Tool(
-                    id=self._identifier_generator.new_id(),
-                    tenant_id=tenant_id,
-                    namespace=upstream.namespace,
-                    canonical_name=operation.generated_tool_name,
-                    owner=command.owner,
-                    status=ToolStatus.DISABLED,
-                )
-                await unit_of_work.catalog.add_tool(tenant_id, tool)
-
-            version_number = await unit_of_work.catalog.next_version_number(
-                tenant_id,
-                tool.id,
-            )
-            version = self._build_version(command, operation, tool, version_number)
-            binding = self._build_binding(operation, version)
-            accepted_operation = operation.accept(
-                draft_tool_version_id=version.id,
-                draft_tool_binding_id=binding.id,
-                review_notes=command.review_notes,
-            )
-
-            await unit_of_work.catalog.add_version(tenant_id, version)
-            await unit_of_work.bindings.add(tenant_id, binding)
-            await unit_of_work.imports.save_operation(tenant_id, accepted_operation)
+            result = await self.execute_in_transaction(unit_of_work, command)
             await unit_of_work.commit()
+            return result
+
+    async def execute_in_transaction(
+        self,
+        unit_of_work: ReviewUnitOfWork,
+        command: ReviewImportedOperationCommand,
+    ) -> ReviewImportedOperationResult:
+        """复用调用方事务完成 Review，不在内部 Commit。"""
+
+        tenant_id = command.context.tenant_id
+        operation = await unit_of_work.imports.get_operation_for_update(
+            tenant_id,
+            command.operation_id,
+        )
+        if operation is None:
+            raise ImportedOperationNotFoundError(
+                f"imported operation {command.operation_id} was not found in tenant"
+            )
+        if operation.review_status is OperationReviewStatus.ACCEPTED:
+            return await self._existing_result(unit_of_work, tenant_id, operation)
+        if operation.conflict_status is not OperationConflictStatus.NONE:
+            raise InvalidReviewStateError(
+                f"operation {operation.id} has conflict {operation.conflict_status.value}"
+            )
+        if operation.generated_tool_name is None:
+            raise InvalidReviewStateError("operation has no generated tool name")
+
+        upstream = await unit_of_work.upstreams.get_for_update(
+            tenant_id,
+            operation.upstream_service_id,
+        )
+        if upstream is None:
+            raise TenantBoundaryViolationError(
+                "operation upstream was not found in requested tenant"
+            )
+        if upstream.status is not UpstreamStatus.ACTIVE:
+            raise UpstreamNotActiveError(f"upstream {upstream.id} is not active")
+
+        tool = await unit_of_work.catalog.get_tool_by_name_for_update(
+            tenant_id,
+            operation.generated_tool_name,
+        )
+        if tool is None:
+            tool = Tool(
+                id=self._identifier_generator.new_id(),
+                tenant_id=tenant_id,
+                namespace=upstream.namespace,
+                canonical_name=operation.generated_tool_name,
+                owner=command.owner,
+                status=ToolStatus.DISABLED,
+            )
+            await unit_of_work.catalog.add_tool(tenant_id, tool)
+
+        version_number = await unit_of_work.catalog.next_version_number(
+            tenant_id,
+            tool.id,
+        )
+        version = self._build_version(command, operation, tool, version_number)
+        binding = self._build_binding(operation, version)
+        accepted_operation = operation.accept(
+            draft_tool_version_id=version.id,
+            draft_tool_binding_id=binding.id,
+            review_notes=command.review_notes,
+        )
+
+        await unit_of_work.catalog.add_version(tenant_id, version)
+        await unit_of_work.bindings.add(tenant_id, binding)
+        await unit_of_work.imports.save_operation(tenant_id, accepted_operation)
 
         return ReviewImportedOperationResult(
             operation_id=operation.id,

@@ -1,4 +1,5 @@
 import {
+  directPublishImportedOperation,
   getOpenApiImport,
   getToolBinding,
   getToolVersion,
@@ -10,6 +11,7 @@ import {
   submitToolVersionReview,
 } from "@/generated/api/sdk.gen";
 import type {
+  DirectPublishOperationResponse,
   ImportDetailResponse,
   ImportJobPageResponse,
   ListOpenApiImportsData,
@@ -61,6 +63,20 @@ export async function acceptOperation(
 ): Promise<ReviewOperationResponse> {
   return (
     await reviewImportedOperation({
+      body,
+      path: { operation_id: operationId },
+      signal: createRequestSignal(),
+      throwOnError: true,
+    })
+  ).data;
+}
+
+export async function directPublishOperation(
+  operationId: string,
+  body: ReviewOperationRequest,
+): Promise<DirectPublishOperationResponse> {
+  return (
+    await directPublishImportedOperation({
       body,
       path: { operation_id: operationId },
       signal: createRequestSignal(),

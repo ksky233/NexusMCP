@@ -72,7 +72,7 @@ test("renders the governed upstream registry", async () => {
   queryClient.clear();
 });
 
-test("recovers the reviewed import workflow after a page reload", async () => {
+test("recovers direct publication from an accepted review after a page reload", async () => {
   const detail = {
     job: {
       id: "00000000-0000-0000-0000-000000000501",
@@ -98,6 +98,11 @@ test("recovers the reviewed import workflow after a page reload", async () => {
         review_status: "accepted",
         draft_tool_version_id: versionId,
         draft_tool_binding_id: bindingId,
+        summary: "Get employee",
+        description: "Get one employee by id.",
+        side_effect: "read_only",
+        input_schema: { type: "object", properties: {} },
+        output_schema: null,
       },
     ],
   } satisfies ImportDetailResponse;
@@ -105,10 +110,14 @@ test("recovers the reviewed import workflow after a page reload", async () => {
     http.get("/admin/openapi/imports/:id", () => HttpResponse.json(detail)),
     http.get("/admin/tool-versions/:id", () => HttpResponse.json(toolVersion("review"))),
     http.get("/admin/tool-bindings/:id", () => HttpResponse.json(toolBinding())),
+    http.get("/admin/toolsets", () =>
+      HttpResponse.json({ items: [], page: { offset: 0, limit: 1, total: 0 } }),
+    ),
   );
   const queryClient = renderRoute(<ImportDetailPage />, "/imports/import-1", "/imports/:importId");
 
-  expect(await screen.findByRole("button", { name: "发布版本" })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "直接发布" })).toBeInTheDocument();
+  expect(screen.getByText("Generated Tool Contract")).toBeInTheDocument();
   expect(screen.getByText("getEmployee")).toBeInTheDocument();
   queryClient.clear();
 });

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   acceptOperation,
+  directPublishOperation,
   fetchBinding,
   fetchImport,
   fetchImports,
@@ -56,6 +57,21 @@ export function useAcceptOperation(importId: string, operationId: string) {
       await Promise.all([
         client.invalidateQueries({ queryKey: importKeys.detail(importId) }),
         client.invalidateQueries({ queryKey: ["imports", "reviews"] }),
+      ]);
+    },
+  });
+}
+
+export function useDirectPublishOperation(importId: string, operationId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: ReviewOperationRequest) => directPublishOperation(operationId, body),
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: importKeys.detail(importId) }),
+        client.invalidateQueries({ queryKey: ["imports", "reviews"] }),
+        client.invalidateQueries({ queryKey: ["tools"] }),
+        client.invalidateQueries({ queryKey: ["toolsets"] }),
       ]);
     },
   });

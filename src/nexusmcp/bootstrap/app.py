@@ -80,6 +80,7 @@ from nexusmcp.modules.identity.ports import AgentServiceAuthenticator
 from nexusmcp.modules.openapi_import.adapters.local_document_reader import (
     LocalOpenApiDocumentReader,
 )
+from nexusmcp.modules.openapi_import.direct_publish import DirectPublishImportedOperation
 from nexusmcp.modules.openapi_import.import_openapi import ImportOpenApi
 from nexusmcp.modules.openapi_import.parser import OpenApiParser
 from nexusmcp.modules.openapi_import.queries import GetOpenApiImport
@@ -482,6 +483,11 @@ def create_app(
                 ),
                 get_openapi_import=GetOpenApiImport(import_uow_factory),
                 review_operation=ReviewImportedOperation(
+                    review_uow_factory,
+                    clock,
+                    identifier_generator,
+                ),
+                direct_publish_operation=DirectPublishImportedOperation(
                     review_uow_factory,
                     clock,
                     identifier_generator,

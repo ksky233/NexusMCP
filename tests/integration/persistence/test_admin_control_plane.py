@@ -158,31 +158,24 @@ async def test_admin_rest_drives_import_review_publish_search_and_mcp(
             get_employee = next(
                 operation for operation in operations if operation["operation_id"] == "getEmployee"
             )
-
-            reviewed = await client.post(
-                f"/admin/openapi/operations/{get_employee['id']}/review",
-                json={"owner": "people-platform", "visibility": "public"},
-            )
-            assert reviewed.status_code == 200
-            review_data = reviewed.json()
-            assert review_data["canonical_name"] == "directory.get_employee"
-
-            submitted_review = await client.post(
-                f"/admin/tool-versions/{review_data['tool_version_id']}/submit-review"
-            )
-            assert submitted_review.status_code == 200
-            assert submitted_review.json() == {"status": "review"}
+            assert get_employee["side_effect"] == "read_only"
+            assert get_employee["input_schema"]["required"] == ["employee_id"]
 
             published = await client.post(
-                "/admin/tools/"
-                f"{review_data['tool_id']}/versions/{review_data['tool_version_id']}/publish",
-                json={
-                    "expected_schema_digest": review_data["schema_digest"],
-                    "expected_binding_digest": review_data["binding_digest"],
-                },
+                f"/admin/openapi/operations/{get_employee['id']}/publish",
+                json={"owner": "people-platform", "visibility": "public"},
             )
             assert published.status_code == 200
-            assert published.json()["canonical_name"] == "directory.get_employee"
+            review_data = published.json()
+            assert review_data["canonical_name"] == "directory.get_employee"
+            assert review_data["already_published"] is False
+            repeated_publish = await client.post(
+                f"/admin/openapi/operations/{get_employee['id']}/publish",
+                json={"owner": "people-platform", "visibility": "public"},
+            )
+            assert repeated_publish.status_code == 200
+            assert repeated_publish.json()["already_published"] is True
+            assert repeated_publish.json()["tool_version_id"] == review_data["tool_version_id"]
 
             search = await client.get("/admin/catalog/search", params={"q": "employee"})
             assert search.status_code == 200

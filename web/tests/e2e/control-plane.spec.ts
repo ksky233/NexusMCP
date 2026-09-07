@@ -29,12 +29,9 @@ test("browser drives publish, MCP call and audit through production-like Nginx",
   await expect(page.getByText("getEmployee", { exact: true })).toBeVisible();
 
   const operation = page.locator("article").filter({ hasText: "getEmployee" });
-  await operation.getByRole("button", { name: "审核 Operation" }).click();
+  await operation.getByRole("button", { name: "直接发布" }).click();
   await operation.getByLabel("负责人").fill("people-platform");
-  await operation.getByRole("button", { name: "接受并创建草稿" }).click();
-  await operation.getByRole("button", { name: "提交审核" }).click();
-  await operation.getByRole("button", { name: "发布版本" }).click();
-  await page.getByRole("button", { name: "发布 Tool 版本" }).click();
+  await operation.getByRole("button", { name: "确认并直接发布" }).click();
   await expect(operation.getByText("已发布", { exact: true })).toBeVisible();
 
   await page.getByRole("link", { name: "工具目录" }).click();
@@ -55,7 +52,7 @@ test("browser drives publish, MCP call and audit through production-like Nginx",
 
   await page.getByLabel("Principal IDs").fill("local-agent-service");
   await page.getByRole("button", { name: "保存 Grant" }).click();
-  await expect(page.getByLabel("Principal IDs")).toHaveValue("local-agent-service");
+  await expect(page.getByText(/Revision 3/)).toBeVisible();
   await page.getByRole("button", { name: "启用" }).click();
   await expect(page.getByText("已启用", { exact: true }).first()).toBeVisible();
 

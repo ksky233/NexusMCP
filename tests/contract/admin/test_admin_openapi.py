@@ -16,6 +16,7 @@ EXPECTED_OPERATION_IDS = {
     "activateToolset",
     "approveApproval",
     "disableUpstream",
+    "directPublishImportedOperation",
     "getApproval",
     "getDashboard",
     "getExecution",
