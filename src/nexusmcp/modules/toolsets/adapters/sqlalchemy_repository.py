@@ -5,6 +5,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from nexusmcp.infrastructure.persistence.identifiers import as_uuid
+from nexusmcp.modules.toolsets.adapters._repository_rules import (
+    requires_persistence_update,
+)
 from nexusmcp.modules.toolsets.adapters.sqlalchemy_mapping import (
     grant_to_model,
     member_to_model,
@@ -34,9 +37,13 @@ class SqlAlchemyToolsetRepository:
 
     async def save(self, tenant_id: str, toolset: Toolset) -> None:
         _require_matching_tenant(tenant_id, toolset.tenant_id)
-        model = await self._get_model(tenant_id, toolset.id, for_update=False)
+        # Save 自身取得 Row Lock，避免调用方漏掉 get_for_update 时发生 Lost Update。
+        model = await self._get_model(tenant_id, toolset.id, for_update=True)
         if model is None:
             raise ValueError("toolset does not exist in tenant")
+        current = await self._aggregate(model)
+        if not requires_persistence_update(current, toolset):
+            return
         update_toolset_model(model, toolset)
         toolset_uuid = as_uuid(toolset.id, field_name="toolset id")
         await self._session.execute(

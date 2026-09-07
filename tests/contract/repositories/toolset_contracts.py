@@ -75,6 +75,19 @@ class ToolsetRepositoryContract:
         persisted = await empty_toolsets.get_by_id(TENANT_A_ID, toolset.id)
         assert persisted == updated, (persisted, updated)
 
+        # 相同 Aggregate 重放是幂等操作；任何真实变更必须严格推进一个 Revision。
+        await empty_toolsets.save(TENANT_A_ID, updated)
+        with pytest.raises(ValueError, match="revision transition"):
+            await empty_toolsets.save(
+                TENANT_A_ID,
+                replace(updated, name="Bypassed Domain"),
+            )
+        with pytest.raises(ValueError, match="revision transition"):
+            await empty_toolsets.save(
+                TENANT_A_ID,
+                replace(updated, name="Skipped Revision", revision=updated.revision + 2),
+            )
+
         with pytest.raises(ValueError, match="stable identity"):
             await empty_toolsets.save(TENANT_A_ID, replace(updated, slug="renamed"))
 

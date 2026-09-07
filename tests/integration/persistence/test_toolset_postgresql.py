@@ -197,3 +197,54 @@ async def test_get_toolset_for_update_acquires_postgresql_row_lock(
             await second_repository.get_for_update(TENANT_A_ID, toolset.id)
         await second_session.rollback()
         await first_session.rollback()
+
+
+@pytest.mark.asyncio
+async def test_aggregate_replace_rolls_back_or_commits_members_and_grants_atomically(
+    pg_session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    async with pg_session_factory() as seed_session:
+        await seed_executable_tool(seed_session)
+        original = make_toolset(active=True, principal_ids=("agent-a",))
+        await SqlAlchemyToolsetRepository(seed_session).add(TENANT_A_ID, original)
+        await seed_session.commit()
+
+    factory = SqlAlchemyToolsetUnitOfWorkFactory(pg_session_factory)
+    async with factory() as unit_of_work:
+        locked = await unit_of_work.toolsets.get_for_update(TENANT_A_ID, original.id)
+        assert locked is not None
+        replacement = locked.replace_grants(
+            expected_revision=locked.revision,
+            principal_ids=("agent-b", "agent-c"),
+            actor_id="admin-a",
+            occurred_at=NOW,
+        )
+        await unit_of_work.toolsets.save(TENANT_A_ID, replacement)
+        # 不调用 commit，退出 UoW 后必须撤销 Aggregate Row、Member 与 Grant 的整体替换。
+
+    async with pg_session_factory() as observer_session:
+        rolled_back = await SqlAlchemyToolsetRepository(observer_session).get_by_id(
+            TENANT_A_ID, original.id
+        )
+        assert rolled_back == original
+
+    async with factory() as unit_of_work:
+        locked = await unit_of_work.toolsets.get_for_update(TENANT_A_ID, original.id)
+        assert locked is not None
+        replacement = locked.replace_grants(
+            expected_revision=locked.revision,
+            principal_ids=("agent-b", "agent-c"),
+            actor_id="admin-a",
+            occurred_at=NOW,
+        )
+        await unit_of_work.toolsets.save(TENANT_A_ID, replacement)
+        await unit_of_work.commit()
+
+    async with pg_session_factory() as observer_session:
+        committed = await SqlAlchemyToolsetRepository(observer_session).get_by_id(
+            TENANT_A_ID, original.id
+        )
+        assert committed == replacement
+        assert committed is not None
+        assert committed.tool_ids == original.tool_ids
+        assert committed.principal_ids == ("agent-b", "agent-c")

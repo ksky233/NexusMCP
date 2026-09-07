@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from nexusmcp.modules.toolsets.adapters._repository_rules import (
+    requires_persistence_update,
+)
 from nexusmcp.modules.toolsets.domain import Toolset, ToolsetKind, ToolsetStatus
 from nexusmcp.modules.toolsets.ports import ToolsetCatalogSnapshot
 
@@ -34,13 +37,8 @@ class InMemoryToolsetRepository:
         current = self._toolsets.get(toolset.id)
         if current is None or current.tenant_id != tenant_id:
             raise ValueError("toolset does not exist in tenant")
-        if (
-            current.slug != toolset.slug
-            or current.kind is not toolset.kind
-            or current.created_by != toolset.created_by
-            or current.created_at != toolset.created_at
-        ):
-            raise ValueError("toolset stable identity fields are immutable")
+        if not requires_persistence_update(current, toolset):
+            return
         slug_owner = await self.get_by_slug(tenant_id, toolset.slug)
         if slug_owner is not None and slug_owner.id != toolset.id:
             raise ValueError("toolset slug already exists in tenant")
