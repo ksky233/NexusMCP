@@ -76,7 +76,7 @@ export function CatalogPage() {
 
       <SearchIndexPanel />
 
-      <div className="mb-5 grid gap-4 border border-slate/30 bg-paper p-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="mb-5 grid gap-4 rounded-[10px] border border-slate/42 bg-paper p-4 sm:grid-cols-2 xl:grid-cols-5">
         <div>
           <FieldLabel htmlFor="catalog-namespace">Namespace</FieldLabel>
           <Input

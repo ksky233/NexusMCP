@@ -85,7 +85,7 @@ export function UpstreamsPage() {
         </div>
       ) : null}
 
-      <div className="mb-5 grid gap-4 border border-slate/30 bg-paper p-4 sm:grid-cols-2 lg:max-w-2xl">
+      <div className="mb-5 grid gap-4 rounded-[10px] border border-slate/42 bg-paper p-4 sm:grid-cols-2 lg:max-w-2xl">
         <div>
           <FieldLabel htmlFor="upstream-namespace-filter">Namespace</FieldLabel>
           <Input

@@ -9,7 +9,10 @@ import { cn } from "@/lib/cn";
 
 export function TableFrame({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("overflow-x-auto border border-slate/30 bg-paper", className)} {...props} />
+    <div
+      className={cn("overflow-x-auto rounded-[10px] border border-slate/42 bg-paper", className)}
+      {...props}
+    />
   );
 }
 
@@ -22,14 +25,14 @@ export function TableHead({ className, ...props }: HTMLAttributes<HTMLTableSecti
 }
 
 export function TableBody({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
-  return <tbody className={cn("divide-y divide-slate/20", className)} {...props} />;
+  return <tbody className={cn("divide-y divide-slate/28", className)} {...props} />;
 }
 
 export function TableHeaderCell({ className, ...props }: ThHTMLAttributes<HTMLTableCellElement>) {
   return (
     <th
       className={cn(
-        "border-b border-slate/20 px-4 py-3 text-[11px] font-normal uppercase tracking-[0.12em] text-slate/55",
+        "border-b border-slate/30 px-4 py-3 text-[11px] font-medium uppercase tracking-[0.12em] text-slate/70",
         className,
       )}
       {...props}

@@ -31,7 +31,7 @@ export function ConfirmDialog({
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-40 bg-ink/28 backdrop-blur-[1px] transition-opacity data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
         <Dialog.Viewport className="fixed inset-0 z-50 grid place-items-center overflow-y-auto p-4">
-          <Dialog.Popup className="w-full max-w-lg rounded-[8px] border border-slate/30 bg-paper shadow-overlay transition-[opacity,transform] duration-200 data-[ending-style]:scale-[0.98] data-[ending-style]:opacity-0 data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0">
+          <Dialog.Popup className="w-full max-w-lg rounded-[12px] border border-slate/42 bg-paper shadow-overlay transition-[opacity,transform] duration-200 data-[ending-style]:scale-[0.98] data-[ending-style]:opacity-0 data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0">
             <div className="p-6 sm:p-7">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -40,7 +40,7 @@ export function ConfirmDialog({
                 </div>
                 <Dialog.Close
                   aria-label="关闭弹窗"
-                  className="grid size-9 cursor-pointer place-items-center rounded-[4px] border border-transparent text-slate/55 outline-none hover:border-slate/20 hover:bg-mist focus-visible:ring-2 focus-visible:ring-slate/45"
+                  className="grid size-9 cursor-pointer place-items-center rounded-[8px] border border-transparent text-slate/60 outline-none hover:border-slate/35 hover:bg-mist focus-visible:ring-2 focus-visible:ring-slate/45"
                 >
                   <X aria-hidden="true" className="size-4" />
                 </Dialog.Close>

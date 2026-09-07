@@ -95,7 +95,7 @@ export function ExecutionsPage() {
           审计事件
         </button>
       </div>
-      <div className="mb-5 grid gap-4 border border-slate/30 bg-paper p-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mb-5 grid gap-4 rounded-[10px] border border-slate/42 bg-paper p-4 sm:grid-cols-2 xl:grid-cols-3">
         <div>
           <FieldLabel htmlFor="execution-principal">Principal</FieldLabel>
           <Input

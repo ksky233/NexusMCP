@@ -9,7 +9,7 @@ import type {
 import { cn } from "@/lib/cn";
 
 const controlClassName =
-  "w-full rounded-[4px] border border-slate/38 bg-paper text-sm font-normal text-ink outline-none transition-[border-color,box-shadow,background-color] duration-200 placeholder:text-slate/45 hover:border-slate/50 focus:border-slate/85 focus:ring-3 focus:ring-slate/8 disabled:cursor-not-allowed disabled:bg-mist/65 disabled:text-slate/40 aria-invalid:border-wine/55 aria-invalid:shadow-[inset_0_0_9px_rgba(116,48,62,0.04)]";
+  "w-full rounded-[8px] border border-slate/50 bg-paper text-sm font-normal text-ink outline-none transition-[border-color,box-shadow,background-color] duration-200 placeholder:text-slate/50 hover:border-slate/68 focus:border-ink/80 focus:ring-3 focus:ring-slate/10 disabled:cursor-not-allowed disabled:bg-mist/65 disabled:text-slate/45 aria-invalid:border-wine/60 aria-invalid:shadow-[inset_0_0_9px_rgba(116,48,62,0.04)]";
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(controlClassName, "h-[42px] px-3.5", className)} {...props} />;

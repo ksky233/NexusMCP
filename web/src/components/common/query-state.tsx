@@ -49,7 +49,10 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
 export function InlineError({ error }: { error: unknown }) {
   const normalized = asApiClientError(error);
   return (
-    <div className="border border-wine/35 bg-wine/6 px-4 py-3 text-sm text-wine" role="alert">
+    <div
+      className="rounded-[8px] border border-wine/45 bg-wine/6 px-4 py-3 text-sm text-wine"
+      role="alert"
+    >
       <span className="font-mono text-xs">{normalized.code}</span>
       <span className="mx-2 text-wine/35">·</span>
       <span>{normalized.message}</span>

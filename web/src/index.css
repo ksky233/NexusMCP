@@ -33,8 +33,8 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  --ink: #222831;
-  --slate: #393e46;
+  --ink: #171a1f;
+  --slate: #59626f;
   --mist: #eeeeee;
   --paper: #ffffff;
   --canvas: #f7f7f6;
@@ -55,7 +55,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background: var(--canvas);
-  color: var(--ink);
+  color: var(--slate);
 }
 
 button,
@@ -85,31 +85,31 @@ summary {
   }
 
   .eyebrow {
-    @apply text-[12px] font-medium uppercase tracking-[0.1em] text-ink/75;
+    @apply text-[12px] font-medium uppercase tracking-[0.1em] text-ink/80;
   }
 
   .component-label {
-    @apply text-[11px] font-medium uppercase tracking-[0.08em] text-ink/65;
+    @apply text-[11px] font-medium uppercase tracking-[0.08em] text-ink/75;
   }
 
   .page-title {
-    @apply mt-3 max-w-4xl text-3xl font-light tracking-[-0.025em] text-ink sm:text-[2.15rem];
+    @apply mt-3 max-w-4xl text-3xl font-normal tracking-[-0.025em] text-ink sm:text-[2.15rem];
   }
 
   .page-description {
-    @apply mt-3 max-w-3xl text-sm font-normal leading-7 text-slate/70;
+    @apply mt-3 max-w-3xl text-sm font-normal leading-7 text-slate;
   }
 
   .panel {
-    @apply min-w-0 rounded-[4px] border border-slate/30 bg-paper shadow-hairline;
+    @apply min-w-0 rounded-[10px] border border-slate/42 bg-paper shadow-hairline;
   }
 
   .panel-interactive {
-    @apply transition-[border-color,box-shadow,transform,background-color] duration-200 hover:-translate-y-px hover:border-slate/40 hover:bg-white hover:shadow-[0_10px_22px_rgba(34,40,49,0.065)];
+    @apply transition-[border-color,box-shadow,transform,background-color] duration-200 hover:-translate-y-px hover:border-slate/58 hover:bg-white hover:shadow-[0_10px_22px_rgba(34,40,49,0.065)];
   }
 
   .state-panel {
-    @apply flex min-h-56 items-center justify-center gap-3 rounded-[4px] border border-slate/30 bg-paper p-6 text-sm text-slate/75 shadow-hairline;
+    @apply flex min-h-56 items-center justify-center gap-3 rounded-[10px] border border-slate/42 bg-paper p-6 text-sm text-slate shadow-hairline;
   }
 
   .hairline-divider {
@@ -117,8 +117,8 @@ summary {
     background: linear-gradient(
       to right,
       transparent,
-      rgba(57, 62, 70, 0.18) 18%,
-      rgba(57, 62, 70, 0.18) 82%,
+      rgba(57, 62, 70, 0.28) 18%,
+      rgba(57, 62, 70, 0.28) 82%,
       transparent
     );
   }

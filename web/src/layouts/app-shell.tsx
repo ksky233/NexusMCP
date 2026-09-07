@@ -54,19 +54,19 @@ export function AppShell() {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-canvas text-ink md:grid md:grid-cols-[256px_minmax(0,1fr)]">
-      <aside className="sticky top-0 hidden h-screen border-r border-slate/20 bg-paper md:flex md:flex-col">
+    <div className="min-h-screen bg-canvas text-slate md:grid md:grid-cols-[256px_minmax(0,1fr)]">
+      <aside className="sticky top-0 hidden h-screen border-r border-slate/30 bg-paper md:flex md:flex-col">
         <SidebarContent />
       </aside>
 
       <Dialog.Root onOpenChange={setMobileNavigationOpen} open={mobileNavigationOpen}>
         <Dialog.Portal>
           <Dialog.Backdrop className="fixed inset-0 z-40 bg-ink/30 transition-opacity data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 md:hidden" />
-          <Dialog.Popup className="fixed inset-y-0 left-0 z-50 flex w-[min(86vw,280px)] flex-col border-r border-slate/25 bg-paper shadow-overlay transition-transform duration-200 data-[ending-style]:-translate-x-full data-[starting-style]:-translate-x-full md:hidden">
+          <Dialog.Popup className="fixed inset-y-0 left-0 z-50 flex w-[min(86vw,280px)] flex-col border-r border-slate/35 bg-paper shadow-overlay transition-transform duration-200 data-[ending-style]:-translate-x-full data-[starting-style]:-translate-x-full md:hidden">
             <Dialog.Title className="sr-only">控制台导航</Dialog.Title>
             <Dialog.Close
               aria-label="关闭导航"
-              className="absolute top-5 right-4 grid size-9 cursor-pointer place-items-center rounded-[4px] border border-slate/20 bg-paper text-slate outline-none hover:bg-mist focus-visible:ring-2 focus-visible:ring-slate/45"
+              className="absolute top-5 right-4 grid size-9 cursor-pointer place-items-center rounded-[8px] border border-slate/35 bg-paper text-slate outline-none hover:bg-mist focus-visible:ring-2 focus-visible:ring-slate/45"
             >
               <X aria-hidden="true" className="size-4" />
             </Dialog.Close>
@@ -76,7 +76,7 @@ export function AppShell() {
       </Dialog.Root>
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-30 border-b border-slate/20 bg-paper/95 backdrop-blur">
+        <header className="sticky top-0 z-30 border-b border-slate/30 bg-paper/95 backdrop-blur">
           <div className="flex min-h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-3">
               <Button
@@ -125,7 +125,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <NavLink
             className={({ isActive }) =>
               cn(
-                "flex min-h-10 items-center gap-3 rounded-[4px] px-3 py-2 text-sm font-normal tracking-[0.015em] text-slate transition-[background-color,color,box-shadow] duration-200 hover:bg-mist hover:text-ink",
+                "flex min-h-10 items-center gap-3 rounded-[8px] px-3 py-2 text-sm font-normal tracking-[0.015em] text-slate transition-[background-color,color,box-shadow] duration-200 hover:bg-mist hover:text-ink",
                 isActive && "bg-mist/95 text-ink shadow-[inset_2px_0_0_#393e46]",
               )
             }
@@ -140,7 +140,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         ))}
       </nav>
 
-      <div className="mt-auto border-t border-slate/20 pt-5">
+      <div className="mt-auto border-t border-slate/30 pt-5">
         <p className="text-[10px] font-normal uppercase tracking-[0.16em] text-slate/40">
           运行边界
         </p>

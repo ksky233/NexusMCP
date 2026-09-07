@@ -75,7 +75,7 @@ export function ToolsetsPage() {
 
       {creating ? <CreateToolsetPanel onClose={() => setCreating(false)} /> : null}
 
-      <div className="mb-5 grid gap-4 border border-slate/30 bg-paper p-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-5 grid gap-4 rounded-[10px] border border-slate/42 bg-paper p-4 sm:grid-cols-2 xl:grid-cols-4">
         <div>
           <FieldLabel htmlFor="toolset-search">名称或 Slug</FieldLabel>
           <Input
