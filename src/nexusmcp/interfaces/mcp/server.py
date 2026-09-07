@@ -13,8 +13,12 @@ from mcp.server.lowlevel import Server
 from mcp.server.request_state import RequestStateBoundary, RequestStateSecurity
 
 from nexusmcp.infrastructure.observability import NexusTelemetry
-from nexusmcp.interfaces.mcp.context import request_headers, resolve_request_context
-from nexusmcp.interfaces.mcp.errors import to_call_tool_error
+from nexusmcp.interfaces.mcp.context import (
+    request_headers,
+    resolve_endpoint_scope,
+    resolve_request_context,
+)
+from nexusmcp.interfaces.mcp.errors import to_call_tool_error, to_mcp_error
 from nexusmcp.interfaces.mcp.meta_tools import (
     NEXUS_SEARCH_TOOLS_NAME,
     parse_search_tools_query,
@@ -25,12 +29,19 @@ from nexusmcp.modules.approval.use_cases import DecideApproval, DecideApprovalCo
 from nexusmcp.modules.catalog.use_cases import ListVisibleTools, ListVisibleToolsQuery
 from nexusmcp.modules.execution.call_tool import CallTool
 from nexusmcp.modules.execution.domain import CallToolCommand, is_valid_idempotency_key
-from nexusmcp.modules.tool_search.search_tools import SearchTools
+from nexusmcp.modules.tool_search.search_tools import SearchTools, SearchToolsResult
+from nexusmcp.modules.toolsets.domain import ToolsetDiscoveryMode
+from nexusmcp.modules.toolsets.runtime import (
+    McpEndpointScopeType,
+    ResolvedToolsetAccess,
+    ResolveToolsetAccess,
+)
 from nexusmcp.shared.errors import (
     ApprovalMismatchError,
     ApprovalRequiredError,
     InvalidArgumentsError,
     NexusMcpError,
+    ToolsetAccessDeniedError,
 )
 from nexusmcp.shared.log_context import bind_log_context
 from nexusmcp.shared.request_context import RequestContext
@@ -64,6 +75,7 @@ def create_mcp_server(
     decide_approval: DecideApproval | None = None,
     telemetry: NexusTelemetry | None = None,
     request_state_security: RequestStateSecurity | None = None,
+    resolve_toolset_access: ResolveToolsetAccess | None = None,
 ) -> Server[Any]:
     """创建 SDK Server，并将 tools/list/call 适配到协议无关 Use Case。"""
 
@@ -93,11 +105,21 @@ def create_mcp_server(
                 protocol_era=request_context.protocol_era.value,
             ):
                 try:
+                    access = await _resolve_toolset_access(
+                        ctx,
+                        request_context,
+                        resolve_toolset_access,
+                    )
+                    effective_search_first = _search_first(access, search_first)
                     tools = (
                         ()
-                        if search_first
-                        else await list_visible_tools.execute(
-                            ListVisibleToolsQuery(request_context)
+                        if effective_search_first
+                        else (
+                            access.tools
+                            if access is not None
+                            else await list_visible_tools.execute(
+                                ListVisibleToolsQuery(request_context)
+                            )
                         )
                     )
                     protocol_tools = [
@@ -118,7 +140,7 @@ def create_mcp_server(
                         )
                         for tool in tools
                     ]
-                    if search_tools is not None:
+                    if search_tools is not None and _meta_search_visible(access, search_first):
                         protocol_tools.insert(0, search_tools_definition())
                 except NexusMcpError as error:
                     observation.finish(outcome="rejected", error_code=error.code)
@@ -130,7 +152,7 @@ def create_mcp_server(
                             "duration_ms": round((perf_counter() - started_at) * 1000, 3),
                         },
                     )
-                    raise
+                    raise to_mcp_error(error) from error
                 except Exception:
                     observation.finish(outcome="error", error_code="unexpected_error")
                     logger.exception(
@@ -191,18 +213,33 @@ def create_mcp_server(
                 tenant_id=request_context.tenant_id,
                 protocol_era=request_context.protocol_era.value,
             ):
+                try:
+                    access = await _resolve_toolset_access(
+                        ctx,
+                        request_context,
+                        resolve_toolset_access,
+                    )
+                except NexusMcpError as error:
+                    observation.finish(outcome="rejected", error_code=error.code)
+                    return to_call_tool_error(error)
                 if params.name == NEXUS_SEARCH_TOOLS_NAME:
                     if search_tools is None:
                         error = NexusMcpError("Tool search is not configured")
                         observation.finish(outcome="rejected", error_code=error.code)
                         return to_call_tool_error(error)
                     try:
+                        if not _meta_search_visible(access, search_first):
+                            raise ToolsetAccessDeniedError(
+                                "Meta Tool was outside the requested endpoint discovery mode"
+                            )
                         query = parse_search_tools_query(
                             request_context,
                             params.arguments or {},
                         )
                         observation.set_search_mode(query.retrieval_mode.value)
                         result = await search_tools.execute(query)
+                        if access is not None:
+                            result = _filter_search_result(result, access)
                     except NexusMcpError as error:
                         observation.finish(outcome="rejected", error_code=error.code)
                         logger.warning(
@@ -247,6 +284,8 @@ def create_mcp_server(
                     observation.finish(outcome="rejected", error_code=error.code)
                     return to_call_tool_error(error)
                 try:
+                    if access is not None:
+                        access.require_business_tool(params.name)
                     await _resolve_interactive_approval(
                         params=params,
                         context=request_context,
@@ -338,6 +377,55 @@ def create_mcp_server(
     # Low-Level Server 不会自动安装 requestState 防篡改边界，必须显式注册。
     server.middleware.append(RequestStateBoundary(security, default_audience="nexusmcp"))
     return server
+
+
+async def _resolve_toolset_access(
+    ctx: RawServerContext,
+    request_context: RequestContext,
+    resolver: ResolveToolsetAccess | None,
+) -> ResolvedToolsetAccess | None:
+    if resolver is None:
+        return None
+    return await resolver.execute(request_context, resolve_endpoint_scope(ctx))
+
+
+def _search_first(access: ResolvedToolsetAccess | None, root_search_first: bool) -> bool:
+    if access is None or access.endpoint_scope.type is McpEndpointScopeType.ROOT:
+        return root_search_first
+    return access.discovery_mode is ToolsetDiscoveryMode.SEARCH_FIRST
+
+
+def _meta_search_visible(
+    access: ResolvedToolsetAccess | None,
+    root_search_first: bool,
+) -> bool:
+    if access is None or access.endpoint_scope.type is McpEndpointScopeType.ROOT:
+        # Root eager 模式保留现有“Meta Tool + 业务 Tool”兼容行为。
+        return True
+    return _search_first(access, root_search_first)
+
+
+def _filter_search_result(
+    result: SearchToolsResult,
+    access: ResolvedToolsetAccess,
+) -> SearchToolsResult:
+    allowed_ids = access.available_tool_ids
+    hits = tuple(hit for hit in result.hits if hit.tool.tool_id in allowed_ids)
+    diagnostics = result.diagnostics
+    return SearchToolsResult(
+        hits=hits,
+        retrieval_mode=result.retrieval_mode,
+        index_version=result.index_version,
+        diagnostics=(
+            {
+                hit.tool.tool_version_id: diagnostics[hit.tool.tool_version_id]
+                for hit in hits
+                if hit.tool.tool_version_id in diagnostics
+            }
+            if diagnostics is not None
+            else None
+        ),
+    )
 
 
 def _protocol_output_schema(

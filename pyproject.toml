@@ -39,6 +39,7 @@ nexusmcp = "nexusmcp.interfaces.cli.app:main"
 [tool.pytest.ini_options]
 addopts = "-ra"
 asyncio_mode = "auto"
+pythonpath = ["."]
 markers = [
     "benchmark: deterministic performance evidence; full snapshot requires explicit opt-in",
     "integration: requires an isolated external dependency such as PostgreSQL",

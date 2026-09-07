@@ -8,6 +8,7 @@ from typing import Any, cast
 from mcp.server.context import ServerRequestContext
 
 from nexusmcp.modules.identity.domain import InternalPrincipal, PrincipalType
+from nexusmcp.modules.toolsets.runtime import McpEndpointScope
 from nexusmcp.shared.request_context import (
     ANONYMOUS_PRINCIPAL_ID,
     ProtocolEra,
@@ -24,6 +25,21 @@ def request_headers(ctx: ServerRequestContext[Any, Any]) -> Mapping[str, str]:
     if not isinstance(headers, Mapping):
         return {}
     return {str(key).lower(): str(value) for key, value in cast(Mapping[Any, Any], headers).items()}
+
+
+def resolve_endpoint_scope(ctx: ServerRequestContext[Any, Any]) -> McpEndpointScope:
+    """只信任 Starlette Router 解析出的 Path Param，不接受 Agent 自报 Toolset。"""
+
+    request = ctx.request
+    path_params = getattr(request, "path_params", None)
+    if not isinstance(path_params, Mapping):
+        return McpEndpointScope.root()
+    slug = path_params.get("toolset_slug")
+    if slug is None:
+        return McpEndpointScope.root()
+    if not isinstance(slug, str) or not slug:
+        raise ValueError("toolset endpoint path contained an invalid slug")
+    return McpEndpointScope.toolset(slug)
 
 
 def _trace_id(headers: Mapping[str, str]) -> str:

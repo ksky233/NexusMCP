@@ -40,7 +40,10 @@ from nexusmcp.modules.policy.domain import (
     ToolPolicy,
 )
 from tests.contract.repositories.contracts import TENANT_A_ID, TOOL_ID, UPSTREAM_ID
-from tests.integration.persistence.test_mcp_read_only_http_call import seed_executable_tool
+from tests.integration.persistence.test_mcp_read_only_http_call import (
+    seed_all_published_grants,
+    seed_executable_tool,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -109,6 +112,11 @@ async def test_allow_injects_secret_while_deny_never_resolves_it(
 ) -> None:
     async with pg_session_factory() as seed_session:
         await seed_executable_tool(seed_session, auth_scheme="bearer")
+        await seed_all_published_grants(
+            seed_session,
+            "sales-assistant-service",
+            "inventory-assistant-service",
+        )
     authenticator = StaticBearerAgentServiceAuthenticator(
         [
             StaticBearerAgentServiceMapping(

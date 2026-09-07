@@ -1,5 +1,6 @@
 """公开演示环境的工作区重置契约与 Use Case。"""
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -20,9 +21,17 @@ class DemoWorkspaceResetResult:
 class ResetDemoWorkspace:
     """显式表达 Demo-only 破坏性操作，不把它伪装成普通 Repository 方法。"""
 
-    def __init__(self, resetter: DemoWorkspaceResetter) -> None:
+    def __init__(
+        self,
+        resetter: DemoWorkspaceResetter,
+        *,
+        after_reset: Callable[[str], Awaitable[None]] | None = None,
+    ) -> None:
         self._resetter = resetter
+        self._after_reset = after_reset
 
     async def execute(self, context: ActorContext) -> DemoWorkspaceResetResult:
         await self._resetter.reset(context.tenant_id)
+        if self._after_reset is not None:
+            await self._after_reset(context.tenant_id)
         return DemoWorkspaceResetResult(tenant_id=context.tenant_id)

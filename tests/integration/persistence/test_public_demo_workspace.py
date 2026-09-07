@@ -11,6 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from nexusmcp.bootstrap.app import create_app
 from nexusmcp.bootstrap.config import Settings
 from nexusmcp.modules.identity.adapters.sqlalchemy_models import TenantModel
+from nexusmcp.modules.toolsets.adapters.sqlalchemy_models import (
+    ToolsetAccessGrantModel,
+    ToolsetModel,
+)
 from tests.contract.repositories.contracts import TENANT_A_ID
 
 pytestmark = pytest.mark.integration
@@ -30,6 +34,7 @@ async def test_public_demo_bootstraps_tenant_and_resets_business_workspace(
             control_plane_enabled=True,
             admin_identity_mode="public_demo",
             demo_admin_principal_id="public-demo-admin",
+            static_agent_principal_id="public-demo-agent",
             embedding_api_key=None,
         )
     )
@@ -60,7 +65,13 @@ async def test_public_demo_bootstraps_tenant_and_resets_business_workspace(
     async with pg_session_factory() as session:
         tenant_count = await session.scalar(select(func.count()).select_from(TenantModel))
         tenant = await session.get(TenantModel, uuid.UUID(TENANT_A_ID))
+        toolsets = (await session.scalars(select(ToolsetModel))).all()
+        grants = (await session.scalars(select(ToolsetAccessGrantModel))).all()
 
     assert tenant_count == 1
     assert tenant is not None
     assert tenant.name == "NexusMCP Public Demo"
+    assert [(toolset.kind, toolset.slug) for toolset in toolsets] == [
+        ("all_published", "all-published")
+    ]
+    assert [grant.principal_id for grant in grants] == ["public-demo-agent"]

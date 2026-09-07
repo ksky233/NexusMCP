@@ -14,7 +14,7 @@ from nexusmcp.interfaces.http.errors import (
     register_http_exception_handlers,
     request_validation_error_handler,
 )
-from nexusmcp.interfaces.mcp.errors import to_call_tool_error
+from nexusmcp.interfaces.mcp.errors import to_call_tool_error, to_mcp_error
 from nexusmcp.shared.errors import InvalidToolStateError, NexusMcpError, ToolNotFoundError
 from nexusmcp.shared.log_context import bind_log_context
 
@@ -31,6 +31,16 @@ def test_mcp_error_mapping_does_not_expose_internal_message() -> None:
     assert isinstance(result.content[0], types.TextContent)
     assert result.content[0].text == error.safe_message
     assert "super-secret" not in str(result)
+
+
+def test_non_tool_mcp_error_mapping_preserves_safe_code_and_message() -> None:
+    error = ToolNotFoundError(INTERNAL_MESSAGE)
+
+    result = to_mcp_error(error)
+
+    assert result.message == error.safe_message
+    assert result.data == {"errorCode": "tool_not_found"}
+    assert "super-secret" not in str(result.error)
 
 
 def test_http_error_mapping_uses_status_safe_message_and_request_id() -> None:

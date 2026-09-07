@@ -1,6 +1,6 @@
 # I-03｜Toolset Scoped MCP Endpoints
 
-> 状态：In Progress（I03-2 Completed）
+> 状态：In Progress（I03-3 Completed）
 > 日期：2026-09-06
 > 触发：中央 MCP Endpoint 暴露完整 Catalog 时，单个 Agent 可能接收到与自身业务无关的大量 Tool
 > 决策依据：[ADR-0020](../adr/0020-toolset-scoped-mcp-endpoints.md)
@@ -15,7 +15,7 @@ I03-1A Domain/Port/InMemory         Completed
 I03-1B PostgreSQL Schema/Adapter    Completed
 I03-1C Persistence Contract Close  Completed
 I03-2 Admin API 与 Web UI          Completed
-I03-3 Scoped MCP Endpoint          Planned
+I03-3 Scoped MCP Endpoint          Completed
 I03-4 Scoped Search 与 Audit       Planned
 I03-5 E2E、Evidence 与部署         Planned
 ```
@@ -944,6 +944,10 @@ I03-2 已完成，证据见：
 - Root `/mcp` 兼容；
 - Modern Scoped Endpoint Protocol Matrix；
 - Legacy Scoped Endpoint `unsupported_protocol` 与 Legacy Root Regression。
+
+I03-3 已完成，证据见：
+
+- [I03-3｜Scoped MCP Endpoint](../实验记录/43_I03-3_ScopedMCPEndpoint.md)
 
 ### I03-4｜Scoped Search 与 Audit
 

@@ -58,6 +58,16 @@ class ToolsetMemberUnavailableError(NexusMcpError):
     safe_message = "One or more toolset members are unavailable."
 
 
+class ToolsetNotActiveError(NexusMcpError):
+    code = "toolset_not_active"
+    safe_message = "The requested toolset is not active."
+
+
+class ToolsetAccessDeniedError(NexusMcpError):
+    code = "toolset_access_denied"
+    safe_message = "The principal is not allowed to access this toolset scope."
+
+
 class SystemToolsetImmutableError(NexusMcpError):
     code = "system_toolset_immutable"
     safe_message = "The system-managed toolset cannot be changed this way."

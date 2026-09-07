@@ -1,6 +1,6 @@
 """FastAPI Application Factory 与依赖组装。"""
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -43,6 +43,7 @@ from nexusmcp.interfaces.admin import AdminServices, create_admin_app
 from nexusmcp.interfaces.admin.toolset_routes import ToolsetAdminServices
 from nexusmcp.interfaces.health.router import create_health_router
 from nexusmcp.interfaces.mcp.context import request_headers, resolve_request_context
+from nexusmcp.interfaces.mcp.http_transport import create_mcp_http_transport
 from nexusmcp.interfaces.mcp.server import create_mcp_server
 from nexusmcp.modules.approval.use_cases import (
     DecideApproval,
@@ -115,10 +116,12 @@ from nexusmcp.modules.tool_search.rank_fusion import ReciprocalRankFusion
 from nexusmcp.modules.tool_search.reindex_tools import ReindexTools
 from nexusmcp.modules.tool_search.search_tools import SearchTools
 from nexusmcp.modules.tool_search.vector_search import SearchVectorTools
+from nexusmcp.modules.toolsets.runtime import ResolveToolsetAccess
 from nexusmcp.modules.toolsets.use_cases import (
     ActivateToolset,
     CreateToolset,
     DisableToolset,
+    EnsureAllPublishedToolset,
     GetToolset,
     ListToolsets,
     ReplaceToolsetGrants,
@@ -263,6 +266,21 @@ def create_app(
     )
     clock = SystemClock()
     identifier_generator = UuidIdentifierGenerator()
+    toolset_uow_factory = (
+        RuntimeToolsetUnitOfWorkFactory(resolved_runtime)
+        if resolved_runtime is not None and resolved_settings.catalog_backend == "postgresql"
+        else None
+    )
+    ensure_all_published = (
+        EnsureAllPublishedToolset(toolset_uow_factory, identifier_generator, clock)
+        if toolset_uow_factory is not None
+        else None
+    )
+    resolve_toolset_access = (
+        ResolveToolsetAccess(toolset_uow_factory, resolved_reader)
+        if toolset_uow_factory is not None
+        else None
+    )
     request_approval: RequestApproval | None = None
     decide_approval: DecideApproval | None = None
     get_approval: GetApproval | None = None
@@ -342,12 +360,17 @@ def create_app(
         decide_approval=decide_approval,
         telemetry=resolved_telemetry,
         request_state_security=request_state_security or _request_state_security(resolved_settings),
+        resolve_toolset_access=resolve_toolset_access,
     )
     transport_security = TransportSecuritySettings(
         allowed_hosts=resolved_settings.transport_allowed_hosts,
         allowed_origins=resolved_settings.transport_allowed_origins,
     )
-    mcp_app = mcp_server.streamable_http_app(transport_security=transport_security)
+    mcp_transport = create_mcp_http_transport(
+        mcp_server,
+        transport_security=transport_security,
+    )
+    mcp_app = mcp_transport.app
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
@@ -374,12 +397,21 @@ def create_app(
                         resolved_settings.local_tenant_id,
                         name="NexusMCP Public Demo",
                     )
+                if ensure_all_published is not None:
+                    await ensure_all_published.execute(
+                        resolved_settings.local_tenant_id,
+                        principal_ids=(
+                            (resolved_settings.static_agent_principal_id,)
+                            if static_agent_principal is not None
+                            else ()
+                        ),
+                    )
                 if reindex_job_store is not None:
                     await reindex_job_store.recover_interrupted(
                         resolved_settings.local_tenant_id,
                         finished_at=SystemClock().now(),
                     )
-            async with mcp_server.session_manager.run():
+            async with mcp_transport.session_manager.run():
                 yield
         finally:
             if owns_http_client and resolved_http_client is not None:
@@ -407,7 +439,8 @@ def create_app(
         review_uow_factory = RuntimeReviewUnitOfWorkFactory(resolved_runtime)
         catalog_uow_factory = RuntimeCatalogUnitOfWorkFactory(resolved_runtime)
         tool_search_uow_factory = RuntimeToolSearchUnitOfWorkFactory(resolved_runtime)
-        toolset_uow_factory = RuntimeToolsetUnitOfWorkFactory(resolved_runtime)
+        if toolset_uow_factory is None:  # pragma: no cover - 上述 Runtime 检查已保证
+            raise RuntimeError("Control Plane requires Toolset Unit of Work")
         published_tool_reader = SqlAlchemyPublishedToolReader(resolved_runtime)
         document_builder = ToolSearchDocumentBuilder()
         reindex_job_store = SqlAlchemyToolSearchReindexJobStore(resolved_runtime)
@@ -494,7 +527,21 @@ def create_app(
                     disable=DisableToolset(toolset_uow_factory, clock),
                 ),
                 reset_demo_workspace=(
-                    ResetDemoWorkspace(SqlAlchemyDemoWorkspaceResetter(resolved_runtime))
+                    ResetDemoWorkspace(
+                        SqlAlchemyDemoWorkspaceResetter(resolved_runtime),
+                        after_reset=(
+                            _toolset_baseline_initializer(
+                                ensure_all_published,
+                                (
+                                    resolved_settings.static_agent_principal_id
+                                    if static_agent_principal is not None
+                                    else None
+                                ),
+                            )
+                            if ensure_all_published is not None
+                            else None
+                        ),
+                    )
                     if resolved_settings.admin_identity_mode == "public_demo"
                     else None
                 ),
@@ -519,6 +566,7 @@ def create_app(
     )
     app.state.settings = resolved_settings
     app.state.mcp_server = mcp_server
+    app.state.mcp_transport = mcp_transport
     app.state.database_runtime = resolved_runtime
     app.state.admin_app = admin_app
     app.state.execution_reader = execution_reader
@@ -536,6 +584,19 @@ def create_app(
         app.mount("/admin", admin_app)
     app.mount("/", mcp_app)
     return app
+
+
+def _toolset_baseline_initializer(
+    ensure_all_published: EnsureAllPublishedToolset,
+    principal_id: str | None,
+) -> Callable[[str], Awaitable[None]]:
+    async def initialize(tenant_id: str) -> None:
+        await ensure_all_published.execute(
+            tenant_id,
+            principal_ids=(principal_id,) if principal_id is not None else (),
+        )
+
+    return initialize
 
 
 def _request_state_security(settings: Settings) -> RequestStateSecurity:

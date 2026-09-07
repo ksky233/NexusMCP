@@ -158,6 +158,65 @@ class CreateToolset:
         )
 
 
+class EnsureAllPublishedToolset:
+    """幂等建立系统 Toolset，并只追加当前部署明确要求的 Service Grant。"""
+
+    def __init__(
+        self,
+        unit_of_work_factory: ToolsetUnitOfWorkFactory,
+        identifier_generator: IdentifierGenerator,
+        clock: Clock,
+    ) -> None:
+        self._unit_of_work_factory = unit_of_work_factory
+        self._identifier_generator = identifier_generator
+        self._clock = clock
+
+    async def execute(
+        self,
+        tenant_id: str,
+        *,
+        principal_ids: tuple[str, ...] = (),
+    ) -> Toolset:
+        async with self._unit_of_work_factory() as unit_of_work:
+            toolset = await unit_of_work.toolsets.get_all_published(tenant_id)
+            if toolset is None:
+                toolset = Toolset.create_all_published(
+                    toolset_id=self._identifier_generator.new_id(),
+                    tenant_id=tenant_id,
+                    created_by="system",
+                    created_at=self._clock.now(),
+                )
+                if principal_ids:
+                    toolset = toolset.replace_grants(
+                        expected_revision=toolset.revision,
+                        principal_ids=principal_ids,
+                        actor_id="system",
+                        occurred_at=self._clock.now(),
+                    )
+                try:
+                    await unit_of_work.toolsets.add(tenant_id, toolset)
+                    await unit_of_work.commit()
+                    return toolset
+                except ValueError:
+                    # 多实例并发启动时，唯一约束胜者已经建立系统 Toolset；重新读取后再合并 Grant。
+                    await unit_of_work.rollback()
+
+        async with self._unit_of_work_factory() as unit_of_work:
+            toolset = await unit_of_work.toolsets.get_all_published(tenant_id)
+            if toolset is None:
+                raise ToolsetConflictError("all_published bootstrap lost uniqueness race")
+            desired = tuple(sorted(set((*toolset.principal_ids, *principal_ids))))
+            updated = toolset.replace_grants(
+                expected_revision=toolset.revision,
+                principal_ids=desired,
+                actor_id="system",
+                occurred_at=self._clock.now(),
+            )
+            await unit_of_work.toolsets.save(tenant_id, updated)
+            await unit_of_work.commit()
+            return updated
+
+
 class UpdateToolset:
     def __init__(self, unit_of_work_factory: ToolsetUnitOfWorkFactory, clock: Clock) -> None:
         self._unit_of_work_factory = unit_of_work_factory

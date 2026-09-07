@@ -30,7 +30,10 @@ from nexusmcp.modules.policy.domain import (
     ToolPolicy,
 )
 from tests.contract.repositories.contracts import TENANT_A_ID, TOOL_ID
-from tests.integration.persistence.test_mcp_read_only_http_call import seed_executable_tool
+from tests.integration.persistence.test_mcp_read_only_http_call import (
+    seed_all_published_grants,
+    seed_executable_tool,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -106,6 +109,7 @@ async def test_modern_mrtr_elicitation_approves_and_resumes_tool_call(
 ) -> None:
     async with pg_session_factory() as seed_session:
         await seed_executable_tool(seed_session)
+        await seed_all_published_grants(seed_session, "approval-agent-service")
     callback_calls = 0
 
     async def approve_in_host(
@@ -163,6 +167,7 @@ async def test_modern_mrtr_decline_rejects_without_creating_execution(
 ) -> None:
     async with pg_session_factory() as seed_session:
         await seed_executable_tool(seed_session)
+        await seed_all_published_grants(seed_session, "approval-agent-service")
 
     async def decline_in_host(
         context: ClientRequestContext,
@@ -222,6 +227,7 @@ async def test_control_plane_approval_resumes_later_and_replay_is_rejected(
 ) -> None:
     async with pg_session_factory() as seed_session:
         await seed_executable_tool(seed_session)
+        await seed_all_published_grants(seed_session, "approval-agent-service")
     upstream_transport = httpx.ASGITransport(app=employee_directory_app)
     async with httpx.AsyncClient(transport=upstream_transport) as upstream_client:
         first_app = create_app(

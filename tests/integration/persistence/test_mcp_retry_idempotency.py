@@ -33,6 +33,9 @@ from nexusmcp.modules.policy.domain import (
 )
 from nexusmcp.modules.registry.adapters.sqlalchemy_models import UpstreamServiceModel
 from tests.contract.repositories.contracts import TENANT_A_ID
+from tests.integration.persistence.test_mcp_read_only_http_call import (
+    seed_all_published_grants,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -203,6 +206,7 @@ async def test_idempotent_put_retries_then_rejects_duplicate_and_conflicting_key
 ) -> None:
     async with pg_session_factory() as seed_session:
         await seed_idempotent_inventory_tool(seed_session)
+        await seed_all_published_grants(seed_session, "inventory-agent-service")
     upstream_requests: list[httpx.Request] = []
 
     def upstream_handler(request: httpx.Request) -> httpx.Response:

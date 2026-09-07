@@ -20,6 +20,10 @@ from nexusmcp.modules.connectors.adapters.sqlalchemy_models import ToolBindingMo
 from nexusmcp.modules.execution.domain import ExecutionStatus
 from nexusmcp.modules.identity.adapters.sqlalchemy_models import TenantModel
 from nexusmcp.modules.registry.adapters.sqlalchemy_models import UpstreamServiceModel
+from nexusmcp.modules.toolsets.adapters.sqlalchemy_repository import (
+    SqlAlchemyToolsetRepository,
+)
+from nexusmcp.modules.toolsets.domain import Toolset
 from tests.contract.repositories.contracts import (
     BINDING_ID,
     TENANT_A_ID,
@@ -29,6 +33,8 @@ from tests.contract.repositories.contracts import (
 )
 
 pytestmark = pytest.mark.integration
+
+SYSTEM_TOOLSET_ID = "00000000-0000-0000-0000-000000000550"
 
 
 async def seed_executable_tool(
@@ -130,6 +136,26 @@ async def seed_executable_tool(
     await session.commit()
 
 
+async def seed_all_published_grants(
+    session: AsyncSession,
+    *principal_ids: str,
+) -> None:
+    now = datetime(2026, 8, 26, 16, 0, tzinfo=UTC)
+    toolset = Toolset.create_all_published(
+        toolset_id=SYSTEM_TOOLSET_ID,
+        tenant_id=TENANT_A_ID,
+        created_by="system",
+        created_at=now,
+    ).replace_grants(
+        expected_revision=1,
+        principal_ids=principal_ids,
+        actor_id="system",
+        occurred_at=now,
+    )
+    await SqlAlchemyToolsetRepository(session).add(TENANT_A_ID, toolset)
+    await session.commit()
+
+
 @pytest.mark.asyncio
 async def test_modern_mcp_read_only_http_tool_call(
     pg_session_factory: async_sessionmaker[AsyncSession],
@@ -191,7 +217,7 @@ async def test_modern_mcp_read_only_http_tool_call(
     assert invalid.meta["com.nexusmcp/errorCode"] == "invalid_arguments"
     assert missing.is_error is True
     assert missing.meta is not None
-    assert missing.meta["com.nexusmcp/errorCode"] == "tool_not_found"
+    assert missing.meta["com.nexusmcp/errorCode"] == "toolset_access_denied"
     assert len(executions) == 1
     assert executions[0].status is ExecutionStatus.SUCCEEDED
     assert executions[0].principal_id == "employee-directory-agent-service"

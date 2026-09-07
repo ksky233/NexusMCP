@@ -23,6 +23,7 @@ from nexusmcp.modules.toolsets.use_cases import (
     CreateToolset,
     CreateToolsetCommand,
     DisableToolset,
+    EnsureAllPublishedToolset,
     GetToolset,
     ListToolsets,
     ListToolsetsQuery,
@@ -253,3 +254,23 @@ async def test_system_toolset_cannot_be_disabled() -> None:
                 expected_revision=system.revision,
             )
         )
+
+
+@pytest.mark.asyncio
+async def test_system_toolset_bootstrap_is_idempotent_and_only_appends_grants() -> None:
+    repository = InMemoryToolsetRepository()
+    uow_factory = InMemoryToolsetUnitOfWorkFactory(toolsets=repository, catalog=catalog())
+    ensure = EnsureAllPublishedToolset(
+        uow_factory,
+        FixedIdentifierGenerator("system-toolset"),
+        FixedClock(),
+    )
+
+    first = await ensure.execute("tenant-a", principal_ids=("agent-a",))
+    second = await ensure.execute("tenant-a", principal_ids=("agent-b",))
+    third = await ensure.execute("tenant-a", principal_ids=("agent-b",))
+
+    assert first.principal_ids == ("agent-a",)
+    assert second.principal_ids == ("agent-a", "agent-b")
+    assert third == second
+    assert await repository.list_by_tenant("tenant-a") == (second,)
