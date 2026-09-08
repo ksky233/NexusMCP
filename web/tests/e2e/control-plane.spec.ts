@@ -5,6 +5,13 @@ import { expect, test } from "@playwright/test";
 test("browser drives publish, MCP call and audit through production-like Nginx", async ({
   page,
 }) => {
+  const repositoryRoot = path.resolve(process.cwd(), "..");
+  execFileSync(
+    "uv",
+    ["run", "python", path.join(repositoryRoot, "tests", "e2e", "seed_web_control_plane.py")],
+    { cwd: repositoryRoot, stdio: "inherit" },
+  );
+
   await page.goto("/");
   await expect(page.getByText("本地开发管理员 · 非生产级身份认证")).toBeVisible();
 
@@ -56,7 +63,6 @@ test("browser drives publish, MCP call and audit through production-like Nginx",
   await page.getByRole("button", { name: "启用" }).click();
   await expect(page.getByText("已启用", { exact: true }).first()).toBeVisible();
 
-  const repositoryRoot = path.resolve(process.cwd(), "..");
   execFileSync(
     "uv",
     [
@@ -69,10 +75,14 @@ test("browser drives publish, MCP call and audit through production-like Nginx",
   );
 
   await page.getByRole("link", { name: "执行与审计" }).click();
-  await expect(page.getByText("directory.get_employee", { exact: true })).toBeVisible({
+  const executionLink = page.getByRole("link", {
+    name: "directory.get_employee",
+    exact: true,
+  });
+  await expect(executionLink).toBeVisible({
     timeout: 30_000,
   });
-  await page.getByText("directory.get_employee", { exact: true }).click();
+  await executionLink.click();
   await expect(page.getByRole("heading", { name: "Attempt 时间线" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "审计时间线" })).toBeVisible();
   await expect(page.getByText("Toolset · revision 4", { exact: true })).toBeVisible();
