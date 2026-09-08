@@ -12,8 +12,9 @@ dearloom Edge Nginx :443
    └── demo-upstreams:9000
 ```
 
-Only the existing Edge Nginx publishes public ports. The local-only `127.0.0.1:18080` binding is retained for direct
-server diagnostics.
+The safe default publishes Web on `127.0.0.1:18080`. The short-lived public IP demo profile sets
+`NEXUSMCP_HTTP_BIND_HOST=0.0.0.0` and publishes only Web; Backend, PostgreSQL and Demo Upstreams remain on the Compose
+network.
 
 ## Build images
 
@@ -105,3 +106,32 @@ docker compose \
 ```
 
 Do not switch the public Host route until the local-only URL, Backend readiness, Demo Upstreams and reset flow all pass.
+
+## Public IP demo
+
+The public project page can link to `http://<server-ip>:18080/`. Set these values only in the server `.env`:
+
+```dotenv
+NEXUSMCP_HTTP_BIND_HOST=0.0.0.0
+NEXUSMCP_HTTP_PORT=18080
+NEXUSMCP_TRANSPORT_ALLOWED_HOSTS=["nexusmcp.dearloom.me","nexusmcp.dearloom.me:*","<server-ip>","<server-ip>:*","127.0.0.1","127.0.0.1:*","localhost","localhost:*"]
+NEXUSMCP_TRANSPORT_ALLOWED_ORIGINS=["https://nexusmcp.dearloom.me","http://<server-ip>:18080"]
+```
+
+Upload the updated `docker-compose.yml`; no image rebuild or database migration is required. Recreate Backend so it
+receives the new Host/Origin allowlists, and recreate Web so Docker applies the public port binding:
+
+```bash
+docker compose --env-file .env -f docker-compose.yml config --quiet
+docker compose --env-file .env -f docker-compose.yml up -d --no-build --wait backend web
+```
+
+Validate the public path and internal boundaries:
+
+```bash
+curl -fsS http://127.0.0.1:18080/healthz
+curl -fsS http://127.0.0.1:18080/health/ready
+docker compose --env-file .env -f docker-compose.yml ps
+```
+
+Only Host TCP 18080 is opened for this profile. Ports 8000, 5432 and 9000 remain unpublished.
