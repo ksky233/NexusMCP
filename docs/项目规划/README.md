@@ -34,6 +34,7 @@ Enterprise HTTP / OpenAPI
 | 10 | [09｜S6 前置 Web Control Plane 与 Remote MCP 边界](./09_S6前置WebControlPlane与RemoteMCP边界.md) | Remote MCP 为什么延后、Web UI 做到哪里 |
 | 11 | [10｜小型知识 RAG 扩展规划](./10_小型知识RAG扩展规划.md) | 如何用朴素 RAG 补齐知识检索能力，以及为什么暂不采用 GraphRAG/KAG |
 | 12 | [11｜单机生产部署规划](./11_单机生产部署规划.md) | 如何复用现有云服务器与 TLS，补齐 Production Packaging、身份边界、发布和运维 |
+| 13 | [12｜公网 IP 多项目入口交接](./12_公网IP多项目入口交接.md) | 如何把入口页交回 DualStruct，并以两个独立 HTTP 端口完成短期求职展示 |
 
 ## 3. 决策层级
 
