@@ -1,7 +1,7 @@
 # Playwright 严格定位与 Retry 状态污染
 
 > 日期：2026-09-08
-> 状态：修复完成 / GitHub CI 验证中
+> 状态：已解决
 > 影响范围：GitHub Actions `Nginx full-stack E2E`
 
 ## 现象
@@ -128,4 +128,10 @@ TRUNCATE business tables
 - 本机一次性 PostgreSQL + Fake Upstream + FastAPI + Unprivileged Nginx：Passed；
 - 完整 Playwright E2E：`2 passed (18.3s)`；
 - 可变状态用例 `--repeat-each=2 --workers=1`：`2 passed (30.7s)`，相同 Fixture Name 连续执行无 Conflict；
-- GitHub CI：Pending。
+- GitHub CI：`cf87178` / Run `34214777659` 全部成功，`Quality and tests`、`Frontend quality and build`、`Nginx full-stack E2E` 均为 Success。
+
+最终修复提交：
+
+```text
+cf87178 test: isolate retried full-stack E2E
+```
